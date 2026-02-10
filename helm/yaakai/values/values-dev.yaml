@@ -68,6 +68,8 @@ backend:
       clientId: backend-dev
       clientSecret: syTw9tOkK0W2NXBG5k4PZgYSdxpbfhQ2
       tempPassword: Welcome@123
+      cloud_client_id: "portal-cloud"   
+      cloud_client_secret: "QGcFgRm1PZDCpycpyzG5939hm394wsM4"
 
     database:
       type: postgres
@@ -129,4 +131,4 @@ ingress:
 
 global:
   imagePullSecrets:
-    - name: gitlab-registry-yakkai
+    - name: gitlab-registry

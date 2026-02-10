@@ -1,7 +1,7 @@
 import time
 from typing import Dict, Any
 from db.engine import async_session
-
+import os
 from core.config import load_config
 from core.cloud_auth.aws_auth import assume_aws_role_with_oidc
 from core.cloud_auth.azure_auth import get_azure_token_with_oidc
@@ -11,8 +11,7 @@ from services.cloud_account_service import CloudAccountService
 
 from keycloak.client import KeycloakAdminClient   # same class, different client
 
-cfg = load_config()
-
+cfg = load_config(os.getenv("APP_CONFIG"))
 
 class CloudAuthProvider:
     """

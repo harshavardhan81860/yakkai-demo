@@ -5,9 +5,9 @@ import requests
 from azure.identity import ClientAssertionCredential
 
 from core.config import load_config
+import os
 
-cfg = load_config()
-
+cfg = load_config(os.getenv("APP_CONFIG"))
 # -----------------------------
 # OIDC token exchange for Azure
 # -----------------------------

@@ -17,6 +17,8 @@ data:
       client_id: {{ .Values.backend.config.keycloak.clientId }}
       client_secret: {{ .Values.backend.config.keycloak.clientSecret }}
       temp_password: {{ .Values.backend.config.keycloak.tempPassword }}
+      cloud_client_id: {{ .Values.backend.config.keycloak.cloud_client_id }}
+      cloud_client_secret: {{ .Values.backend.config.keycloak.cloud_client_secret }}
 
     database:
       type: {{ .Values.backend.config.database.type }}
