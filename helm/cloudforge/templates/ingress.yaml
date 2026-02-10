@@ -1,0 +1,44 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "cloudforge.fullname" . }}-ingress
+  labels:
+    {{- include "cloudforge.labels" . | nindent 4 }}
+  annotations:
+    {{- range $key, $value := .Values.ingress.annotations }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- range .Values.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          # API routes → backend
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "cloudforge.fullname" . }}-backend
+                port:
+                  number: {{ .Values.backend.service.port }}
+          # All other routes → frontend
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "cloudforge.fullname" . }}-frontend
+                port:
+                  number: {{ .Values.frontend.service.port }}
+{{- end }}
