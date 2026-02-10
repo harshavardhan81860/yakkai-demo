@@ -1,0 +1,34 @@
+{{- if .Values.backend.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.backend.config.app.name }}-config
+  namespace: suyasevai
+data:
+  helm-dev.yaml: |
+    app:
+      name: {{ .Values.backend.config.app.name }}
+      environment: {{ .Values.backend.config.app.environment }}
+      version: {{ .Values.backend.config.app.version }}
+
+    keycloak:
+      realm: {{ .Values.backend.config.keycloak.realm }}
+      auth_server_url: {{ .Values.backend.config.keycloak.authServerUrl }}
+      client_id: {{ .Values.backend.config.keycloak.clientId }}
+      client_secret: {{ .Values.backend.config.keycloak.clientSecret }}
+      temp_password: {{ .Values.backend.config.keycloak.tempPassword }}
+
+    database:
+      type: {{ .Values.backend.config.database.type }}
+      host: {{ .Values.backend.config.database.host }}
+      port: {{ .Values.backend.config.database.port }}
+      name: {{ .Values.backend.config.database.name }}
+      username: {{ .Values.backend.config.database.username }}
+      password: {{ .Values.backend.config.database.password }}
+      max_connections: {{ .Values.backend.config.database.maxConnections }}
+      min_connections: {{ .Values.backend.config.database.minConnections }}
+
+    logging:
+      level: {{ .Values.backend.config.logging.level }}
+      file_path: {{ .Values.backend.config.logging.filePath }}
+{{- end }}

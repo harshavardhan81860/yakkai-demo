@@ -1,0 +1,33 @@
+.breadcrumbs {
+  font-size: 16px;
+  margin-bottom: 24px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.breadcrumbs a {
+  color: #6366f1;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.breadcrumbs a:hover {
+  color: #4f46e5;
+  background-color: rgba(99, 102, 241, 0.08);
+}
+
+.breadcrumbs .current {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.breadcrumbs .sep {
+  color: #94a3b8;
+  font-size: 18px;
+  font-weight: 300;
+}

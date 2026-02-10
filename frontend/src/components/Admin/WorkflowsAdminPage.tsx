@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Card, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Chip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Select, MenuItem, FormControl, InputLabel, IconButton, LinearProgress, Grid, Switch } from '@mui/material';
 import { Add, Delete, Edit } from '@mui/icons-material';
-import api from '../../api/client';
-import { getProviderColor, getProviderIcon } from '../../data/cloudProviders';
+import api from '../../services/api';
+import { getProviderColor, getProviderIcon } from '../../cloudProviders';
 
 const WorkflowsAdminPage = () => {
     const [workflows, setWorkflows] = useState<any[]>([]);
@@ -102,17 +102,17 @@ const WorkflowsAdminPage = () => {
                 <DialogTitle sx={{ fontWeight: 700 }}>Add Workflow</DialogTitle>
                 <DialogContent sx={{ pt: '16px !important' }}>
                     <Grid container spacing={2}>
-                        <Grid item xs={12}><TextField fullWidth label="Workflow Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></Grid>
-                        <Grid item xs={6}>
+                        <Grid size={{ xs: 12 }}><TextField fullWidth label="Workflow Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></Grid>
+                        <Grid size={{ xs: 6 }}>
                             <FormControl fullWidth><InputLabel>Provider</InputLabel>
                                 <Select value={form.provider_id} label="Provider" onChange={e => setForm({ ...form, provider_id: Number(e.target.value) })}>
                                     {providers.map(p => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
                                 </Select>
                             </FormControl>
                         </Grid>
-                        <Grid item xs={6}><TextField fullWidth label="Resource Type" value={form.resource_type} onChange={e => setForm({ ...form, resource_type: e.target.value })} helperText="Use * for all types" /></Grid>
-                        <Grid item xs={12}><TextField fullWidth label="Approval Chain JSON" value={form.approval_chain_json} onChange={e => setForm({ ...form, approval_chain_json: e.target.value })} multiline rows={3} sx={{ '& textarea': { fontFamily: 'monospace', fontSize: '0.8rem' } }} /></Grid>
-                        <Grid item xs={12}><TextField fullWidth label="Cost Thresholds JSON" value={form.cost_thresholds_json} onChange={e => setForm({ ...form, cost_thresholds_json: e.target.value })} multiline rows={2} sx={{ '& textarea': { fontFamily: 'monospace', fontSize: '0.8rem' } }} /></Grid>
+                        <Grid size={{ xs: 6 }}><TextField fullWidth label="Resource Type" value={form.resource_type} onChange={e => setForm({ ...form, resource_type: e.target.value })} helperText="Use * for all types" /></Grid>
+                        <Grid size={{ xs: 12 }}><TextField fullWidth label="Approval Chain JSON" value={form.approval_chain_json} onChange={e => setForm({ ...form, approval_chain_json: e.target.value })} multiline rows={3} sx={{ '& textarea': { fontFamily: 'monospace', fontSize: '0.8rem' } }} /></Grid>
+                        <Grid size={{ xs: 12 }}><TextField fullWidth label="Cost Thresholds JSON" value={form.cost_thresholds_json} onChange={e => setForm({ ...form, cost_thresholds_json: e.target.value })} multiline rows={2} sx={{ '& textarea': { fontFamily: 'monospace', fontSize: '0.8rem' } }} /></Grid>
                     </Grid>
                 </DialogContent>
                 <DialogActions>

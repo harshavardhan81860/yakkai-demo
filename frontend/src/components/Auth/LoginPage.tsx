@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Card, TextField, Button, Typography, Alert, CircularProgress, IconButton, InputAdornment } from '@mui/material';
 import { Visibility, VisibilityOff, Cloud } from '@mui/icons-material';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../auth/AuthProvider';
 import { useNavigate } from 'react-router-dom';
 
 const LoginPage = () => {

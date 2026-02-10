@@ -1,0 +1,183 @@
+import time
+from typing import List, Dict, Any
+
+from azure.mgmt.resource import SubscriptionClient
+from azure.mgmt.compute import ComputeManagementClient
+from azure.mgmt.containerservice import ContainerServiceClient
+from azure.core.credentials import AccessToken
+
+from core.cloud_auth.auth_provider import cloud_auth_provider
+
+# --------------------------------------------------
+# Region cache
+# --------------------------------------------------
+_REGION_CACHE: Dict[str, Dict[str, Any]] = {}
+REGION_TTL_SECONDS = 12 * 60 * 60  # 12 hours
+
+def _get_cached_regions(account_id: str):
+    cached = _REGION_CACHE.get(account_id)
+    if not cached:
+        return None
+    if cached["expiry"] < time.time():
+        _REGION_CACHE.pop(account_id, None)
+        return None
+    return cached["regions"]
+
+def _set_cached_regions(account_id: str, regions: List[str]):
+    _REGION_CACHE[account_id] = {
+        "regions": regions,
+        "expiry": time.time() + REGION_TTL_SECONDS
+    }
+
+# --------------------------------------------------
+# Token adapter for Azure SDK
+# --------------------------------------------------
+class TokenCredentialAdapter:
+    """Wraps a raw access token into Azure SDK credential"""
+    def __init__(self, token: str):
+        self._token = token
+
+    def get_token(self, *scopes, **kwargs):
+        # expires in 1 hour from now
+        return AccessToken(self._token, int(time.time()) + 3600)
+
+# --------------------------------------------------
+# Azure clients helper
+# --------------------------------------------------
+async def _get_azure_clients(account_id: str):
+    """
+    Returns compute, aks, subscription client, and primary subscription id
+    """
+    auth = await cloud_auth_provider.get_credentials(account_id)
+    token = auth["access_token"]
+    subscription_id = auth["subscription_id"]
+
+    credential = TokenCredentialAdapter(token)
+
+    compute_client = ComputeManagementClient(credential, subscription_id)
+    aks_client = ContainerServiceClient(credential, subscription_id)
+    sub_client = SubscriptionClient(credential)
+
+    return compute_client, aks_client, sub_client, subscription_id
+
+
+async def test_connection(cloud_account_id: str) -> dict:
+    """
+    Test Azure connection using given cloud account.
+    Returns success/failure message.
+    """
+    try:
+        auth = await cloud_auth_provider.get_credentials(cloud_account_id)
+        token = auth["access_token"]
+        subscription_id = auth["subscription_id"]
+
+        credential = TokenCredentialAdapter(token)
+        sub_client = SubscriptionClient(credential)
+
+        # Lightweight read-only call
+        list(sub_client.subscriptions.list())
+
+        return {"status": "success", "message": "Azure connection successful"}
+
+    except Exception as e:
+        return {"status": "failure", "message": f"Azure connection failed: {str(e)}"}
+
+# --------------------------------------------------
+# Regions (cached)
+# --------------------------------------------------
+async def get_regions(account_id: str, refresh: bool = False) -> List[str]:
+    if not refresh:
+        cached = _get_cached_regions(account_id)
+        if cached:
+            return cached
+
+    _, _, sub_client, subscription_id = await _get_azure_clients(account_id)
+
+    regions = [loc.name for loc in sub_client.subscriptions.list_locations(subscription_id)]
+    regions.sort()
+    _set_cached_regions(account_id, regions)
+    return regions
+
+# --------------------------------------------------
+# Virtual Machines
+# --------------------------------------------------
+async def get_instances(account_id: str, region: str) -> List[Dict]:
+    compute, _, _, _ = await _get_azure_clients(account_id)
+
+    results = []
+    for vm in compute.virtual_machines.list_all():
+        if vm.location.lower() != region.lower():
+            continue
+
+        results.append({
+            "vm_id": vm.id,
+            "name": vm.name,
+            "location": vm.location,
+            "size": vm.hardware_profile.vm_size if vm.hardware_profile else None,
+            "provisioning_state": vm.provisioning_state,
+        })
+    return results
+
+# --------------------------------------------------
+# VM Images (limited to publishers/offers/skus)
+# --------------------------------------------------
+async def get_images(account_id: str, region: str) -> List[Dict]:
+    compute, _, _, _ = await _get_azure_clients(account_id)
+
+    images = []
+    publishers = list(compute.virtual_machine_images.list_publishers(region))
+    for pub in publishers[:5]:  # limit for performance
+        offers = list(compute.virtual_machine_images.list_offers(region, pub.name))
+        for offer in offers[:3]:
+            skus = list(compute.virtual_machine_images.list_skus(region, pub.name, offer.name))
+            for sku in skus[:3]:
+                images.append({
+                    "publisher": pub.name,
+                    "offer": offer.name,
+                    "sku": sku.name,
+                    "region": region,
+                })
+    return images
+
+# --------------------------------------------------
+# AKS Clusters
+# --------------------------------------------------
+async def get_clusters(account_id: str, region: str) -> List[Dict]:
+    _, aks, _, _ = await _get_azure_clients(account_id)
+
+    clusters = []
+    for cluster in aks.managed_clusters.list():
+        if cluster.location.lower() != region.lower():
+            continue
+
+        clusters.append({
+            "name": cluster.name,
+            "location": cluster.location,
+            "kubernetes_version": cluster.kubernetes_version,
+            "dns_prefix": cluster.dns_prefix,
+            "provisioning_state": cluster.provisioning_state,
+        })
+    return clusters
+
+# --------------------------------------------------
+# Subscriptions
+# --------------------------------------------------
+async def list_subscriptions_for_account(account_id: str, refresh: bool = False) -> List[Dict[str, Any]]:
+    """
+    Fetch all subscriptions visible to this cloud account using the token from auth provider
+    """
+    auth = await cloud_auth_provider.get_credentials(account_id)
+    token = auth["access_token"]
+
+    credential = TokenCredentialAdapter(token)
+    sub_client = SubscriptionClient(credential)
+
+    subscriptions = []
+    for sub in sub_client.subscriptions.list():
+        subscriptions.append({
+            "subscription_id": sub.subscription_id,
+            "display_name": sub.display_name,
+            "state": sub.state.value if hasattr(sub.state, "value") else sub.state
+        })
+
+    return subscriptions

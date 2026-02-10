@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Card, Typography, Grid, LinearProgress, Chip, Avatar } from '@mui/material';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RTooltip, Legend, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
-import api from '../../api/client';
-import { getProviderColor, CLOUD_PROVIDERS } from '../../data/cloudProviders';
+import api from '../../services/api';
+import { getProviderColor, CLOUD_PROVIDERS } from '../../cloudProviders';
 
 const StatisticsPage = () => {
     const [stats, setStats] = useState<any>(null);
@@ -33,7 +33,7 @@ const StatisticsPage = () => {
             <Grid container spacing={2.5}>
                 {/* Provider Cards */}
                 {providerStats.map((p: any) => (
-                    <Grid item xs={12} sm={6} md={4} lg key={p.type}>
+                    <Grid size={{ xs: 12, sm: 6, md: 4, lg: 'grow' }} key={p.type}>
                         <Card sx={{ p: 2.5, border: `1px solid ${getProviderColor(p.type)}20`, '&:hover': { border: `1px solid ${getProviderColor(p.type)}50` }, transition: 'all 0.3s' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
                                 <Avatar sx={{ bgcolor: getProviderColor(p.type) + '20', width: 40, height: 40, fontSize: '1.2rem' }}>{CLOUD_PROVIDERS[p.type]?.icon || '☁️'}</Avatar>
@@ -59,7 +59,7 @@ const StatisticsPage = () => {
                 ))}
 
                 {/* Cost Trend */}
-                <Grid item xs={12} md={8}>
+                <Grid size={{ xs: 12, md: 8 }}>
                     <Card sx={{ p: 3 }}>
                         <Typography variant="h6" sx={{ mb: 2 }}>Multi-Cloud Cost Trend</Typography>
                         <ResponsiveContainer width="100%" height={320}>
@@ -67,7 +67,8 @@ const StatisticsPage = () => {
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                                 <XAxis dataKey="month" tick={{ fill: '#9CA3AF', fontSize: 12 }} />
                                 <YAxis tick={{ fill: '#9CA3AF', fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                                <RTooltip contentStyle={{ background: '#1a2235', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }} formatter={(v: number) => `$${v.toLocaleString()}`} />
+                                {/* @ts-ignore */}
+                                <RTooltip contentStyle={{ background: '#1a2235', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }} formatter={(v: any) => `$${v.toLocaleString()}`} />
                                 <Legend wrapperStyle={{ color: '#9CA3AF' }} />
                                 <Area type="monotone" dataKey="aws" stackId="1" fill="#FF990020" stroke="#FF9900" name="AWS" />
                                 <Area type="monotone" dataKey="azure" stackId="1" fill="#0078D420" stroke="#0078D4" name="Azure" />
@@ -80,7 +81,7 @@ const StatisticsPage = () => {
                 </Grid>
 
                 {/* Radar */}
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Card sx={{ p: 3, height: '100%' }}>
                         <Typography variant="h6" sx={{ mb: 2 }}>Provider Comparison</Typography>
                         <ResponsiveContainer width="100%" height={320}>
@@ -97,7 +98,7 @@ const StatisticsPage = () => {
                 </Grid>
 
                 {/* Category Distribution */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Card sx={{ p: 3 }}>
                         <Typography variant="h6" sx={{ mb: 2 }}>Resource Categories</Typography>
                         <ResponsiveContainer width="100%" height={280}>
@@ -105,6 +106,7 @@ const StatisticsPage = () => {
                                 <Pie data={Object.entries(stats?.category_breakdown || {}).map(([k, v]) => ({ name: k, value: v as number }))} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value">
                                     {Object.keys(stats?.category_breakdown || {}).map((_, i) => <Cell key={i} fill={['#6C63FF', '#00D9FF', '#10B981', '#F59E0B', '#EF4444', '#9C27B0'][i % 6]} />)}
                                 </Pie>
+                                {/* @ts-ignore */}
                                 <RTooltip contentStyle={{ background: '#1a2235', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }} />
                                 <Legend wrapperStyle={{ color: '#9CA3AF' }} />
                             </PieChart>
@@ -113,7 +115,7 @@ const StatisticsPage = () => {
                 </Grid>
 
                 {/* Status Pipeline */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Card sx={{ p: 3 }}>
                         <Typography variant="h6" sx={{ mb: 2 }}>Request Pipeline</Typography>
                         <ResponsiveContainer width="100%" height={280}>

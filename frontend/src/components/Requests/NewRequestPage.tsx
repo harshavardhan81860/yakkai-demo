@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Box, Card, CardContent, Typography, Stepper, Step, StepLabel, Button, Grid, Radio, RadioGroup, FormControlLabel, TextField, Select, MenuItem, FormControl, InputLabel, Chip, LinearProgress, Alert } from '@mui/material';
 import { CloudQueue, ArrowForward, ArrowBack, Send, AttachMoney } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import api from '../../api/client';
-import { CloudAccount, CatalogItem } from '../../types';
-import { CLOUD_PROVIDERS, getProviderColor, getProviderIcon, RESOURCE_CATEGORIES, CATEGORY_ICONS } from '../../data/cloudProviders';
+import api from '../../services/api';
+import { CloudAccount, CatalogItem } from '../../index';
+import { CLOUD_PROVIDERS, getProviderColor, getProviderIcon, RESOURCE_CATEGORIES, CATEGORY_ICONS } from '../../cloudProviders';
 
 const steps = ['Cloud Provider', 'Account', 'Category', 'Resource Type', 'Configuration', 'Cost Estimate', 'Justification', 'Review & Submit'];
 
@@ -95,7 +95,7 @@ const NewRequestPage = () => {
                         <Typography variant="h6" sx={{ mb: 3 }}>Select Cloud Provider</Typography>
                         <Grid container spacing={2}>
                             {Object.entries(CLOUD_PROVIDERS).map(([key, p]) => (
-                                <Grid item xs={12} sm={6} md={4} key={key}>
+                                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={key}>
                                     <Card onClick={() => setProvider(key)} sx={{
                                         p: 3, cursor: 'pointer', textAlign: 'center',
                                         border: provider === key ? `2px solid ${p.color}` : '1px solid rgba(255,255,255,0.06)',
@@ -118,7 +118,7 @@ const NewRequestPage = () => {
                         <Typography variant="h6" sx={{ mb: 3 }}>Select Cloud Account</Typography>
                         <Grid container spacing={2}>
                             {filteredAccounts.map(a => (
-                                <Grid item xs={12} sm={6} key={a.id}>
+                                <Grid size={{ xs: 12, sm: 6 }} key={a.id}>
                                     <Card onClick={() => setAccountId(a.id)} sx={{
                                         p: 2.5, cursor: 'pointer',
                                         border: accountId === a.id ? `2px solid ${getProviderColor(a.provider_type || '')}` : '1px solid rgba(255,255,255,0.06)',
@@ -144,7 +144,7 @@ const NewRequestPage = () => {
                         <Typography variant="h6" sx={{ mb: 3 }}>Select Resource Category</Typography>
                         <Grid container spacing={2}>
                             {RESOURCE_CATEGORIES.map(cat => (
-                                <Grid item xs={6} sm={4} md={3} key={cat}>
+                                <Grid size={{ xs: 6, sm: 4, md: 3 }} key={cat}>
                                     <Card onClick={() => setCategory(cat)} sx={{
                                         p: 3, cursor: 'pointer', textAlign: 'center',
                                         border: category === cat ? '2px solid #6C63FF' : '1px solid rgba(255,255,255,0.06)',
@@ -167,7 +167,7 @@ const NewRequestPage = () => {
                         <Typography variant="h6" sx={{ mb: 3 }}>Select Resource Type</Typography>
                         <Grid container spacing={2}>
                             {filteredCatalog.map(c => (
-                                <Grid item xs={12} sm={6} md={4} key={c.id}>
+                                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={c.id}>
                                     <Card onClick={() => setResourceType(c.resource_type)} sx={{
                                         p: 2.5, cursor: 'pointer',
                                         border: resourceType === c.resource_type ? '2px solid #6C63FF' : '1px solid rgba(255,255,255,0.06)',
@@ -190,7 +190,7 @@ const NewRequestPage = () => {
                         <Typography variant="h6" sx={{ mb: 3 }}>Configure {resourceType}</Typography>
                         <Grid container spacing={2.5}>
                             {configFields.map((f: any) => (
-                                <Grid item xs={12} sm={6} key={f.name}>
+                                <Grid size={{ xs: 12, sm: 6 }} key={f.name}>
                                     {f.type === 'select' ? (
                                         <FormControl fullWidth>
                                             <InputLabel>{f.label}</InputLabel>
@@ -224,9 +224,9 @@ const NewRequestPage = () => {
                                 </Box>
                             </Box>
                             <Grid container spacing={2}>
-                                <Grid item xs={4}><Typography variant="caption" color="text.secondary">Compute</Typography><Typography variant="body1" sx={{ fontWeight: 700 }}>${(estimatedCost * 0.7).toFixed(2)}</Typography></Grid>
-                                <Grid item xs={4}><Typography variant="caption" color="text.secondary">Storage</Typography><Typography variant="body1" sx={{ fontWeight: 700 }}>${(estimatedCost * 0.2).toFixed(2)}</Typography></Grid>
-                                <Grid item xs={4}><Typography variant="caption" color="text.secondary">Network</Typography><Typography variant="body1" sx={{ fontWeight: 700 }}>${(estimatedCost * 0.1).toFixed(2)}</Typography></Grid>
+                                <Grid size={{ xs: 4 }}><Typography variant="caption" color="text.secondary">Compute</Typography><Typography variant="body1" sx={{ fontWeight: 700 }}>${(estimatedCost * 0.7).toFixed(2)}</Typography></Grid>
+                                <Grid size={{ xs: 4 }}><Typography variant="caption" color="text.secondary">Storage</Typography><Typography variant="body1" sx={{ fontWeight: 700 }}>${(estimatedCost * 0.2).toFixed(2)}</Typography></Grid>
+                                <Grid size={{ xs: 4 }}><Typography variant="caption" color="text.secondary">Network</Typography><Typography variant="body1" sx={{ fontWeight: 700 }}>${(estimatedCost * 0.1).toFixed(2)}</Typography></Grid>
                             </Grid>
                         </Card>
                     </Box>
@@ -264,14 +264,14 @@ const NewRequestPage = () => {
                                 { label: 'Est. Monthly Cost', value: <Typography sx={{ fontWeight: 800, color: '#10B981' }}>${estimatedCost.toFixed(2)}</Typography> },
                                 { label: 'Duration', value: duration },
                             ].map((item, i) => (
-                                <Grid item xs={12} sm={6} key={i}>
+                                <Grid size={{ xs: 12, sm: 6 }} key={i}>
                                     <Box sx={{ p: 2, borderRadius: 2, border: '1px solid rgba(255,255,255,0.06)', bgcolor: 'rgba(0,0,0,0.2)' }}>
                                         <Typography variant="caption" color="text.secondary">{item.label}</Typography>
                                         <Typography variant="body1" sx={{ fontWeight: 600 }}>{item.value}</Typography>
                                     </Box>
                                 </Grid>
                             ))}
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <Box sx={{ p: 2, borderRadius: 2, border: '1px solid rgba(255,255,255,0.06)', bgcolor: 'rgba(0,0,0,0.2)' }}>
                                     <Typography variant="caption" color="text.secondary">Configuration</Typography>
                                     <Box sx={{ fontFamily: 'monospace', fontSize: '0.8rem', mt: 0.5 }}><pre style={{ margin: 0, color: '#9CA3AF' }}>{JSON.stringify(config, null, 2)}</pre></Box>

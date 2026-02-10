@@ -1,0 +1,55 @@
+{{- if .Values.keycloak.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.keycloak.name }}
+  labels:
+    app: {{ .Values.keycloak.name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.keycloak.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.keycloak.name }}
+    spec:
+      containers:
+        - name: {{ .Values.keycloak.name }}
+          image: {{ .Values.keycloak.image }}
+          args:
+            - start-dev
+          ports:
+            - containerPort: {{ .Values.keycloak.port }}
+          resources:
+            {{- toYaml .Values.keycloak.resources | nindent 12 }}
+
+          env:
+            # ===== Admin =====
+            - name: KEYCLOAK_ADMIN
+              value: {{ .Values.keycloak.adminUser | quote }}
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              value: {{ .Values.keycloak.adminPassword | quote }}
+            - name: KC_HOSTNAME_URL
+              value: {{ .Values.keycloak.hostdetails.hosturl | quote }}
+            - name: KC_HOSTNAME_ADMIN_URL
+              value: {{ .Values.keycloak.hostdetails.hosturl | quote }}
+            - name: KC_PROXY
+              value: "edge"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            # ===== External DB =====
+            - name: KC_DB
+              value: {{ .Values.keycloak.database.type | quote }}
+            - name: KC_DB_URL_HOST
+              value: {{ .Values.keycloak.database.host | quote }}
+            - name: KC_DB_URL_PORT
+              value: {{ .Values.keycloak.database.port | quote }}
+            - name: KC_DB_URL_DATABASE
+              value: {{ .Values.keycloak.database.name | quote }}
+            - name: KC_DB_USERNAME
+              value: {{ .Values.keycloak.database.user | quote }}
+            - name: KC_DB_PASSWORD
+              value: {{ .Values.keycloak.database.password | quote }}
+{{- end }}

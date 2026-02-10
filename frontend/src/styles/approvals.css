@@ -1,0 +1,35 @@
+/* ===== Approvals Layout ===== */
+
+.tab-nav {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 8px;
+}
+
+/* individual tab */
+.tab-link {
+  padding: 8px 14px;
+  text-decoration: none;
+  font-weight: 500;
+  color: #374151;
+  border-radius: 6px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+/* hover */
+.tab-link:hover {
+  background: #f3f4f6;
+}
+
+/* active tab */
+.tab-link.active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.page-container {
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}

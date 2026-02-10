@@ -1,0 +1,26 @@
+
+app:
+  name: "cloud-selfservice-backend"
+  environment: "docker-dev"
+  version: "v1"
+
+keycloak:
+  realm: "testing-local"
+  auth_server_url: "http://my-keycloak:8080"
+  client_id: "backend-local-testing"
+  client_secret: "c1wFley7vjHMdW3oxazAVpvL6bH8xplN"
+  temp_password: "Welcome@123"
+
+database:
+  type: "postgres"
+  host: "postgres-db"
+  port: 5432
+  name: "myappdb"
+  username: "postgres"
+  password: "postgres"
+  max_connections: 10
+  min_connections: 2
+
+logging:
+  level: "INFO"
+  file_path: "logs/app.log"

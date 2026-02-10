@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Box, Card, CardContent, Typography, Grid, Chip, Avatar, LinearProgress, IconButton, Tooltip, Button } from '@mui/material';
 import { TrendingUp, CloudQueue, Storage, People, Assignment, CheckCircle, Speed, ArrowForward, Refresh } from '@mui/icons-material';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, Tooltip as RTooltip, Legend, Area, AreaChart } from 'recharts';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../auth/AuthProvider';
 import { useNavigate } from 'react-router-dom';
-import api from '../../api/client';
-import { DashboardStats } from '../../types';
-import { getProviderColor, getProviderIcon, getStatusLabel, STATUS_COLORS, CLOUD_PROVIDERS } from '../../data/cloudProviders';
+import api from '../../services/api';
+import { DashboardStats } from '../../index';
+import { getProviderColor, getProviderIcon, getStatusLabel, STATUS_COLORS, CLOUD_PROVIDERS } from '../../cloudProviders';
 
 const DashboardPage = () => {
     const { user } = useAuth();
@@ -53,7 +53,7 @@ const DashboardPage = () => {
             <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Box>
                     <Typography variant="h4" sx={{ fontWeight: 800 }}>
-                        Welcome back, <span style={{ background: 'linear-gradient(135deg,#6C63FF,#00D9FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{user?.name?.split(' ')[0]}</span>
+                        Welcome back, <span style={{ background: 'linear-gradient(135deg,#6C63FF,#00D9FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{user?.username?.split(' ')[0] || user?.first_name}</span>
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                         Here's your multi-cloud infrastructure overview
@@ -70,7 +70,7 @@ const DashboardPage = () => {
             {/* Stat Cards */}
             <Grid container spacing={2.5} sx={{ mb: 3 }}>
                 {statCards.map((card, i) => (
-                    <Grid item xs={12} sm={6} md={3} key={i}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }} key={i}>
                         <Card sx={{ background: card.gradient, border: '1px solid rgba(255,255,255,0.06)' }}>
                             <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 2.5, '&:last-child': { pb: 2.5 } }}>
                                 <Avatar sx={{ bgcolor: card.color + '20', color: card.color, width: 48, height: 48 }}>{card.icon}</Avatar>
@@ -86,7 +86,7 @@ const DashboardPage = () => {
 
             <Grid container spacing={2.5}>
                 {/* Cloud Provider Overview */}
-                <Grid item xs={12} md={8}>
+                <Grid size={{ xs: 12, md: 8 }}>
                     <Card sx={{ p: 3 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                             <Typography variant="h6">Cloud Provider Overview</Typography>
@@ -94,7 +94,7 @@ const DashboardPage = () => {
                         </Box>
                         <Grid container spacing={2}>
                             {Object.entries(stats.providers_breakdown).map(([key, val]) => (
-                                <Grid item xs={12} sm={6} lg={4} key={key}>
+                                <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={key}>
                                     <Box sx={{ p: 2, borderRadius: 2, border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)', '&:hover': { border: `1px solid ${getProviderColor(key)}40`, background: `${getProviderColor(key)}08` }, transition: 'all 0.2s' }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
                                             <Box sx={{ fontSize: '1.4rem' }}>{getProviderIcon(key)}</Box>
@@ -119,7 +119,7 @@ const DashboardPage = () => {
                 </Grid>
 
                 {/* Resource Distribution Pie */}
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Card sx={{ p: 3, height: '100%' }}>
                         <Typography variant="h6" sx={{ mb: 2 }}>Resource Distribution</Typography>
                         {providerPieData.length > 0 ? (
@@ -141,15 +141,15 @@ const DashboardPage = () => {
                 </Grid>
 
                 {/* Cost Trend Chart */}
-                <Grid item xs={12} md={8}>
+                <Grid size={{ xs: 12, md: 8 }}>
                     <Card sx={{ p: 3 }}>
                         <Typography variant="h6" sx={{ mb: 2 }}>Cost Trend (6 Months)</Typography>
                         <ResponsiveContainer width="100%" height={280}>
                             <AreaChart data={stats.cost_trend}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                                 <XAxis dataKey="month" tick={{ fill: '#9CA3AF', fontSize: 12 }} />
-                                <YAxis tick={{ fill: '#9CA3AF', fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                                <RTooltip contentStyle={{ background: '#1a2235', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }} formatter={(v: number) => `$${v.toLocaleString()}`} />
+                                <YAxis tick={{ fill: '#9CA3AF', fontSize: 12 }} tickFormatter={(v: any) => `$${((v || 0) / 1000).toFixed(0)}k`} />
+                                <RTooltip contentStyle={{ background: '#1a2235', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }} formatter={(v: any) => `$${v.toLocaleString()}`} />
                                 <Legend wrapperStyle={{ color: '#9CA3AF' }} />
                                 <Area type="monotone" dataKey="aws" stackId="1" fill="#FF990030" stroke="#FF9900" name="AWS" />
                                 <Area type="monotone" dataKey="azure" stackId="1" fill="#0078D430" stroke="#0078D4" name="Azure" />
@@ -162,7 +162,7 @@ const DashboardPage = () => {
                 </Grid>
 
                 {/* Recent Requests */}
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Card sx={{ p: 3, height: '100%' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                             <Typography variant="h6">Recent Requests</Typography>
@@ -182,7 +182,7 @@ const DashboardPage = () => {
                 </Grid>
 
                 {/* Request Status Breakdown */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Card sx={{ p: 3 }}>
                         <Typography variant="h6" sx={{ mb: 2 }}>Request Status</Typography>
                         <ResponsiveContainer width="100%" height={250}>
@@ -200,14 +200,14 @@ const DashboardPage = () => {
                 </Grid>
 
                 {/* Category Breakdown */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Card sx={{ p: 3 }}>
                         <Typography variant="h6" sx={{ mb: 2 }}>Resources by Category</Typography>
                         <ResponsiveContainer width="100%" height={250}>
                             <BarChart data={categoryData} layout="vertical">
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                                 <XAxis type="number" tick={{ fill: '#9CA3AF', fontSize: 12 }} />
-                                <YAxis dataKey="name" type="category" width={80} tick={{ fill: '#9CA3AF', fontSize: 12, textTransform: 'capitalize' }} />
+                                <YAxis dataKey="name" type="category" width={80} tick={{ fill: '#9CA3AF', fontSize: 12 }} />
                                 <RTooltip contentStyle={{ background: '#1a2235', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }} />
                                 <Bar dataKey="count" fill="#6C63FF" radius={[0, 6, 6, 0]} />
                             </BarChart>

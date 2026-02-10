@@ -1,0 +1,12 @@
+class RESOURCE:
+    USER = "USER"
+    TENANT = "TENANT"
+    ROLE = "ROLE"
+    GROUP = "GROUP"
+
+class ACTION:
+    CREATE = "CREATE"
+    DELETE = "DELETE"
+    UPDATE = "UPDATE"
+    ACTIVATE = "ACTIVATE"
+    DEACTIVATE = "DEACTIVATE"

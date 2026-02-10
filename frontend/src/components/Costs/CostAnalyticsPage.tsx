@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Card, Typography, Grid, LinearProgress } from '@mui/material';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RTooltip, Legend, Cell } from 'recharts';
-import api from '../../api/client';
-import { CLOUD_PROVIDERS, getProviderColor } from '../../data/cloudProviders';
+import api from '../../services/api';
+import { CLOUD_PROVIDERS, getProviderColor } from '../../cloudProviders';
 
 const CostAnalyticsPage = () => {
     const [costData, setCostData] = useState<any>(null);
@@ -39,7 +39,7 @@ const CostAnalyticsPage = () => {
                     { label: 'Quarterly Forecast', value: `$${forecast.quarterly_forecast?.toLocaleString()}`, color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
                     { label: 'Annual Forecast', value: `$${forecast.annual_forecast?.toLocaleString()}`, color: '#6C63FF', bg: 'rgba(108,99,255,0.1)' },
                 ].map((c, i) => (
-                    <Grid item xs={6} md={3} key={i}>
+                    <Grid size={{ xs: 6, md: 3 }} key={i}>
                         <Card sx={{ p: 2.5, textAlign: 'center', background: `linear-gradient(135deg,${c.bg},transparent)` }}>
                             <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{c.label}</Typography>
                             <Typography variant="h5" sx={{ fontWeight: 800, color: c.color, mt: 0.5 }}>{c.value}</Typography>
@@ -50,15 +50,15 @@ const CostAnalyticsPage = () => {
 
             <Grid container spacing={2.5}>
                 {/* Cost Trend */}
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                     <Card sx={{ p: 3 }}>
                         <Typography variant="h6" sx={{ mb: 2 }}>6-Month Cost Trend</Typography>
                         <ResponsiveContainer width="100%" height={320}>
                             <AreaChart data={costData?.trend || []}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                                 <XAxis dataKey="month" tick={{ fill: '#9CA3AF', fontSize: 12 }} />
-                                <YAxis tick={{ fill: '#9CA3AF', fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                                <RTooltip contentStyle={{ background: '#1a2235', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }} formatter={(v: number) => `$${v.toLocaleString()}`} />
+                                <YAxis tick={{ fill: '#9CA3AF', fontSize: 12 }} tickFormatter={(v: any) => `$${((v || 0) / 1000).toFixed(0)}k`} />
+                                <RTooltip contentStyle={{ background: '#1a2235', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }} formatter={(v: any) => `$${v.toLocaleString()}`} />
                                 <Legend />
                                 {Object.keys(CLOUD_PROVIDERS).map(p => (
                                     <Area key={p} type="monotone" dataKey={p} stackId="1" stroke={getProviderColor(p)} fill={getProviderColor(p) + '20'} name={p.toUpperCase()} />
@@ -69,15 +69,15 @@ const CostAnalyticsPage = () => {
                 </Grid>
 
                 {/* Cross-cloud Comparison */}
-                <Grid item xs={12} md={7}>
+                <Grid size={{ xs: 12, md: 7 }}>
                     <Card sx={{ p: 3 }}>
                         <Typography variant="h6" sx={{ mb: 2 }}>Cross-Cloud Cost Comparison</Typography>
                         <ResponsiveContainer width="100%" height={300}>
                             <BarChart data={comparisonData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                                 <XAxis dataKey="category" tick={{ fill: '#9CA3AF', fontSize: 12 }} />
-                                <YAxis tick={{ fill: '#9CA3AF', fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                                <RTooltip contentStyle={{ background: '#1a2235', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }} formatter={(v: number) => `$${v.toLocaleString()}`} />
+                                <YAxis tick={{ fill: '#9CA3AF', fontSize: 12 }} tickFormatter={(v: number) => `$${((v || 0) / 1000).toFixed(0)}k`} />
+                                <RTooltip contentStyle={{ background: '#1a2235', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#fff' }} formatter={(v: any) => `$${v.toLocaleString()}`} />
                                 <Legend />
                                 {Object.keys(CLOUD_PROVIDERS).map(p => (
                                     <Bar key={p} dataKey={p} fill={getProviderColor(p)} name={p.toUpperCase()} radius={[4, 4, 0, 0]} />
@@ -88,7 +88,7 @@ const CostAnalyticsPage = () => {
                 </Grid>
 
                 {/* Optimization Recommendations */}
-                <Grid item xs={12} md={5}>
+                <Grid size={{ xs: 12, md: 5 }}>
                     <Card sx={{ p: 3, height: '100%' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                             <Typography variant="h6">Optimization Insights</Typography>
@@ -108,12 +108,12 @@ const CostAnalyticsPage = () => {
                 </Grid>
 
                 {/* Per-provider forecast */}
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                     <Card sx={{ p: 3 }}>
                         <Typography variant="h6" sx={{ mb: 2 }}>Provider Forecast Breakdown</Typography>
                         <Grid container spacing={2}>
                             {forecast?.by_provider && Object.entries(forecast.by_provider).map(([key, val]: [string, any]) => (
-                                <Grid item xs={6} sm={4} md key={key}>
+                                <Grid size={{ xs: 6, sm: 4, md: "grow" }} key={key}>
                                     <Box sx={{ p: 2, borderRadius: 2, border: `1px solid ${getProviderColor(key)}20`, textAlign: 'center' }}>
                                         <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase' }}>{key}</Typography>
                                         <Typography variant="body1" sx={{ fontWeight: 700, color: getProviderColor(key) }}>${val.current?.toLocaleString()}</Typography>

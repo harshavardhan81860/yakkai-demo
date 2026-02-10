@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Box, Card, Typography, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField, MenuItem, Select, FormControl, InputLabel, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, LinearProgress } from '@mui/material';
 import { Visibility, Delete, FilterList, Add } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import api from '../../api/client';
-import { ResourceRequest } from '../../types';
-import { getProviderColor, getProviderIcon, getStatusLabel, STATUS_COLORS } from '../../data/cloudProviders';
+import api from '../../services/api';
+import { ResourceRequest } from '../../index';
+import { getProviderColor, getProviderIcon, getStatusLabel, STATUS_COLORS } from '../../cloudProviders';
 
 const RequestsListPage = () => {
     const [requests, setRequests] = useState<ResourceRequest[]>([]);

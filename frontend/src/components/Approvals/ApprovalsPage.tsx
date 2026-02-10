@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Card, Typography, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, LinearProgress, Tabs, Tab, Grid, Avatar } from '@mui/material';
 import { CheckCircle, Cancel, Visibility } from '@mui/icons-material';
-import api from '../../api/client';
-import { Approval } from '../../types';
-import { getProviderColor, getProviderIcon, getStatusLabel, STATUS_COLORS } from '../../data/cloudProviders';
+import api from '../../services/api';
+import { Approval } from '../../index';
+import { getProviderColor, getProviderIcon, getStatusLabel, STATUS_COLORS } from '../../cloudProviders';
 
 const ApprovalsPage = () => {
     const [tab, setTab] = useState(0);
@@ -94,25 +94,25 @@ const ApprovalsPage = () => {
             </Box>
 
             <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={6} sm={3}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                     <Card sx={{ p: 2, textAlign: 'center', background: 'linear-gradient(135deg,rgba(255,152,0,0.1),rgba(255,152,0,0.03))' }}>
                         <Typography variant="h4" sx={{ fontWeight: 800, color: '#FF9800' }}>{pending.length}</Typography>
                         <Typography variant="caption" color="text.secondary">Pending</Typography>
                     </Card>
                 </Grid>
-                <Grid item xs={6} sm={3}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                     <Card sx={{ p: 2, textAlign: 'center', background: 'linear-gradient(135deg,rgba(16,185,129,0.1),rgba(16,185,129,0.03))' }}>
                         <Typography variant="h4" sx={{ fontWeight: 800, color: '#10B981' }}>{history.filter(h => h.status === 'approved').length}</Typography>
                         <Typography variant="caption" color="text.secondary">Approved</Typography>
                     </Card>
                 </Grid>
-                <Grid item xs={6} sm={3}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                     <Card sx={{ p: 2, textAlign: 'center', background: 'linear-gradient(135deg,rgba(239,68,68,0.1),rgba(239,68,68,0.03))' }}>
                         <Typography variant="h4" sx={{ fontWeight: 800, color: '#EF4444' }}>{history.filter(h => h.status === 'rejected').length}</Typography>
                         <Typography variant="caption" color="text.secondary">Rejected</Typography>
                     </Card>
                 </Grid>
-                <Grid item xs={6} sm={3}>
+                <Grid size={{ xs: 6, sm: 3 }}>
                     <Card sx={{ p: 2, textAlign: 'center', background: 'linear-gradient(135deg,rgba(108,99,255,0.1),rgba(108,99,255,0.03))' }}>
                         <Typography variant="h4" sx={{ fontWeight: 800, color: '#6C63FF' }}>{pending.length + history.length}</Typography>
                         <Typography variant="caption" color="text.secondary">Total</Typography>

@@ -1,0 +1,42 @@
+{{- if and .Values.ingress.enabled .Values.frontend.enabled }}
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: yakkai-root-ingress
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.ingress.className }}
+
+    # cert-manager
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+
+    # Force HTTPS
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+
+    # 🔁 Redirect / → frontend path
+    nginx.ingress.kubernetes.io/permanent-redirect: {{ .Values.ingress.paths.frontend }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+
+  tls:
+    - hosts:
+        {{- range .Values.ingress.hosts }}
+        - {{ .host }}
+        {{- end }}
+      secretName: {{ .Values.ingress.tlsSecretName | quote }}
+
+  rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $.Values.frontend.name }}
+                port:
+                  number: {{ $.Values.frontend.service.port }}
+    {{- end }}
+
+{{- end }}

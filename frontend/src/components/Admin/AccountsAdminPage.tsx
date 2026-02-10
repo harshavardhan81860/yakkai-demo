@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Card, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Chip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Select, MenuItem, FormControl, InputLabel, IconButton, LinearProgress, Grid } from '@mui/material';
 import { Add, Edit, Delete, Sync, CloudQueue } from '@mui/icons-material';
-import api from '../../api/client';
-import { getProviderColor, getProviderIcon, STATUS_COLORS } from '../../data/cloudProviders';
+import api from '../../services/api';
+import { getProviderColor, getProviderIcon, STATUS_COLORS } from '../../cloudProviders';
 
 const AccountsAdminPage = () => {
     const [accounts, setAccounts] = useState<any[]>([]);
@@ -58,7 +58,7 @@ const AccountsAdminPage = () => {
                     { label: 'Total Resources', value: totalResources, color: '#00D9FF' },
                     { label: 'Monthly Spend', value: `$${totalCost.toLocaleString()}`, color: '#F59E0B' },
                 ].map((s, i) => (
-                    <Grid item xs={6} md={3} key={i}>
+                    <Grid size={{ xs: 6, md: 3 }} key={i}>
                         <Card sx={{ p: 2, textAlign: 'center', background: `linear-gradient(135deg,${s.color}15,transparent)` }}>
                             <Typography variant="h4" sx={{ fontWeight: 800, color: s.color }}>{s.value}</Typography>
                             <Typography variant="caption" color="text.secondary">{s.label}</Typography>
@@ -114,16 +114,16 @@ const AccountsAdminPage = () => {
                 <DialogTitle sx={{ fontWeight: 700 }}>Add Cloud Account</DialogTitle>
                 <DialogContent sx={{ pt: '16px !important' }}>
                     <Grid container spacing={2}>
-                        <Grid item xs={12}><TextField fullWidth label="Account Name" value={form.account_name} onChange={e => setForm({ ...form, account_name: e.target.value })} /></Grid>
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}><TextField fullWidth label="Account Name" value={form.account_name} onChange={e => setForm({ ...form, account_name: e.target.value })} /></Grid>
+                        <Grid size={{ xs: 12 }}>
                             <FormControl fullWidth><InputLabel>Provider</InputLabel>
                                 <Select value={form.provider_id} label="Provider" onChange={e => setForm({ ...form, provider_id: Number(e.target.value) })}>
                                     {providers.map(p => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
                                 </Select>
                             </FormControl>
                         </Grid>
-                        <Grid item xs={12}><TextField fullWidth label="Account Identifier" value={form.account_identifier} onChange={e => setForm({ ...form, account_identifier: e.target.value })} /></Grid>
-                        <Grid item xs={12}><TextField fullWidth label="Region" value={form.region} onChange={e => setForm({ ...form, region: e.target.value })} /></Grid>
+                        <Grid size={{ xs: 12 }}><TextField fullWidth label="Account Identifier" value={form.account_identifier} onChange={e => setForm({ ...form, account_identifier: e.target.value })} /></Grid>
+                        <Grid size={{ xs: 12 }}><TextField fullWidth label="Region" value={form.region} onChange={e => setForm({ ...form, region: e.target.value })} /></Grid>
                     </Grid>
                 </DialogContent>
                 <DialogActions>

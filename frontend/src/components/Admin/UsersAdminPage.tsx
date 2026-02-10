@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Card, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Chip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Select, MenuItem, FormControl, InputLabel, IconButton, LinearProgress, Grid, Avatar, Switch, FormControlLabel } from '@mui/material';
 import { Add, Edit, Delete, PersonAdd } from '@mui/icons-material';
-import api from '../../api/client';
+import api from '../../services/api';
 
 const UsersAdminPage = () => {
     const [users, setUsers] = useState<any[]>([]);
@@ -62,8 +62,8 @@ const UsersAdminPage = () => {
                     { label: 'Active', value: users.filter(u => u.is_active).length, color: '#10B981' },
                     { label: 'Admins', value: users.filter(u => u.role?.name === 'admin').length, color: '#F59E0B' },
                 ].map((s, i) => (
-                    <Grid item xs={4} key={i}>
-                        <Card sx={{ p: 2, textAlign: 'center', background: `linear-gradient(135deg,${s.color}15,transparent)` }}>
+                    <Grid size={{ xs: 12 }} key={i}>
+                        <Card sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: `linear-gradient(135deg,${s.color}15,transparent)` }}>
                             <Typography variant="h4" sx={{ fontWeight: 800, color: s.color }}>{s.value}</Typography>
                             <Typography variant="caption" color="text.secondary">{s.label}</Typography>
                         </Card>
@@ -114,10 +114,10 @@ const UsersAdminPage = () => {
                 <DialogTitle sx={{ fontWeight: 700 }}>{editUser ? 'Edit User' : 'Add New User'}</DialogTitle>
                 <DialogContent sx={{ pt: '16px !important' }}>
                     <Grid container spacing={2}>
-                        <Grid item xs={12}><TextField fullWidth label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Grid>
-                        <Grid item xs={12}><TextField fullWidth label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Grid>
-                        <Grid item xs={12}><TextField fullWidth label="Password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} helperText={editUser ? 'Leave blank to keep current password' : ''} /></Grid>
-                        <Grid item xs={6}>
+                        <Grid size={{ xs: 12 }}><TextField fullWidth label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Grid>
+                        <Grid size={{ xs: 12 }}><TextField fullWidth label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Grid>
+                        <Grid size={{ xs: 12 }}><TextField fullWidth label="Password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} helperText={editUser ? 'Leave blank to keep current password' : ''} /></Grid>
+                        <Grid size={{ xs: 6 }}>
                             <FormControl fullWidth>
                                 <InputLabel>Role</InputLabel>
                                 <Select value={form.role_id} label="Role" onChange={(e) => setForm({ ...form, role_id: Number(e.target.value) })}>
@@ -125,7 +125,7 @@ const UsersAdminPage = () => {
                                 </Select>
                             </FormControl>
                         </Grid>
-                        <Grid item xs={6}>
+                        <Grid size={{ xs: 6 }}>
                             <FormControlLabel control={<Switch checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />} label="Active" />
                         </Grid>
                     </Grid>
