@@ -80,11 +80,10 @@ class UserRepository:
         result = await session.execute(stmt)
         return result.scalars().all()
 
-    # async def get_roles_by_user(self, session: AsyncSession, user_id: int):
-    #     stmt = (
-    #         select(Role)
-    #         .join(UserRole, Role.id == UserRole.role_id)
-    #         .where(UserRole.user_id == user_id)
-    #     )
-    #     result = await session.execute(stmt)
-    #     return result.scalars().all()
+    async def get_by_username(self, session: AsyncSession, username: str) -> Optional[User]:
+        """
+        Get user by username.
+        """
+        stmt = select(User).where(User.username == username)
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()

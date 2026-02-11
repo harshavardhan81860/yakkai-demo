@@ -205,39 +205,6 @@ class ApprovalRequestRepository:
         ]
 
 
-    async def get_user_id(self, session: AsyncSession, username: str) -> int:
-        stmt = select(User.id).where(User.username == username)
-        result = await session.execute(stmt)
-        user_id = result.scalar_one_or_none()
-        if user_id is None:
-            raise HTTPException(status_code=404, detail=f"User '{username}' not found")
-        return user_id
-
-    async def get_user_roles(self, session: AsyncSession, username: str):
-        user_id = await self.get_user_id(session, username)
-
-        stmt = (
-            select(Role.name)
-            .join(RoleAssignment, RoleAssignment.role_id == Role.id)
-            .where(RoleAssignment.user_id == user_id)
-        )
-
-        result = await session.execute(stmt)
-        return {r[0] for r in result.all()}
-
-    async def get_user_groups(self, session: AsyncSession, username: str):
-        user_id = await self.get_user_id(session, username)
-
-        stmt = (
-            select(Group.name)
-            .join(GroupAssignment, GroupAssignment.group_id == Group.id)
-            .where(GroupAssignment.user_id == user_id)
-        )
-
-        result = await session.execute(stmt)
-        return {r[0] for r in result.all()}
-
-
     # ---------------------------
     # Pending approvals (eligibility check)
     # ---------------------------
@@ -253,9 +220,24 @@ class ApprovalRequestRepository:
         if not exclude_user:
             return [orm_to_dict(r) for r in requests]
 
-        # fetch user context ONCE
-        user_roles = set(await self.get_user_roles(session, exclude_user))
-        user_groups = set(await self.get_user_groups(session, exclude_user))
+        # ✅ NEW: Use UserService to get complete access mappings
+        from services.user_service import UserService
+        from repositories.user_repository import UserRepository
+        
+        user_service = UserService()
+        user_repo = UserRepository()
+        
+        # Get user by username
+        user = await user_repo.get_by_username(session, exclude_user)
+        if not user:
+            return []
+        
+        # Get complete access mappings (includes inherited roles!)
+        access_mappings = await user_service.get_user_access_mappings(session, str(user.id))
+        
+        # Extract role names and group names (both DIRECT and INHERITED)
+        user_roles = {role["name"] for role in access_mappings["roles"]}
+        user_groups = {group["name"] for group in access_mappings["groups"]}
 
         filtered = []
 
@@ -278,6 +260,8 @@ class ApprovalRequestRepository:
                 continue
 
             eligible = False
+            
+            # 1️⃣ Check template approvers
             for a in current_level["approvers"]:
                 if a["approver_type"] == "USER" and a["approver_value"] == exclude_user:
                     eligible = True
@@ -288,11 +272,12 @@ class ApprovalRequestRepository:
                 if a["approver_type"] == "GROUP" and a["approver_value"] in user_groups:
                     eligible = True
                     break
+            
             if eligible:
                 filtered.append(req)
                 continue
 
-            # 2️⃣ EXPLICIT approvers (current level only)
+            # 2️⃣ Check explicit approvers (current level only)
             explicit_approvers = await self.get_explicit_approvers(session, req.id)
 
             for ea in explicit_approvers:
@@ -315,23 +300,49 @@ class ApprovalRequestRepository:
 
     # Fetch all usernames assigned to a role
     async def get_users_for_role(
-            self,
-            session: AsyncSession,
-            role_name: str
-        ):
-            stmt = select(Role.id).where(Role.name == role_name)
-            result = await session.execute(stmt)
-            role_id = result.scalar_one_or_none()
+        self,
+        session: AsyncSession,
+        role_name: str
+    ):
+        from services.user_service import UserService
+        
+        # Get role ID
+        stmt = select(Role.id).where(Role.name == role_name)
+        result = await session.execute(stmt)
+        role_id = result.scalar_one_or_none()
 
-            if not role_id:
-                return []
+        if not role_id:
+            return []
 
-            stmt = select(RoleAssignment.user_id).where(
-                RoleAssignment.role_id == role_id
+        # Get users with DIRECT role assignments
+        stmt = select(RoleAssignment.user_id).where(
+            RoleAssignment.role_id == role_id
+        )
+        result = await session.execute(stmt)
+        direct_users = {str(r[0]) for r in result.all()}
+
+        # Get users who have this role through GROUP inheritance
+        # We need to check all users in groups that have this role
+        from models.group_role_assignment import GroupRoleAssignment
+        
+        # Get groups that have this role
+        stmt = select(GroupRoleAssignment.group_id).where(
+            GroupRoleAssignment.role_id == role_id
+        )
+        result = await session.execute(stmt)
+        group_ids = [r[0] for r in result.all()]
+
+        inherited_users = set()
+        if group_ids:
+            # Get all users in these groups
+            stmt = select(GroupAssignment.user_id).where(
+                GroupAssignment.group_id.in_(group_ids)
             )
             result = await session.execute(stmt)
+            inherited_users = {str(r[0]) for r in result.all()}
 
-            return [str(r[0]) for r in result.all()]
+        # Return combined set as list
+        return list(direct_users | inherited_users)
 
     # Fetch all usernames assigned to a group
     async def get_users_for_group(
@@ -357,28 +368,55 @@ class ApprovalRequestRepository:
         
 
     async def is_user_eligible_for_level(self, session, req, username: str) -> bool:
-            template_levels = await self.get_template_levels(
-                session, req.template_id, req.template_version
-            )
-            explicit = await self.get_explicit_approvers(session, req.id)
+        # ✅ NEW: Use UserService for complete access mappings
+        from services.user_service import UserService
+        from repositories.user_repository import UserRepository
+        
+        user_service = UserService()
+        user_repo = UserRepository()
+        
+        # Get user by username
+        user = await user_repo.get_by_username(session, username)
+        if not user:
+            return False
+        
+        # Get complete access mappings (includes inherited roles!)
+        access_mappings = await user_service.get_user_access_mappings(session, str(user.id))
+        
+        # Extract role names and group names (both DIRECT and INHERITED)
+        user_roles = {role["name"] for role in access_mappings["roles"]}
+        user_groups = {group["name"] for group in access_mappings["groups"]}
 
-            user_roles = set(await self.get_user_roles(session, username))
-            user_groups = set(await self.get_user_groups(session, username))
+        template_levels = await self.get_template_levels(
+            session, req.template_id, req.template_version
+        )
+        explicit = await self.get_explicit_approvers(session, req.id)
 
-            for level in template_levels:
-                if level["level_order"] != req.current_level:
+        for level in template_levels:
+            if level["level_order"] != req.current_level:
+                continue
+
+            # Check template approvers
+            for a in level["approvers"]:
+                if a["approver_type"] == "USER" and a["approver_value"] == username:
+                    return True
+                if a["approver_type"] == "ROLE" and a["approver_value"] in user_roles:
+                    return True
+                if a["approver_type"] == "GROUP" and a["approver_value"] in user_groups:
+                    return True
+
+            # Check explicit approvers
+            for ea in explicit:
+                if ea.level_order != req.current_level:
                     continue
+                if ea.approver_type == "USER" and ea.approver_value == username:
+                    return True
+                if ea.approver_type == "ROLE" and ea.approver_value in user_roles:
+                    return True
+                if ea.approver_type == "GROUP" and ea.approver_value in user_groups:
+                    return True
 
-                # explicit approvers first
-                for ea in explicit:
-                    if ea.level_order != req.current_level:
-                        continue
-                    if ea.approver_type == "USER" and ea.approver_value == username:
-                        return True
-                    if ea.approver_type == "ROLE" and ea.approver_value in user_roles:
-                        return True
-                    if ea.approver_type == "GROUP" and ea.approver_value in user_groups:
-                        return True   
+        return False
 
     async def get_next_level(
                 self,

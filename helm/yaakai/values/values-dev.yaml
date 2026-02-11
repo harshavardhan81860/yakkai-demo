@@ -64,12 +64,12 @@ backend:
 
     keycloak:
       realm: yakkai-dev
-      authServerUrl: http://keycloak:8080
+      authServerUrl: https://yakkai.guhatek.org/keycloak
       clientId: backend-dev
-      clientSecret: syTw9tOkK0W2NXBG5k4PZgYSdxpbfhQ2
+      clientSecret: lOZxgqKynryn8CTT2YLiDus66V6sP7LZ
       tempPassword: Welcome@123
-      cloud_client_id: "portal-cloud"   
-      cloud_client_secret: "QGcFgRm1PZDCpycpyzG5939hm394wsM4"
+      cloud_client_id: portal-cloud   
+      cloud_client_secret: jlAH4l1bP6O829KQAcI9Xn2Zcn2psZ89
 
     database:
       type: postgres

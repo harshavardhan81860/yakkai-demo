@@ -111,15 +111,15 @@ class ApprovalRequestService:
                     409, "This approval level is already completed"
                 )
 
-            # # 🔐 Eligibility validation (SAME logic as pending approvals)
-            # if not await self.repo.is_user_eligible_for_level(
-            #     session=session,
-            #     req=req,
-            #     username=current_user
-            # ):
-            #     raise HTTPException(
-            #         403, "User is not eligible to approve this level"
-            #     )
+            # 🔐 Eligibility validation
+            if not await self.repo.is_user_eligible_for_level(
+                session=session,
+                req=req,
+                username=current_user
+            ):
+                raise HTTPException(
+                    403, "User is not eligible to approve this level"
+                )
 
             # ✅ Record action
             action = await self.repo.add_action(

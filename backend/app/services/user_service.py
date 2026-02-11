@@ -10,6 +10,7 @@ from services.role_assignment_service import RoleAssignmentService
 from services.group_role_assignment_service import GroupRoleAssignmentService
 from services.role_service import RoleService
 from repositories.group_repository import GroupRepository
+from repositories.tenant_repository import TenantRepository
 
 
 from core.config import load_config
@@ -160,6 +161,24 @@ class UserService:
         group_role_service = GroupRoleAssignmentService()
         role_service = RoleService()
         group_repo = GroupRepository()
+        tenant_repo = TenantRepository()  # Add tenant repository
+
+        # Cache for tenant lookups
+        tenant_cache = {}
+
+        async def get_tenant_info(tenant_id):
+            """Helper to get tenant info with caching"""
+            if tenant_id is None:
+                return {}  # Empty dict for system type
+            
+            if tenant_id not in tenant_cache:
+                tenant = await tenant_repo.get_by_id(session, tenant_id)
+                tenant_cache[tenant_id] = {
+                    "id": tenant.id,
+                    "name": tenant.name
+                } if tenant else {}
+            
+            return tenant_cache[tenant_id]
 
         # ─────────────────────────────────────────────
         # 2. User → Groups
@@ -174,12 +193,20 @@ class UserService:
             if not group:
                 continue
 
-            groups.append({
-                "id": group.id,
-                "name": group.name
-            })
+            tenant_info = await get_tenant_info(group.tenant_id)
 
-            group_map[group.id] = group.name
+            group_data = {
+                "id": group.id,
+                "name": group.name,
+                "type": "SYSTEM" if group.tenant_id is None else "TENANT",
+                "tenant": tenant_info  # Always present (empty dict or populated)
+            }
+
+            groups.append(group_data)
+            group_map[group.id] = {
+                "name": group.name,
+                "tenant_info": tenant_info
+            }
 
         # ─────────────────────────────────────────────
         # 3. User → Direct Roles
@@ -195,17 +222,23 @@ class UserService:
             if not role:
                 continue
 
-            roles_map[role.id] = {
+            tenant_info = await get_tenant_info(role.tenant_id)
+
+            role_data = {
                 "id": role.id,
                 "name": role.name,
+                "type": "SYSTEM" if role.tenant_id is None else "TENANT",
+                "tenant": tenant_info,  # Always present (empty dict or populated)
                 "assignment_type": "DIRECT",
                 "inherited_from_groups": []  # ALWAYS PRESENT
             }
 
+            roles_map[role.id] = role_data
+
         # ─────────────────────────────────────────────
         # 4. Roles inherited via Groups
         # ─────────────────────────────────────────────
-        for group_id, group_name in group_map.items():
+        for group_id, group_info in group_map.items():
             group_role_assignments = await group_role_service.list_group_roles(
                 session, group_id
             )
@@ -219,17 +252,23 @@ class UserService:
                 if role.id in roles_map and roles_map[role.id]["assignment_type"] == "DIRECT":
                     continue
 
+                tenant_info = await get_tenant_info(role.tenant_id)
+
                 if role.id not in roles_map:
-                    roles_map[role.id] = {
+                    role_data = {
                         "id": role.id,
                         "name": role.name,
+                        "type": "SYSTEM" if role.tenant_id is None else "TENANT",
+                        "tenant": tenant_info,  # Always present (empty dict or populated)
                         "assignment_type": "INHERITED",
                         "inherited_from_groups": []
                     }
 
+                    roles_map[role.id] = role_data
+
                 roles_map[role.id]["inherited_from_groups"].append({
                     "id": group_id,
-                    "name": group_name
+                    "name": group_info["name"]
                 })
 
         # ─────────────────────────────────────────────
