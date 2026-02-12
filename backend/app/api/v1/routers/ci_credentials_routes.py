@@ -6,11 +6,16 @@ from schemas.ci_credentials_schema import CICredentialsCreate, CICredentialsUpda
 from core.response import ApiResponse
 from utils.serializer import orm_to_dict
 
+from core.enums.registry_enum import RESOURCE, ACTION
+from services.registry_validation_service import registry
+
 router = APIRouter(prefix="/ci-credentials", tags=["CI Credentials"])
 service = CICredentialsService()
+resource = RESOURCE.CI_CREDENTIALS
 
 
 @router.get("/")
+@registry(resource=resource, action=ACTION.READ)
 async def list_credentials(
     provider: str | None = None,
     is_active: bool | None = None,
@@ -24,6 +29,7 @@ async def list_credentials(
 
 
 @router.post("/create")
+@registry(resource=resource, action=ACTION.CREATE)
 async def create_credentials(
     req: CICredentialsCreate,
     session: AsyncSession = Depends(get_session)
@@ -40,6 +46,7 @@ async def create_credentials(
 
 
 @router.patch("/{record_id}/activate")
+@registry(resource=resource, action=ACTION.ACTIVATE)
 async def activate_credentials(
     record_id: str,
     session: AsyncSession = Depends(get_session)
@@ -55,6 +62,7 @@ async def activate_credentials(
 
 
 @router.patch("/{record_id}/deactivate")
+@registry(resource=resource, action=ACTION.DEACTIVATE)
 async def deactivate_credentials(
     record_id: str,
     session: AsyncSession = Depends(get_session)
@@ -70,6 +78,7 @@ async def deactivate_credentials(
 
 
 @router.patch("/{record_id}/update")
+@registry(resource=resource, action=ACTION.UPDATE)
 async def update_credentials(
     record_id: str,
     req: CICredentialsUpdate,

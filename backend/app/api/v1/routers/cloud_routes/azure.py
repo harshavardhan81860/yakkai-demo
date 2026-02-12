@@ -4,10 +4,15 @@ from services.cloud_services import azure as azure_service
 from core.response import ApiResponse
 from services.cloud_services.azure import list_subscriptions_for_account
 
+from core.enums.registry_enum import RESOURCE, ACTION
+from services.registry_validation_service import registry
+
 router = APIRouter(prefix="/azure", tags=["Azure"])
+resource = RESOURCE.CLOUD_ACCOUNT
 
 
 @router.get("/test_connection/{cloud_account_id}")
+@registry(resource=resource, action=ACTION.READ)
 async def test_azure_connection(cloud_account_id: str):
     return await azure_service.test_connection(cloud_account_id)
 
@@ -16,6 +21,7 @@ async def test_azure_connection(cloud_account_id: str):
 # --------------------------------------------------
 
 @router.get("/regions")
+@registry(resource=resource, action=ACTION.READ)
 async def list_regions(
     cloud_account_id: str = Query(...),
     refresh: bool = Query(False),
@@ -41,6 +47,7 @@ async def list_regions(
         )
 
 @router.get("/subscriptions")
+@registry(resource=resource, action=ACTION.READ)
 async def get_subscriptions(cloud_account_id: str = Query(...)):
     """
     List all subscriptions for a given cloud account
@@ -62,6 +69,7 @@ async def get_subscriptions(cloud_account_id: str = Query(...)):
 # --------------------------------------------------
 
 @router.get("/instances")
+@registry(resource=resource, action=ACTION.READ)
 async def list_instances(
     cloud_account_id: str = Query(...),
     region: str = Query(...),
@@ -92,6 +100,7 @@ async def list_instances(
 # --------------------------------------------------
 
 @router.get("/images")
+@registry(resource=resource, action=ACTION.READ)
 async def list_images(
     cloud_account_id: str = Query(...),
     region: str = Query(...),
@@ -122,6 +131,7 @@ async def list_images(
 # --------------------------------------------------
 
 @router.get("/clusters")
+@registry(resource=resource, action=ACTION.READ)
 async def list_clusters(
     cloud_account_id: str = Query(...),
     region: str = Query(...),

@@ -8,9 +8,9 @@ import {
 import {
   Send, Assignment, Add, Delete, History, Info,
   ArrowBack, Code, Person, Group, AdminPanelSettings,
-  Security, Speed
+  Security, Speed, Layers, CheckCircle
 } from "@mui/icons-material";
-import { fetchApprovalTemplates } from "../services/approvalTemplatesService";
+import { fetchApprovalTemplates, getApprovalTemplateDetails } from "../services/approvalTemplatesService";
 import { submitApprovalRequest } from "../services/approvalRequestsService";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
 
@@ -55,9 +55,24 @@ const ApprovalRequestCreate = () => {
     loadTemplates();
   }, []);
 
-  const onTemplateSelect = (id: string) => {
-    const t = templates.find((x) => x.id === id) || null;
-    setSelectedTemplate(t);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
+  const onTemplateSelect = async (id: string) => {
+    const listTemplate = templates.find((x) => x.id === id) || null;
+    if (!listTemplate) return;
+
+    setSelectedTemplate(listTemplate);
+    setDetailsLoading(true);
+    try {
+      const res = await getApprovalTemplateDetails({ template_id: id });
+      if (res.data?.template) {
+        setSelectedTemplate(res.data.template);
+      }
+    } catch (err) {
+      console.error("Failed to load template details", err);
+    } finally {
+      setDetailsLoading(false);
+    }
   };
 
   const addApprover = () => setExplicitApprovers(prev => [...prev, { approver_type: "USER", approver_value: "" }]);
@@ -101,8 +116,8 @@ const ApprovalRequestCreate = () => {
     <Box>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800 }}>Initiate Approval</Typography>
-          <Typography variant="body2" color="text.secondary">Trigger a new gated operation through established workflows</Typography>
+          <Typography variant="h4" sx={{ fontWeight: 800 }}>Dummy Approval Request</Typography>
+          <Typography variant="body2" color="text.secondary">Trigger a manual gated operation for testing or custom workflows</Typography>
         </Box>
         <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate(-1)}>Abort</Button>
       </Box>
@@ -137,7 +152,7 @@ const ApprovalRequestCreate = () => {
 
                 {selectedTemplate && (
                   <Paper sx={{ p: 2, bgcolor: 'rgba(108,99,255,0.05)', borderRadius: 2, border: '1px solid rgba(108,99,255,0.1)' }}>
-                    <Stack spacing={1}>
+                    <Stack spacing={2}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography variant="caption" color="text.secondary">Process Name</Typography>
                         <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{selectedTemplate.template_name}</Typography>
@@ -157,6 +172,61 @@ const ApprovalRequestCreate = () => {
                           <Typography variant="body2" sx={{ color: '#00D9FF', fontWeight: 700 }}>{selectedTemplate.default_sla_minutes ? `${selectedTemplate.default_sla_minutes}m` : 'Unbounded'}</Typography>
                         </Stack>
                       </Box>
+
+                      {selectedTemplate.levels && selectedTemplate.levels.length > 0 && (
+                        <>
+                          <Divider sx={{ my: 0.5, borderStyle: 'dashed' }} />
+                          <Typography variant="caption" sx={{ fontWeight: 700, color: '#6C63FF', textTransform: 'uppercase', letterSpacing: 1 }}>Workflow Insight</Typography>
+                          <Stack spacing={1.5}>
+                            {selectedTemplate.levels.map((level: any, idx: number) => (
+                              <Box key={idx} sx={{ pl: 1, borderLeft: '2px solid #6C63FF20' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                  <Layers sx={{ fontSize: 14, color: '#6C63FF' }} />
+                                  <Typography variant="caption" sx={{ fontWeight: 700 }}>Level {level.level_order}: {level.approval_mode}</Typography>
+                                </Box>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                                  Requires <b>{level.required_approvals}</b> approval(s) from:
+                                </Typography>
+                                <Stack direction="row" spacing={0.5} flexWrap="wrap" gap={0.5}>
+                                  {level.approvers.map((app: any, aIdx: number) => {
+                                    let color: any = 'default';
+                                    let icon: any = <Person sx={{ fontSize: '12px !important' }} />;
+                                    let label = 'User';
+
+                                    if (app.approver_type === 'ROLE') {
+                                      color = 'warning';
+                                      icon = <Security sx={{ fontSize: '12px !important' }} />;
+                                      label = 'Role';
+                                    } else if (app.approver_type === 'GROUP') {
+                                      color = 'info';
+                                      icon = <Group sx={{ fontSize: '12px !important' }} />;
+                                      label = 'Group';
+                                    }
+
+                                    return (
+                                      <Tooltip key={aIdx} title={label} arrow>
+                                        <Chip
+                                          label={app.approver_value}
+                                          size="small"
+                                          variant="outlined"
+                                          color={color}
+                                          icon={icon}
+                                          sx={{
+                                            fontSize: '0.65rem',
+                                            height: 20,
+                                            bgcolor: color === 'default' ? 'rgba(255,255,255,0.05)' : undefined,
+                                            borderRadius: '4px'
+                                          }}
+                                        />
+                                      </Tooltip>
+                                    );
+                                  })}
+                                </Stack>
+                              </Box>
+                            ))}
+                          </Stack>
+                        </>
+                      )}
                     </Stack>
                   </Paper>
                 )}

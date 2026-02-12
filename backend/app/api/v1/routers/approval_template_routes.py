@@ -8,21 +8,28 @@ from core.response import ApiResponse
 from utils.serializer import orm_to_dict
 from uuid import UUID
 
+from core.enums.registry_enum import RESOURCE, ACTION
+from services.registry_validation_service import registry
+
 router = APIRouter(
     prefix="/approval/templates",
     tags=["Approval Templates"]
 )
 
 service = ApprovalTemplateService()
+resource = RESOURCE.APPROVAL_TEMPLATE
 
 
 @router.get("/")
+@registry(resource=resource, action=ACTION.READ)
 async def list_templates(
     template_name: str | None = None,
     is_active: bool | None = None,
+    scope: str | None = None,
+    tenant_id: str | None = None,
     session: AsyncSession = Depends(get_session)
 ):
-    templates = await service.list_templates(session, template_name, is_active)
+    templates = await service.list_templates(session, template_name, is_active, scope, tenant_id)
     return ApiResponse.success(
         message="Templates fetched",
         data={"templates": [orm_to_dict(t) for t in templates]}
@@ -30,6 +37,7 @@ async def list_templates(
 
 
 @router.get("/details")
+@registry(resource=resource, action=ACTION.READ)
 async def get_template_details(
     template_id: UUID | None = None,
     template_name: str | None = None,
@@ -62,6 +70,7 @@ async def get_template_details(
 
 
 @router.post("/")
+@registry(resource=resource, action=ACTION.CREATE)
 async def create_template(
     req: CreateApprovalTemplateRequest,
     session: AsyncSession = Depends(get_session)
@@ -75,6 +84,7 @@ async def create_template(
 
 
 @router.patch("/{template_id}/activate")
+@registry(resource=resource, action=ACTION.ACTIVATE)
 async def activate_template(
     template_id: str,
     session: AsyncSession = Depends(get_session)
@@ -87,6 +97,7 @@ async def activate_template(
 
 
 @router.patch("/{template_id}/deactivate")
+@registry(resource=resource, action=ACTION.DEACTIVATE)
 async def deactivate_template(
     template_id: str,
     session: AsyncSession = Depends(get_session)
@@ -102,6 +113,7 @@ from schemas.approval_template_schema import UpdateApprovalTemplateRequest
 
 
 @router.put("/{template_id}")
+@registry(resource=resource, action=ACTION.UPDATE)
 async def update_template(
     template_id: str,
     req: UpdateApprovalTemplateRequest,

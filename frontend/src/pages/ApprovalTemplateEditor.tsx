@@ -24,6 +24,7 @@ import {
   updateApprovalTemplate,
   getApprovalTemplateDetails,
 } from "../services/approvalTemplatesService";
+import { fetchAllTenants, TenantRow } from "../services/tenantsService";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
 
 const ApprovalTemplateEditor = () => {
@@ -37,11 +38,14 @@ const ApprovalTemplateEditor = () => {
 
   const [sourceTemplateName, setSourceTemplateName] = useState<string | null>(null);
   const [templateName, setTemplateName] = useState("");
+  const [scope, setScope] = useState<"SYSTEM" | "TENANT">("SYSTEM");
+  const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
   const [defaultSla, setDefaultSla] = useState<number | null>(null);
   const [levels, setLevels] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
+  const [tenants, setTenants] = useState<TenantRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const normalizeLevels = (ls: any[]) => ls.map((l, i) => ({ ...l, level_order: i + 1 }));
@@ -64,11 +68,12 @@ const ApprovalTemplateEditor = () => {
   };
 
   useEffect(() => {
-    Promise.all([fetchAllUsers(), fetchAllRoles(), fetchAllGroups()]).then(
-      ([u, r, g]) => {
+    Promise.all([fetchAllUsers(), fetchAllRoles(), fetchAllGroups(), fetchAllTenants()]).then(
+      ([u, r, g, t]) => {
         setUsers(u.filter((x) => x.is_active));
         setRoles(r.filter((x) => x.is_active));
         setGroups(g.filter((x) => x.is_active));
+        setTenants(t.filter((x) => x.is_active));
       }
     );
   }, []);
@@ -85,6 +90,8 @@ const ApprovalTemplateEditor = () => {
         const res = await getApprovalTemplateDetails({ template_id: templateId });
         const t = res.data.template;
         setSourceTemplateName(t.template_name);
+        setScope(t.scope || "SYSTEM");
+        setSelectedTenant(t.tenant_id || null);
         setDefaultSla(t.default_sla_minutes);
         setLevels(normalizeLevels(t.levels));
         if (isClone) setTemplateName(`${t.template_name}_COPY`);
@@ -130,6 +137,8 @@ const ApprovalTemplateEditor = () => {
     }
     const payload = {
       template_name: templateName,
+      scope: scope,
+      tenant_id: scope === "TENANT" ? selectedTenant : null,
       default_sla_minutes: defaultSla,
       levels: normalizeLevels(levels).map((l) => ({
         ...l,
@@ -186,6 +195,43 @@ const ApprovalTemplateEditor = () => {
                   onChange={(e) => setTemplateName(e.target.value)}
                   placeholder="e.g. Production Infrastructure Change"
                 />
+              </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Settings fontSize="small" /> Governance Scope
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid size={6}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Scope</InputLabel>
+                      <Select
+                        value={scope}
+                        label="Scope"
+                        onChange={(e) => setScope(e.target.value as any)}
+                        disabled={isEdit}
+                      >
+                        <MenuItem value="SYSTEM">Platform Global</MenuItem>
+                        <MenuItem value="TENANT">Tenant Specific</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid size={6}>
+                    {scope === "TENANT" && (
+                      <Autocomplete
+                        size="small"
+                        options={tenants}
+                        getOptionLabel={(t) => t.display_name}
+                        value={tenants.find(t => t.id.toString() === selectedTenant) || null}
+                        onChange={(_, v) => setSelectedTenant(v?.id.toString() || null)}
+                        disabled={isEdit}
+                        renderInput={(p) => <TextField {...p} label="Target Tenant" />}
+                      />
+                    )}
+                  </Grid>
+                </Grid>
+              </Grid>
+              <Grid size={{ xs: 12, md: 12 }}>
+                <Divider sx={{ my: 1 }} />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>

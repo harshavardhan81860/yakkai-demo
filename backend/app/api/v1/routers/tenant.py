@@ -8,11 +8,16 @@ from core.response import ApiResponse
 from utils.serializer import orm_to_dict
 from schemas.tenant_schema import CreateTenantRequest
 
+from core.enums.registry_enum import RESOURCE, ACTION
+from services.registry_validation_service import registry
+
 router = APIRouter(prefix="/tenants", tags=["Tenants"])
 service = TenantService()
+resource = RESOURCE.TENANT
 
 
 @router.get("/")
+@registry(resource=resource, action=ACTION.READ)
 async def list_tenants(
     is_active: bool | None = None,
     session: AsyncSession = Depends(get_session)

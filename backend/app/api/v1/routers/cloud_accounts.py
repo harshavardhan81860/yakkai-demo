@@ -6,14 +6,19 @@ from schemas.cloud_account_schema import CloudAccountCreate,CloudAccountUpdate
 from core.response import ApiResponse
 from utils.serializer import orm_to_dict
 
+from core.enums.registry_enum import RESOURCE, ACTION
+from services.registry_validation_service import registry
+
 router = APIRouter(prefix="/cloud-accounts", tags=["Cloud Accounts"])
 service = CloudAccountService()
+resource = RESOURCE.CLOUD_ACCOUNT
 
 
 # ---------- LIST ----------
 
 # router
 @router.get("/")
+@registry(resource=resource, action=ACTION.READ)
 async def list_accounts(
     id: str | None = None,
     tenant_id: str | None = None,
@@ -35,6 +40,7 @@ async def list_accounts(
 # ---------- CREATE ----------
 
 @router.post("/create")
+@registry(resource=resource, action=ACTION.CREATE)
 async def create_account(
     req: CloudAccountCreate,
     session: AsyncSession = Depends(get_session)
@@ -63,6 +69,7 @@ async def create_account(
 # ---------- ACTIVATE ----------
 
 @router.patch("/{record_id}/activate")
+@registry(resource=resource, action=ACTION.ACTIVATE)
 async def activate_account(
     record_id: str,
     session: AsyncSession = Depends(get_session)
@@ -80,6 +87,7 @@ async def activate_account(
 # ---------- DEACTIVATE ----------
 
 @router.patch("/{record_id}/deactivate")
+@registry(resource=resource, action=ACTION.DEACTIVATE)
 async def deactivate_account(
     record_id: str,
     session: AsyncSession = Depends(get_session)
@@ -96,6 +104,7 @@ async def deactivate_account(
 
 
 @router.patch("/{record_id}")
+@registry(resource=resource, action=ACTION.UPDATE)
 async def update_cloud_account(
     record_id: str,
     req: CloudAccountUpdate,

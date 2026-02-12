@@ -6,12 +6,17 @@ from schemas.approval_mapping_schema import *
 from core.response import ApiResponse
 from core.enums.operator_enum import OperatorEnum, OPERATOR_LABELS
 
+from core.enums.registry_enum import RESOURCE, ACTION
+from services.registry_validation_service import registry
+
 router = APIRouter(prefix="/approval-mapping", tags=["Approval Mapping"])
 service = ApprovalMappingService()
+resource = RESOURCE.APPROVAL_MAPPING
 
 
 # -------- List Policies --------
 @router.get("/policies")
+@registry(resource=resource, action=ACTION.READ)
 async def get_policies(
     resource_name: Optional[str] =(None),
     action_name: Optional[str] = (None),
@@ -57,6 +62,7 @@ async def get_policies(
 
 # -------- Single Policy Details --------
 @router.get("/policy/{policy_id}/details")
+@registry(resource=resource, action=ACTION.READ)
 async def get_policy_details(
     policy_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
@@ -68,6 +74,7 @@ async def get_policy_details(
 
 
 @router.post("/policy")
+@registry(resource=resource, action=ACTION.CREATE)
 async def create_policy(
     req: ApprovalMappingPolicyCreate,
     session: AsyncSession = Depends(get_session),
@@ -80,16 +87,19 @@ async def create_policy(
 
 
 @router.put("/policy/{policy_id}")
+@registry(resource=resource, action=ACTION.UPDATE)
 async def update_policy(policy_id: str, req: ApprovalMappingPolicyUpdate, session: AsyncSession = Depends(get_session)):
     return ApiResponse.success(data=await service.update_policy(session, policy_id, req))
 
 
 @router.post("/evaluate")
+@registry(resource=resource, action=ACTION.EVALUATE)
 async def evaluate(req: ApprovalMappingEvaluateRequest, session: AsyncSession = Depends(get_session)):
     return ApiResponse.success(data=await service.evaluate(session, req))
 
 # ---------------- Operator endpoint ----------------
 @router.get("/operators")
+@registry(resource=resource, action=ACTION.READ)
 async def get_operators():
     ops = [{"value": op.value, "label": OPERATOR_LABELS[op]} for op in OperatorEnum]
     return ApiResponse.success(data={"operators": ops})

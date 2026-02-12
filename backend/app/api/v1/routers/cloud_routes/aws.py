@@ -5,10 +5,15 @@ from services.cloud_services import aws as aws_service
 from core.response import ApiResponse   # adjust import if different
 
 
+from core.enums.registry_enum import RESOURCE, ACTION
+from services.registry_validation_service import registry
+
 router = APIRouter(prefix="/aws", tags=["AWS"])
+resource = RESOURCE.CLOUD_ACCOUNT
 
 
 @router.get("/test_connection/{cloud_account_id}")
+@registry(resource=resource, action=ACTION.READ)
 async def test_aws_connection(cloud_account_id: str):
     return await aws_service.test_connection(cloud_account_id)
 # --------------------------------------------------
@@ -16,6 +21,7 @@ async def test_aws_connection(cloud_account_id: str):
 # --------------------------------------------------
 
 @router.get("/regions")
+@registry(resource=resource, action=ACTION.READ)
 async def list_regions(
     cloud_account_id: str = Query(..., description="Cloud account ID"),
     refresh: bool = Query(False, description="Force refresh region cache"),
@@ -46,6 +52,7 @@ async def list_regions(
 # --------------------------------------------------
 
 @router.get("/instances")
+@registry(resource=resource, action=ACTION.READ)
 async def list_instances(
     cloud_account_id: str = Query(...),
     region: str = Query(...),
@@ -76,6 +83,7 @@ async def list_instances(
 # --------------------------------------------------
 
 @router.get("/images")
+@registry(resource=resource, action=ACTION.READ)
 async def list_images(
     cloud_account_id: str = Query(...),
     region: str = Query(...),
@@ -106,6 +114,7 @@ async def list_images(
 # --------------------------------------------------
 
 @router.get("/clusters")
+@registry(resource=resource, action=ACTION.READ)
 async def list_clusters(
     cloud_account_id: str = Query(...),
     region: str = Query(...),

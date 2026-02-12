@@ -11,14 +11,16 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../auth/AuthProvider';
 
+import UnauthorizedView from '../Error/UnauthorizedView';
+
 const DRAWER_WIDTH = 280;
 
 const AppLayout = () => {
-    const { user, logout } = useAuth();
+    const { user, logout, isActive } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [collapsed, setCollapsed] = useState(false);
-    const width = collapsed ? 72 : DRAWER_WIDTH;
+    const width = !isActive ? 0 : (collapsed ? 72 : DRAWER_WIDTH);
 
     const menuItems = [
         // ── Main ──
@@ -27,9 +29,10 @@ const AppLayout = () => {
         { text: 'Runners', icon: <Terminal />, path: '/ci-credentials' },
         { divider: true },
 
-        // ── Provisioning (Disabled) ──
+        // ── Provisioning ──
         { header: 'Provisioning' },
-        { text: 'My Requests', icon: <RocketLaunch />, path: '#', disabled: true },
+        { text: 'My Requests', icon: <Inventory />, path: '/resource-request/list' },
+        { text: 'New Request', icon: <RocketLaunch />, path: '/resource-request/new' },
         { divider: true },
 
         // ── Identity ──
@@ -46,6 +49,8 @@ const AppLayout = () => {
         { text: 'History', icon: <BarChart />, path: '/approvals/history' },
         { text: 'Workflow Defined', icon: <Category />, path: '/approvals-management/templates' },
         { text: 'Workflow Mapping', icon: <Lan />, path: '/approvals-management/policy-mapping' },
+        { text: 'Dummy Request', icon: <RocketLaunch />, path: '/approvals/approvalrequestcreate' },
+
         { divider: true },
 
         // ── Governance ──
@@ -55,6 +60,16 @@ const AppLayout = () => {
         { text: 'Resource Registry', icon: <Inventory />, path: '/registry' },
         { divider: true },
     ];
+
+    // Prevent rendering if not authenticated (extra safety layer)
+    /* If the user is authenticated but not active (e.g. INACTIVE or NOT_FOUND), show the Unauthorized view */
+    if (!isActive || !user) {
+        return (
+            <Box sx={{ minHeight: '100vh', bgcolor: '#0A0E1A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <UnauthorizedView />
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#0A0E1A' }}>

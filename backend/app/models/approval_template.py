@@ -13,6 +13,8 @@ class ApprovalTemplate(Base):
     __table_args__ = {"schema": "approval"}
 
     id = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scope = mapped_column(String(50), nullable=False, default="SYSTEM")  # SYSTEM or TENANT
+    tenant_id = mapped_column(UUID(as_uuid=True), nullable=True)
     template_name = mapped_column(String(100), nullable=False)
     version = mapped_column(Integer, nullable=False)
     is_active = mapped_column(Boolean, default=True)

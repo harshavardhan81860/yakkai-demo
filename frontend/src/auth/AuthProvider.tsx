@@ -9,15 +9,15 @@ const basePath = import.meta.env.VITE_APP_BASE_PATH || "";
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [ready, setReady] = useState(false);
   const [authState, setAuthState] = useState<
-    "ACTIVE" | "INACTIVE" | "NOT_FOUND"
+    "ACTIVE" | "INACTIVE" | "NOT_FOUND" | "ERROR"
   >("ACTIVE");
 
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
 
-    const isSecureContext = window.location.protocol === 'https:' || 
-                         window.location.hostname === 'localhost';
+    const isSecureContext = window.location.protocol === 'https:' ||
+      window.location.hostname === 'localhost';
 
     keycloak
       .init({
@@ -46,14 +46,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           });
           setAuthState("ACTIVE");
         } else {
-          setAuthState(result.status as "ACTIVE" | "INACTIVE" | "NOT_FOUND");
+          if (result.user) {
+            setUser({
+              username: result.user.username,
+              email: result.user.email,
+              first_name: result.user.first_name,
+              is_active: result.user.is_active,
+            });
+          }
+          setAuthState(result.status as any);
         }
 
         setReady(true);
       })
       .catch((err) => {
         console.error("Auth init failed", err);
-        setAuthState("NOT_FOUND");
+        setAuthState("ERROR");
         setReady(true);
       });
   }, []);
@@ -68,9 +76,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         authState,
         user,
         isActive: authState === "ACTIVE",
+        login: () => keycloak.login(),
         logout: () =>
           // keycloak.logout({ redirectUri: window.location.origin }),
-          keycloak.logout({redirectUri: `${window.location.origin}/${basePath}/`}),
+          keycloak.logout({ redirectUri: `${window.location.origin}/${basePath}/` }),
       }}
     >
       {children}

@@ -9,10 +9,13 @@ import {
 } from "@mui/icons-material";
 
 const Home = () => {
-  const { user } = useAuth();
+  const { user, authState, logout } = useAuth();
   const navigate = useNavigate();
 
+  const isActive = authState === "ACTIVE";
+
   const fullName = user?.first_name ? `${user.first_name} ${user.last_name || ''}` : user?.username;
+
 
   return (
     <Container maxWidth="lg" sx={{ py: 8 }}>

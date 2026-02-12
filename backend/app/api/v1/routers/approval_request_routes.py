@@ -12,18 +12,23 @@ from core.response import ApiResponse
 from utils.serializer import orm_to_dict
 from core.current_user import get_current_username
 
+from core.enums.registry_enum import RESOURCE, ACTION
+from services.registry_validation_service import registry
+
 router = APIRouter(
     prefix="/approval",
     tags=["Approval Requests"]
 )
 
 service = ApprovalRequestService()
+resource = RESOURCE.APPROVAL_REQUEST
 
 
 # ===============================
 # Submit approval request
 # ===============================
 @router.post("/requests")
+@registry(resource=resource, action=ACTION.SUBMIT)
 async def submit_request(
     req: SubmitApprovalRequestSchema,
     request: Request,
@@ -48,6 +53,7 @@ async def submit_request(
 # List approval requests (summary)
 # ===============================
 @router.get("/requests")
+@registry(resource=resource, action=ACTION.READ)
 async def list_requests(
     request: Request,
     username: str | None = None,
@@ -72,6 +78,7 @@ async def list_requests(
 # Approval request full details
 # ===============================
 @router.get("/requests/{request_id}/details")
+@registry(resource=resource, action=ACTION.READ)
 async def get_request_details(
     request_id: str,
     session: AsyncSession = Depends(get_session)
@@ -91,6 +98,7 @@ async def get_request_details(
 # Submit approval decision
 # ===============================
 @router.post("/requests/{request_id}/decision")
+@registry(resource=resource, action=ACTION.UPDATE)
 async def submit_decision(
     request_id: str,
     req: ApprovalDecisionSchema,
@@ -116,6 +124,7 @@ async def submit_decision(
 # Pending approvals (admin + user)
 # ===============================
 @router.get("/approvals/pending")
+@registry(resource=resource, action=ACTION.READ)
 async def get_pending_approvals(
     request: Request,
     username: str | None = None,
@@ -140,6 +149,7 @@ async def get_pending_approvals(
 # Approval actions (audit/history)
 # ===============================
 @router.get("/approvals/actions")
+@registry(resource=resource, action=ACTION.READ)
 async def get_approval_actions(
     request: Request,
     username: str | None = None,
@@ -160,6 +170,7 @@ async def get_approval_actions(
     )
 
 @router.post("/requests/{request_id}/close")
+@registry(resource=resource, action=ACTION.CANCEL)
 async def close_request(
     request_id: str,
     request: Request,

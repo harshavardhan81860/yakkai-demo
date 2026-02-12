@@ -1,4 +1,5 @@
 # routes/role_routes.py
+from typing import Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.engine import get_session
@@ -8,14 +9,17 @@ from schemas.role_schema import RoleCreateRequest, RoleResponse, RoleUpdateReque
 from schemas.role_assignment_schema import RoleAssignmentCreateRequest, RoleAssignmentResponse
 from core.response import ApiResponse
 from utils.serializer import orm_to_dict
-from typing import List, Optional
+from core.enums.registry_enum import RESOURCE, ACTION
+from services.registry_validation_service import registry
 
 router = APIRouter(prefix="/roles", tags=["Roles"])
 service = RoleService()
 assign_service = RoleAssignmentService()
+resource = RESOURCE.ROLE
 
 # Roles
 @router.get("/")
+@registry(resource=resource, action=ACTION.READ)
 async def list_roles(tenant_id: Optional[str] = None, session: AsyncSession = Depends(get_session)):
     roles = await service.list_roles(session, tenant_id)
     return ApiResponse.success(
@@ -24,6 +28,7 @@ async def list_roles(tenant_id: Optional[str] = None, session: AsyncSession = De
     )
 
 @router.post("/create")
+@registry(resource=resource, action=ACTION.CREATE)
 async def create_role(req: RoleCreateRequest, session: AsyncSession = Depends(get_session)):
     try:
         role = await service.create_role(session, req.tenant_id, req.name, req.description, req.email,req.is_system_role)
@@ -36,6 +41,7 @@ async def create_role(req: RoleCreateRequest, session: AsyncSession = Depends(ge
         return ApiResponse.error(message=str(e), status_code=400)
 
 @router.put("/{role_id}")
+@registry(resource=resource, action=ACTION.UPDATE)
 async def update_role(role_id: str, req: RoleUpdateRequest, session: AsyncSession = Depends(get_session)):
     try:
         role = await service.update_role(session, role_id, req.name, req.description, req.email, req.is_active)
@@ -47,6 +53,7 @@ async def update_role(role_id: str, req: RoleUpdateRequest, session: AsyncSessio
         return ApiResponse.error(message=str(e), status_code=400)
 
 @router.patch("/{role_id}/activate")
+@registry(resource=resource, action=ACTION.ACTIVATE)
 async def activate_role(role_id: str, session: AsyncSession = Depends(get_session)):
     try:
         role = await service.update_role(session, role_id, None, None, True)
@@ -55,6 +62,7 @@ async def activate_role(role_id: str, session: AsyncSession = Depends(get_sessio
         return ApiResponse.error(message=str(e), status_code=400)
 
 @router.patch("/{role_id}/deactivate")
+@registry(resource=resource, action=ACTION.DEACTIVATE)
 async def deactivate_role(role_id: str, session: AsyncSession = Depends(get_session)):
     try:
         role = await service.update_role(session, role_id, None, None, False)
@@ -64,6 +72,7 @@ async def deactivate_role(role_id: str, session: AsyncSession = Depends(get_sess
 
 # Role assignments
 @router.post("/assign")
+@registry(resource=resource, action=ACTION.ASSIGN)
 async def assign_role(req: RoleAssignmentCreateRequest, session: AsyncSession = Depends(get_session)):
     try:
         assignment = await assign_service.assign_role(
@@ -80,6 +89,7 @@ async def assign_role(req: RoleAssignmentCreateRequest, session: AsyncSession = 
         return ApiResponse.error(message=str(e), status_code=400)
 
 @router.post("/revoke/{assignment_id}")
+@registry(resource=resource, action=ACTION.REVOKE)
 async def revoke_role(assignment_id: str, session: AsyncSession = Depends(get_session)):
     try:
         res = await assign_service.revoke_role(session, assignment_id)
@@ -88,11 +98,13 @@ async def revoke_role(assignment_id: str, session: AsyncSession = Depends(get_se
         return ApiResponse.error(message=str(e), status_code=400)
 
 @router.get("/user/{user_id}")
+@registry(resource=resource, action=ACTION.READ)
 async def list_user_roles(user_id: str, session: AsyncSession = Depends(get_session)):
     assignments = await assign_service.list_user_assignments(session, user_id)
     return ApiResponse.success(message="User roles fetched", data={"assignments": [orm_to_dict(a) for a in assignments]})
 
 @router.get("/{role_id}/users")
+@registry(resource=resource, action=ACTION.READ)
 async def get_users_for_role(role_id: str, session: AsyncSession = Depends(get_session)):
     users = await assign_service.list_role_assignments(session, role_id)
     return ApiResponse.success(

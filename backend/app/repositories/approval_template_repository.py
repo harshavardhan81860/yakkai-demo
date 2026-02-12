@@ -18,7 +18,9 @@ class ApprovalTemplateRepository:
         self,
         session: AsyncSession,
         template_name: str | None,
-        is_active: bool | None
+        is_active: bool | None,
+        scope: str | None = None,
+        tenant_id: str | None = None
     ):
         stmt = select(ApprovalTemplate)
 
@@ -28,14 +30,23 @@ class ApprovalTemplateRepository:
         if is_active is not None:
             stmt = stmt.where(ApprovalTemplate.is_active == is_active)
 
+        if scope:
+            stmt = stmt.where(ApprovalTemplate.scope == scope)
+            if scope == "TENANT" and tenant_id:
+                stmt = stmt.where(ApprovalTemplate.tenant_id == tenant_id)
+
         result = await session.execute(stmt.order_by(desc(ApprovalTemplate.created_at)))
         return result.scalars().all()
 
-    async def get_active_template(self, session: AsyncSession, template_name: str):
+    async def get_active_template(self, session: AsyncSession, template_name: str, scope: str = "SYSTEM", tenant_id: str | None = None):
         stmt = select(ApprovalTemplate).where(
             ApprovalTemplate.template_name == template_name,
-            ApprovalTemplate.is_active.is_(True)
+            ApprovalTemplate.is_active.is_(True),
+            ApprovalTemplate.scope == scope
         )
+        if scope == "TENANT":
+            stmt = stmt.where(ApprovalTemplate.tenant_id == tenant_id)
+        
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -46,6 +57,8 @@ class ApprovalTemplateRepository:
     ):
         template = ApprovalTemplate(
             template_name=req.template_name,
+            scope=req.scope,
+            tenant_id=req.tenant_id,
             version=1,
             is_active=req.is_active,
             default_sla_minutes=req.default_sla_minutes
@@ -118,6 +131,8 @@ class ApprovalTemplateRepository:
         # create new version
         new_template = ApprovalTemplate(
             template_name=old_template.template_name,
+            scope=old_template.scope,
+            tenant_id=old_template.tenant_id,
             version=old_template.version + 1,
             is_active=True,
             default_sla_minutes=req.default_sla_minutes
@@ -206,6 +221,8 @@ class ApprovalTemplateRepository:
         return {
             "id": str(template.id),
             "template_name": template.template_name,
+            "scope": template.scope,
+            "tenant_id": str(template.tenant_id) if template.tenant_id else None,
             "version": template.version,
             "is_active": template.is_active,
             "default_sla_minutes": template.default_sla_minutes,

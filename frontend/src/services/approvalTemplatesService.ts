@@ -25,6 +25,8 @@ export interface ApprovalLevel {
 export interface ApprovalTemplate {
   id: string;
   template_name: string;
+  scope: "SYSTEM" | "TENANT";
+  tenant_id?: string;
   version: number;
   is_active: boolean;
   default_sla_minutes: number;
@@ -38,6 +40,8 @@ export interface ApprovalTemplate {
 export const fetchApprovalTemplates = async (params?: {
   template_name?: string;
   is_active?: boolean;
+  scope?: string;
+  tenant_id?: string;
 }): Promise<ApprovalTemplate[]> => {
   const res = await api.get("api/v1/approval/templates/", { params });
 
@@ -60,6 +64,8 @@ export const getApprovalTemplateDetails = async (params: {
 
 export const createApprovalTemplate = async (payload: {
   template_name: string;
+  scope?: "SYSTEM" | "TENANT";
+  tenant_id?: string | null;
   default_sla_minutes: number | null;
   levels: ApprovalLevel[];
 }) => {

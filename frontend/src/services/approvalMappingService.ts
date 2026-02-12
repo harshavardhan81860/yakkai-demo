@@ -8,8 +8,10 @@ export interface ApprovalPolicy {
   scope_type: string;
   scope_id?: string;
   template_id: string;
+  template_name?: string;
   is_mandatory: boolean;
   is_active: boolean;
+  groups?: ApprovalGroup[];
   created_at: string;
   updated_at: string;
 }

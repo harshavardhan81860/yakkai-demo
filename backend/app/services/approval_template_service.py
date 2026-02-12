@@ -12,15 +12,20 @@ class ApprovalTemplateService:
     def __init__(self):
         self.repo = ApprovalTemplateRepository()
 
-    async def list_templates(self, session, template_name, is_active):
-        return await self.repo.list_templates(session, template_name, is_active)
+    async def list_templates(self, session, template_name, is_active, scope: str | None = None, tenant_id: str | None = None):
+        return await self.repo.list_templates(session, template_name, is_active, scope, tenant_id)
 
     async def create_template(self, session, req: CreateApprovalTemplateRequest):
-        active = await self.repo.get_active_template(session, req.template_name)
+        active = await self.repo.get_active_template(
+            session, 
+            req.template_name, 
+            scope=req.scope, 
+            tenant_id=req.tenant_id
+        )
         if active:
             raise HTTPException(
                 status_code=400,
-                detail="Active template already exists for this template_name"
+                detail=f"Active template already exists for this template_name in {req.scope} scope"
             )
         return await self.repo.create_template(session, req)
 

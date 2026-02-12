@@ -9,7 +9,7 @@ import {
 import {
   Add, Visibility, Edit, ContentCopy, CheckCircle, Block,
   KeyboardArrowDown, KeyboardArrowUp, Timer,
-  Assignment, AccountTree
+  Assignment, AccountTree, Person, Security, Group
 } from "@mui/icons-material";
 import {
   fetchApprovalTemplates,
@@ -122,6 +122,7 @@ const ApprovalTemplates = () => {
               <TableRow>
                 <TableCell width={50}></TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Name</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>Scope</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Version</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Timeout (SLA)</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
@@ -148,6 +149,15 @@ const ApprovalTemplates = () => {
                           <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{g.name}</Typography>
                         </Box>
                       </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={g.latest.scope === 'SYSTEM' ? 'Global' : 'Tenant'}
+                        size="small"
+                        color={g.latest.scope === 'SYSTEM' ? 'primary' : 'warning'}
+                        variant="outlined"
+                        sx={{ fontWeight: 700, borderRadius: '6px' }}
+                      />
                     </TableCell>
                     <TableCell>
                       <Chip label={`v${g.latest.version}`} size="small" variant="outlined" sx={{ fontWeight: 700 }} />
@@ -222,9 +232,38 @@ const ApprovalTemplates = () => {
                 <Divider sx={{ my: 1.5, borderColor: 'rgba(255,255,255,0.05)' }} />
                 <Typography variant="caption" color="text.secondary">Designated Approvers:</Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                  {l.approvers.map((a: any, i: number) => (
-                    <Chip key={i} size="small" label={a.approver_value} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
-                  ))}
+                  {l.approvers.map((a: any, i: number) => {
+                    let color: any = 'default';
+                    let icon: any = <Person sx={{ fontSize: '14px !important' }} />;
+                    let label = 'User';
+
+                    if (a.approver_type === 'ROLE') {
+                      color = 'warning';
+                      icon = <Security sx={{ fontSize: '14px !important' }} />;
+                      label = 'Role';
+                    } else if (a.approver_type === 'GROUP') {
+                      color = 'info';
+                      icon = <Group sx={{ fontSize: '14px !important' }} />;
+                      label = 'Group';
+                    }
+
+                    return (
+                      <Tooltip key={i} title={label} arrow>
+                        <Chip
+                          size="small"
+                          label={a.approver_value}
+                          icon={icon}
+                          color={color}
+                          variant="outlined"
+                          sx={{
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            bgcolor: color === 'default' ? 'rgba(255,255,255,0.05)' : undefined
+                          }}
+                        />
+                      </Tooltip>
+                    );
+                  })}
                 </Box>
               </Paper>
             ))}

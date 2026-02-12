@@ -5,23 +5,30 @@ from core.response import ApiResponse
 from services.governance_service import GovernanceService
 from schemas.governance_schema import *
 
+from core.enums.registry_enum import RESOURCE, ACTION
+from services.registry_validation_service import registry
+
 router = APIRouter(prefix="/governance", tags=["Governance"])
 service = GovernanceService()
+resource = RESOURCE.GOVERNANCE
 
 
 @router.post("/policy_create")
+@registry(resource=resource, action=ACTION.CREATE)
 async def create_policy(req: GovernancePolicyCreate, session: AsyncSession = Depends(get_session)):
     print("polciy create")
     return ApiResponse.success(data=await service.create_policy(session, req))
 
 
 @router.put("/policy_update/{policy_id}")
+@registry(resource=resource, action=ACTION.UPDATE)
 async def update_policy(policy_id: str, req: GovernancePolicyUpdate, session: AsyncSession = Depends(get_session)):
     print("Policy_update")
     return ApiResponse.success(data=await service.update_policy(session, policy_id, req))
 
 
 @router.get("/policies")
+@registry(resource=resource, action=ACTION.READ)
 async def get_policies(
     resource_type: str | None = None,
     action_name: str | None = None,
@@ -43,10 +50,12 @@ async def get_policies(
 
 
 @router.post("/policy-subject")
+@registry(resource=resource, action=ACTION.ASSIGN)
 async def add_policy_subject(req: GovernancePolicySubjectCreate, session: AsyncSession = Depends(get_session)):
     return ApiResponse.success(data=await service.add_subject(session, req))
 
 @router.get("/policy-subjects")
+@registry(resource=resource, action=ACTION.READ)
 async def get_governance_subjects(
     policy_id: str | None = None,
     subject_type: str | None = None,
@@ -63,6 +72,7 @@ async def get_governance_subjects(
     )
 
 @router.put("/policy-subject/{subject_id}")
+@registry(resource=resource, action=ACTION.UPDATE)
 async def update_policy_subject(
     subject_id: str,
     req: GovernancePolicySubjectUpdate,
@@ -77,6 +87,7 @@ async def update_policy_subject(
 
 
 @router.get("/resource-access")
+@registry(resource=resource, action=ACTION.READ)
 async def get_resource_access(
     resource_type: str | None = None,
     resource_id: str | None = None,
@@ -97,11 +108,13 @@ async def get_resource_access(
     )
 
 @router.post("/resource-access")
+@registry(resource=resource, action=ACTION.ASSIGN)
 async def create_resource_access(req: GovernanceResourceAccessCreate, session: AsyncSession = Depends(get_session)):
     return ApiResponse.success(data=await service.create_resource_access(session, req))
 
 
 @router.put("/resource-access/{access_id}")
+@registry(resource=resource, action=ACTION.UPDATE)
 async def update_resource_access(
     access_id: str,
     req: GovernanceResourceAccessUpdate,
@@ -112,5 +125,6 @@ async def update_resource_access(
     )
 
 @router.post("/evaluate")
+@registry(resource=resource, action=ACTION.EVALUATE)
 async def evaluate_governance(req: GovernanceEvaluateRequest, session: AsyncSession = Depends(get_session)):
     return ApiResponse.success(data=await service.evaluate(session, req))

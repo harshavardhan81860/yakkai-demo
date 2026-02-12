@@ -42,6 +42,8 @@ import PermissionPolicyCreate from "./pages/PermissionPolicyCreate";
 import PolicySubjectList from "./pages/PolicySubjectList";
 import PolicySubjectCreate from "./pages/PolicySubjectCreate";
 import BuildInProgress from "./pages/BuildInProgress";
+import ResourceRequestWizard from "./pages/ResourceRequest/ResourceRequestWizard";
+import ResourceRequestsList from "./pages/ResourceRequest/ResourceRequestsList";
 
 function App() {
     return (
@@ -98,6 +100,10 @@ function App() {
 
                 {/* Registry (from developed) */}
                 <Route path="/registry" element={<Registry />} />
+
+                {/* Resource Requests (New Module) */}
+                <Route path="/resource-request/new" element={<ResourceRequestWizard />} />
+                <Route path="/resource-request/list" element={<ResourceRequestsList />} />
 
                 {/* Analytics (MUI from promted) */}
                 <Route path="/statistics" element={<StatisticsPage />} />

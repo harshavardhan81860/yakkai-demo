@@ -15,6 +15,7 @@ service = UserService()
 resource = RESOURCE.USER
 
 @router.get("/")
+@registry(resource=resource, action=ACTION.READ)
 async def list_users(
     email: Optional[str] = None,
     user_id: Optional[str] = None,
@@ -27,16 +28,16 @@ async def list_users(
     users_list = [orm_to_dict(u) for u in users]
 
     total = len(users_list)
-    active = sum(1 for u in users_list if u.get("is_active") is True)
-    inactive = sum(1 for u in users_list if u.get("is_active") is False)
+    active_users_count = sum(1 for u in users_list if u.get("is_active") is True)
+    inactive_users_count = sum(1 for u in users_list if u.get("is_active") is False)
 
     return ApiResponse.success(
         message="Users fetched successfully",
         data = {
             "header": {
                 "total_users": total,
-                "active_users": active,
-                "inactive_users": inactive
+                "active_users": active_users_count,
+                "inactive_users": inactive_users_count
             },
             "users": users_list
         }
@@ -130,6 +131,7 @@ async def forgot_password(email: str):
         return ApiResponse.error(message=str(e), status_code=400)
 
 @router.get("/users/me", tags=["Users"])
+@registry(resource=resource, action=ACTION.READ)
 async def get_current_user(
     request: Request,
     session: AsyncSession = Depends(get_session)
@@ -172,6 +174,7 @@ async def get_current_user(
 
 
 @router.get("/{user_id}/access-mappings")
+@registry(resource=resource, action=ACTION.READ)
 async def get_user_access_mappings(
     user_id: str,
     session: AsyncSession = Depends(get_session)

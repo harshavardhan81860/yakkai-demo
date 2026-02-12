@@ -6,7 +6,7 @@ import {
   Stack, Paper, Dialog, DialogTitle, DialogContent, DialogActions
 } from "@mui/material";
 import {
-  Add, History, CheckCircle, Block, Security, Rule, Lan
+  Add, History, CheckCircle, Block, Security, Rule, Lan, Info
 } from "@mui/icons-material";
 import { fetchPolicies, fetchPolicyDetails, updatePolicy } from "../services/approvalMappingService";
 import type { ApprovalPolicy, ApprovalGroup } from "../services/approvalMappingService";
@@ -46,8 +46,10 @@ const ApprovalPolicyList = () => {
 
   const viewConditions = async (policyId: string) => {
     try {
-      const res = await fetchPolicyDetails(policyId);
-      setViewGroups({ groups: res.groups ?? [], open: true });
+      const res: any = await fetchPolicyDetails(policyId);
+      // The backend sends groups inside the policy object
+      const groups = res.groups ?? res.policy?.groups ?? [];
+      setViewGroups({ groups, open: true });
     } catch (err) {
       console.error(err);
     }
@@ -108,7 +110,12 @@ const ApprovalPolicyList = () => {
                       <Typography variant="caption" color="text.secondary">{p.scope_id ?? 'Global'}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip label={p.template_id} size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontWeight: 700 }} />
+                      <Chip
+                        label={p.template_name || p.template_id.substring(0, 8)}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontWeight: 700 }}
+                      />
                     </TableCell>
                     <TableCell>
                       <Chip
@@ -153,18 +160,25 @@ const ApprovalPolicyList = () => {
         <DialogTitle sx={{ fontWeight: 800 }}>Enforcement Conditions</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ py: 1 }}>
-            {viewGroups.groups.map((g, gi) => (
-              <Paper key={g.id} sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <Typography variant="subtitle2" sx={{ mb: 2, color: '#6C63FF', fontWeight: 800 }}>Rule Group {gi + 1} ({g.operator})</Typography>
-                {g.conditions.map((c) => (
-                  <Box key={c.id} sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>{c.attribute}</Typography>
-                    <Typography variant="body2" color="text.secondary">{c.operator}</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 800, color: '#00D9FF' }}>{c.value}</Typography>
-                  </Box>
-                ))}
-              </Paper>
-            ))}
+            {viewGroups.groups.length === 0 ? (
+              <Box sx={{ p: 4, textAlign: 'center', opacity: 0.5 }}>
+                <Info sx={{ fontSize: 48, mb: 1 }} />
+                <Typography variant="body2">No semantic conditions mapped to this policy.</Typography>
+              </Box>
+            ) : (
+              viewGroups.groups.map((g, gi) => (
+                <Paper key={g.id} sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <Typography variant="subtitle2" sx={{ mb: 2, color: '#6C63FF', fontWeight: 800 }}>Rule Group {gi + 1} ({g.operator})</Typography>
+                  {g.conditions.map((c) => (
+                    <Box key={c.id} sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{c.attribute}</Typography>
+                      <Typography variant="body2" color="text.secondary">{c.operator}</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 800, color: '#00D9FF' }}>{c.value}</Typography>
+                    </Box>
+                  ))}
+                </Paper>
+              ))
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>

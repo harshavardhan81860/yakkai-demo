@@ -71,7 +71,7 @@ class ApprovalMappingPolicyCreate(BaseModel):
         }
 
 class ApprovalMappingPolicyUpdate(BaseModel):
-    template_id: Optional[uuid.UUID]
+    # template_id: Optional[uuid.UUID]
     is_mandatory: Optional[bool] = None
     is_active: Optional[bool] = None
     groups: Optional[List[ApprovalMappingGroupUpdate]] = []

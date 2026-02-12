@@ -21,6 +21,8 @@ class TemplateLevelSchema(BaseModel):
 
 class CreateApprovalTemplateRequest(BaseModel):
     template_name: str
+    scope: Literal["SYSTEM", "TENANT"] = "SYSTEM"
+    tenant_id: Optional[str] = None
     is_active: bool = True
     default_sla_minutes: Optional[int] = None
     levels: List[TemplateLevelSchema]
@@ -32,5 +34,7 @@ class UpdateApprovalTemplateRequest(BaseModel):
 
 class CloneApprovalTemplateRequest(BaseModel):
     template_name: str
+    scope: Literal["SYSTEM", "TENANT"] = "SYSTEM"
+    tenant_id: Optional[str] = None
     is_active: bool = False
     default_sla_minutes: int

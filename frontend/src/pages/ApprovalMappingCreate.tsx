@@ -70,17 +70,15 @@ const ApprovalPolicyCreate = () => {
   const [result, setResult] = useState<ResultState>({ open: false, success: false, message: "" });
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadInitialData = async () => {
       setLoading(true);
       try {
-        const [catalogRes, templatesRes, tenantsRes, operatorsRes] = await Promise.all([
+        const [catalogRes, tenantsRes, operatorsRes] = await Promise.all([
           fetchRegistryCatalog(),
-          fetchApprovalTemplates({ is_active: true }),
           fetchAllTenants(),
           fetchOperators(),
         ]);
         setCatalog(catalogRes);
-        setTemplates(templatesRes);
         setTenants(tenantsRes);
         setOperators(operatorsRes);
       } catch (err) {
@@ -89,8 +87,28 @@ const ApprovalPolicyCreate = () => {
         setLoading(false);
       }
     };
-    loadData();
+    loadInitialData();
   }, []);
+
+  useEffect(() => {
+    const loadScopedTemplates = async () => {
+      const params: any = { is_active: true, scope: rule.scope };
+      if (rule.scope === "TENANT") {
+        if (!rule.tenant) {
+          setTemplates([]);
+          return;
+        }
+        params.tenant_id = rule.tenant;
+      }
+      try {
+        const res = await fetchApprovalTemplates(params);
+        setTemplates(res);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    loadScopedTemplates();
+  }, [rule.scope, rule.tenant]);
 
   const handleConditionChange = (groupIdx: number, condIdx: number, field: keyof Condition, value: string) => {
     setGroups(groups.map((grp, idx) => {

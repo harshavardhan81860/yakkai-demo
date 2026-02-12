@@ -10,6 +10,8 @@ CREATE SCHEMA IF NOT EXISTS approval;
 CREATE TABLE IF NOT EXISTS approval.approval_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     template_name VARCHAR(100) NOT NULL,
+    scope VARCHAR(50) DEFAULT 'SYSTEM' NOT NULL,
+    tenant_id UUID NULL
     version INTEGER NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     default_sla_minutes INTEGER,

@@ -7,14 +7,19 @@ from utils.serializer import orm_to_dict
 from services.group_role_assignment_service import GroupRoleAssignmentService
 from schemas.group_role_assignment_schema import GroupRoleAssignmentCreateRequest
 
+from core.enums.registry_enum import RESOURCE, ACTION
+from services.registry_validation_service import registry
+
 router = APIRouter(
     prefix="/group-roles",
     tags=["Group Role Assignment"]
 )
 
 service = GroupRoleAssignmentService()
+resource = RESOURCE.ROLE
 
 @router.post("/assign")
+@registry(resource=resource, action=ACTION.ASSIGN)
 async def assign_role_to_group(
     req: GroupRoleAssignmentCreateRequest,
     session: AsyncSession = Depends(get_session)
@@ -32,6 +37,7 @@ async def assign_role_to_group(
     )
 
 @router.post("/revoke/{assignment_id}")
+@registry(resource=resource, action=ACTION.REVOKE)
 async def revoke_group_role(
     assignment_id: str,
     session: AsyncSession = Depends(get_session)
@@ -43,6 +49,7 @@ async def revoke_group_role(
     )
 
 @router.get("/group/{group_id}")
+@registry(resource=resource, action=ACTION.READ)
 async def list_group_roles(
     group_id: str,
     session: AsyncSession = Depends(get_session)
@@ -55,6 +62,7 @@ async def list_group_roles(
 
 
 @router.get("/role/{role_id}")
+@registry(resource=resource, action=ACTION.READ)
 async def list_role_groups(
     role_id: str,
     session: AsyncSession = Depends(get_session)

@@ -10,12 +10,17 @@ from core.response import ApiResponse
 from utils.serializer import orm_to_dict
 import uuid
 
+from core.enums.registry_enum import RESOURCE, ACTION
+from services.registry_validation_service import registry
+
 router = APIRouter(prefix="/quota", tags=["Quota"])
 service = QuotaService()
+resource = RESOURCE.QUOTA
 
 
 # List all quotas
 @router.get("/")
+@registry(resource=resource, action=ACTION.READ)
 async def list_quotas(session: AsyncSession = Depends(get_session)):
     limits = await service.list_limits(session)
     return ApiResponse.success(
