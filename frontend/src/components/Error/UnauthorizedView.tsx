@@ -46,12 +46,12 @@ const UnauthorizedView = () => {
                 {(user?.username || user?.email) && (
                     <Paper variant="outlined" sx={{ p: 2, mb: 4, bgcolor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.1)' }}>
                         <Grid container spacing={2}>
-                            <Grid item xs={user?.email ? 6 : 12}>
+                            <Grid size={{ xs: user?.email ? 6 : 12 }}>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>IDENTIFIED USERNAME</Typography>
                                 <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{user?.username || 'N/A'}</Typography>
                             </Grid>
                             {user?.email && (
-                                <Grid item xs={6}>
+                                <Grid size={{ xs: 6 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>REGISTERED EMAIL</Typography>
                                     <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{user?.email || 'N/A'}</Typography>
                                 </Grid>

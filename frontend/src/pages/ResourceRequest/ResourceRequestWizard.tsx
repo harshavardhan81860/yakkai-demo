@@ -29,13 +29,24 @@ import {
 
 // --- DUMMY DATA FOR PROTOTYPE ---
 
-const TENANTS = [
+interface Tenant {
+    id: string;
+    name: string;
+}
+
+const TENANTS: Tenant[] = [
     { id: 't1', name: 'Engineering' },
     { id: 't2', name: 'Marketing' },
     { id: 't3', name: 'Data Science' }
 ];
 
-const CLOUD_ACCOUNTS = {
+interface CloudAccount {
+    id: string;
+    name: string;
+    provider: string;
+}
+
+const CLOUD_ACCOUNTS: Record<string, CloudAccount[]> = {
     't1': [
         { id: 'aws-prod', name: 'AWS Production', provider: 'AWS' },
         { id: 'aws-dev', name: 'AWS Development', provider: 'AWS' }
@@ -48,7 +59,14 @@ const CLOUD_ACCOUNTS = {
     ]
 };
 
-const SERVICE_CATALOG = {
+interface Service {
+    id: string;
+    name: string;
+    type: string;
+    icon: React.ReactNode;
+}
+
+const SERVICE_CATALOG: Record<string, Service[]> = {
     'AWS': [
         { id: 'aws-ec2', name: 'Elastic Compute Cloud (EC2)', type: 'COMPUTE', icon: <StorageIcon /> },
         { id: 'aws-s3', name: 'Simple Storage Service (S3)', type: 'STORAGE', icon: <CloudIcon /> },
@@ -60,7 +78,16 @@ const SERVICE_CATALOG = {
     ]
 };
 
-const SERVICE_FORMS = {
+interface FormField {
+    id: string;
+    label: string;
+    type: string;
+    options?: string[];
+    helperText?: string;
+    placeholder?: string;
+}
+
+const SERVICE_FORMS: Record<string, FormField[]> = {
     'aws-ec2': [
         { id: 'instance_type', label: 'Instance Type', type: 'select', options: ['t3.micro', 't3.small', 'm5.large', 'c5.xlarge'], helperText: 't3.micro: $0.0104/hr, m5.large: $0.096/hr' },
         { id: 'ami_id', label: 'AMI ID', type: 'text', placeholder: 'ami-0abcdef12345' },
@@ -78,7 +105,7 @@ const SERVICE_FORMS = {
 };
 
 
-const PRICING_MOCK = {
+const PRICING_MOCK: Record<string, number> = {
     't3.micro': 10,
     't3.small': 20,
     'm5.large': 80,
@@ -99,15 +126,15 @@ const ResourceRequestWizard = () => {
         cloudAccount: '',
         serviceId: '',
         provider: '',
-        inputs: {},
+        inputs: {} as Record<string, any>,
         costEstimate: 0
     });
 
     const [validationState, setValidationState] = useState({
         loading: false,
-        quotaStatus: null, // 'OK' | 'WARNING' | 'EXCEEDED'
-        policyStatus: null, // 'OK' | 'NEEDS_APPROVAL'
-        messages: []
+        quotaStatus: null as string | null, // 'OK' | 'WARNING' | 'EXCEEDED'
+        policyStatus: null as string | null, // 'OK' | 'NEEDS_APPROVAL'
+        messages: [] as string[]
     });
 
 
@@ -132,8 +159,8 @@ const ResourceRequestWizard = () => {
         const instance = formData.inputs['instance_type'] || formData.inputs['vm_size'];
         let quota = 'OK';
         let policy = 'OK';
-        let msgs = [];
-        const cost = PRICING_MOCK[instance] || 0;
+        let msgs: string[] = [];
+        const cost = PRICING_MOCK[instance as string] || 0;
 
         // Logic for demo
         if (cost > 50) {
@@ -156,7 +183,7 @@ const ResourceRequestWizard = () => {
         });
     }
 
-    const handleContextSelect = (field, value) => {
+    const handleContextSelect = (field: string, value: string) => {
         setFormData(prev => ({
             ...prev,
             [field]: value,
@@ -173,7 +200,7 @@ const ResourceRequestWizard = () => {
         }
     };
 
-    const handleInputCheck = (field, value) => {
+    const handleInputCheck = (field: string, value: any) => {
         setFormData(prev => ({
             ...prev,
             inputs: {
@@ -190,7 +217,7 @@ const ResourceRequestWizard = () => {
         <Box sx={{ mt: 4 }}>
             <Typography variant="h6" gutterBottom>Where should this resource behave?</Typography>
             <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                         select
                         fullWidth
@@ -203,7 +230,7 @@ const ResourceRequestWizard = () => {
                         ))}
                     </TextField>
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                         select
                         fullWidth
@@ -228,7 +255,7 @@ const ResourceRequestWizard = () => {
                 <Typography variant="h6" gutterBottom>Select a Service</Typography>
                 <Grid container spacing={2}>
                     {services.map(srv => (
-                        <Grid item xs={12} md={4} key={srv.id}>
+                        <Grid size={{ xs: 12, md: 4 }} key={srv.id}>
                             <Card
                                 variant="outlined"
                                 sx={{
@@ -260,7 +287,7 @@ const ResourceRequestWizard = () => {
                 <Typography variant="h6" gutterBottom>Configure Resource</Typography>
                 <Grid container spacing={3}>
                     {fields.map(field => (
-                        <Grid item xs={12} md={6} key={field.id}>
+                        <Grid size={{ xs: 12, md: 6 }} key={field.id}>
                             <TextField
                                 select={field.type === 'select'}
                                 fullWidth
@@ -297,10 +324,10 @@ const ResourceRequestWizard = () => {
 
                 <Paper variant="outlined" sx={{ p: 3, mb: 3 }}>
                     <Grid container spacing={2}>
-                        <Grid item xs={6}><Typography color="text.secondary">Tenant:</Typography> {TENANTS.find(t => t.id === formData.tenant)?.name}</Grid>
-                        <Grid item xs={6}><Typography color="text.secondary">Cloud:</Typography> {formData.cloudAccount}</Grid>
-                        <Grid item xs={6}><Typography color="text.secondary">Service:</Typography> {SERVICE_CATALOG[formData.provider]?.find(s => s.id === formData.serviceId)?.name}</Grid>
-                        <Grid item xs={6}><Typography color="text.secondary">Estimated Cost:</Typography> <b>${formData.costEstimate}/month</b></Grid>
+                        <Grid size={{ xs: 6 }}><Typography color="text.secondary">Tenant:</Typography> {TENANTS.find(t => t.id === formData.tenant)?.name}</Grid>
+                        <Grid size={{ xs: 6 }}><Typography color="text.secondary">Cloud:</Typography> {formData.cloudAccount}</Grid>
+                        <Grid size={{ xs: 6 }}><Typography color="text.secondary">Service:</Typography> {SERVICE_CATALOG[formData.provider]?.find(s => s.id === formData.serviceId)?.name}</Grid>
+                        <Grid size={{ xs: 6 }}><Typography color="text.secondary">Estimated Cost:</Typography> <b>${formData.costEstimate}/month</b></Grid>
                     </Grid>
                     <Divider sx={{ my: 2 }} />
                     <Typography variant="subtitle2">Configuration:</Typography>

@@ -22,7 +22,16 @@ const AppLayout = () => {
     const [collapsed, setCollapsed] = useState(false);
     const width = !isActive ? 0 : (collapsed ? 72 : DRAWER_WIDTH);
 
-    const menuItems = [
+    interface MenuItemType {
+        header?: string;
+        text?: string;
+        icon?: React.ReactNode;
+        path?: string;
+        divider?: boolean;
+        disabled?: boolean;
+    }
+
+    const menuItems: MenuItemType[] = [
         // ── Main ──
         { header: 'Infrastructure' },
         { text: 'Tenants', icon: <Business />, path: '/tenants' },

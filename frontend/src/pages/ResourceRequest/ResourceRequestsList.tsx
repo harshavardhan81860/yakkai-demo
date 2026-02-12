@@ -139,9 +139,15 @@ const REQUESTS = [
 
 // --- STYLED COMPONENTS ---
 
-const StatusChip = styled(Chip)(({ theme, status }) => {
-    let color = theme.palette.default;
-    let bgcolor = theme.palette.action.hover;
+interface StatusChipProps {
+    status: string;
+}
+
+const StatusChip = styled(Chip, {
+    shouldForwardProp: (prop) => prop !== 'status',
+})<StatusChipProps>(({ theme, status }) => {
+    let color: string = theme.palette.text.primary;
+    let bgcolor: string = theme.palette.action.hover;
 
     switch (status) {
         case 'APPROVED':
@@ -178,8 +184,14 @@ const StatusChip = styled(Chip)(({ theme, status }) => {
     };
 });
 
+interface StatCardProps {
+    title: string;
+    value: number | string;
+    icon: React.ReactNode;
+    color: string;
+}
 
-const StatCard = ({ title, value, icon, color }) => (
+const StatCard = ({ title, value, icon, color }: StatCardProps) => (
     <Card variant="outlined" sx={{ height: '100%', borderRadius: 3 }}>
         <CardContent sx={{ display: 'flex', alignItems: 'center', p: 3 }}>
             <Box sx={{
@@ -243,16 +255,16 @@ const ResourceRequestsList = () => {
 
             {/* Stats Row */}
             <Grid container spacing={3} mb={5}>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <StatCard title="Total Requests" value={STATS.total} icon={<CloudIcon />} color="#6C63FF" />
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <StatCard title="Pending Approval" value={STATS.pending} icon={<ScheduleIcon />} color="#F59E0B" />
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <StatCard title="Approved / Active" value={STATS.approved} icon={<CheckCircleIcon />} color="#10B981" />
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <StatCard title="Rejected / Failed" value={STATS.rejected} icon={<ErrorIcon />} color="#EF4444" />
                 </Grid>
             </Grid>
