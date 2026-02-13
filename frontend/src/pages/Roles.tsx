@@ -16,6 +16,8 @@ import {
 } from "../services/rolesService";
 import { fetchAllTenants, type TenantRow } from "../services/tenantsService";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
+import { fetchAllGroups } from "../services/groupsService";
+
 
 const Roles = () => {
   const navigate = useNavigate();
@@ -27,6 +29,7 @@ const Roles = () => {
   const [editRole, setEditRole] = useState<RoleRow | null>(null);
   const [editDescription, setEditDescription] = useState("");
   const [editEmail, setEditEmail] = useState("");
+  const [allGroups, setAllGroups] = useState<any[]>([]);
 
   const [form, setForm] = useState<any>({ name: "", description: "", is_system_role: true, email: "" });
   const [resultDialog, setResultDialog] = useState<{ success: boolean; message: string } | null>(null);
@@ -41,7 +44,15 @@ const Roles = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [rolesData, tenantsData] = await Promise.all([fetchAllRoles(), fetchAllTenants()]);
+      const [rolesData, tenantsData, groupsData] = await Promise.all([
+        fetchAllRoles(),
+        fetchAllTenants(),
+        fetchAllGroups()
+      ]);
+
+      setRoles([...rolesData].sort((a, b) => Number(b.is_active) - Number(a.is_active) || a.id - b.id));
+      setTenants(tenantsData.filter((t) => t.is_active));
+      setAllGroups(groupsData);
       setRoles([...rolesData].sort((a, b) => Number(b.is_active) - Number(a.is_active) || a.id - b.id));
       setTenants(tenantsData.filter((t) => t.is_active));
     } catch (err) {
@@ -69,17 +80,27 @@ const Roles = () => {
     setViewRoleModal(true);
     setActiveTab(0);
     setLoadingRoleData(true);
+
     try {
-      const [users, groups] = await Promise.all([getRoleUsers(role.id), getRoleGroups(role.id)]);
+      const [users, groups] = await Promise.all([
+        getRoleUsers(role.id),
+        getRoleGroups(role.id)
+      ]);
+
+      console.log("Groups from API:", groups);
+      console.log("Users from API:", users);
+
       setRoleUsers(users);
       setRoleGroups(groups);
-    } catch {
+    } catch (err) {
+      console.error(err);
       setRoleUsers([]);
       setRoleGroups([]);
     } finally {
       setLoadingRoleData(false);
     }
   };
+
 
   const submitCreate = async () => {
     if (!form.name || !form.description) return;
@@ -215,11 +236,33 @@ const Roles = () => {
             </Table>
           ) : (
             <Table size="small">
-              <TableHead><TableRow><TableCell>Group</TableCell><TableCell>Status</TableCell></TableRow></TableHead>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Group</TableCell>
+                  <TableCell>Status</TableCell>
+                </TableRow>
+              </TableHead>
               <TableBody>
-                {roleGroups.length ? roleGroups.map(g => (
-                  <TableRow key={g.id}><TableCell>{g.name}</TableCell><TableCell><Chip label="Linked" size="small" variant="outlined" /></TableCell></TableRow>
-                )) : <TableRow><TableCell colSpan={2} align="center" sx={{ py: 4 }}>No groups linked</TableCell></TableRow>}
+                {roleGroups.length ? roleGroups.map(g => {
+                  const groupName =
+                    allGroups.find(gr => String(gr.id) === String(g.group_id))?.name
+                    || g.group_id;
+
+                  return (
+                    <TableRow key={g.id}>
+                      <TableCell>{groupName}</TableCell>
+                      <TableCell>
+                        <Chip label="Linked" size="small" variant="outlined" />
+                      </TableCell>
+                    </TableRow>
+                  );
+                }) : (
+                  <TableRow>
+                    <TableCell colSpan={2} align="center" sx={{ py: 4 }}>
+                      No groups linked
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           )}

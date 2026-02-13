@@ -17,6 +17,10 @@ import {
 } from "../../services/userRolesService";
 import { fetchAllGroups } from "../../services/groupsService";
 import { fetchAllRoles } from "../../services/rolesService";
+import { AccessMappingGroup, AccessMappingRole, fetchUserAccessMappings } from "../../services/userAccessMappingService";
+import { useNavigate } from "react-router-dom";
+
+
 
 interface UserRolesGroupsDialogProps {
   userId: number;
@@ -32,46 +36,77 @@ const UserRolesGroupsDialog = ({
   onClose,
 }: UserRolesGroupsDialogProps) => {
   const [loading, setLoading] = useState(false);
-  const [groups, setGroups] = useState<(UserGroupAssignment & { group_name?: string })[]>([]);
-  const [roles, setRoles] = useState<(UserRoleAssignment & { role_name?: string })[]>([]);
+  const [groups, setGroups] = useState<AccessMappingGroup[]>([]);
+  const [roles, setRoles] = useState<AccessMappingRole[]>([]);
   const [activeTab, setActiveTab] = useState(0);
+  const navigate = useNavigate();
+
 
   useEffect(() => {
+    const loadGroups = async () => {
+      try {
+        setLoading(true);
+        const response = await fetchUserAccessMappings(userId);
+        setGroups(response?.groups ?? []);
+        setRoles(response?.roles ?? []);
+      } catch (error) {
+        console.error("Failed to fetch groups", error);
+        setGroups([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (isOpen && userId) {
-      loadData();
+      loadGroups();
     }
   }, [isOpen, userId]);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [groupsMaster, rolesMaster, userGroupsResp, userRolesResp] = await Promise.all([
-        fetchAllGroups(),
-        fetchAllRoles(),
-        fetchUserGroups(userId),
-        fetchUserRoles(userId),
-      ]);
+  // const loadData = async () => {
+  //   setLoading(true);
+  //   try {
+  //     const [groupsMaster, rolesMaster, userGroupsResp, userRolesResp] = await Promise.all([
+  //       fetchAllGroups(),
+  //       fetchAllRoles(),
+  //       fetchUserGroups(userId),
+  //       fetchUserRoles(userId),
+  //     ]);
 
-      const userGroups: UserGroupAssignment[] = userGroupsResp ?? [];
-      const userRoles: UserRoleAssignment[] = userRolesResp ?? [];
+  //     const userGroups: UserGroupAssignment[] = userGroupsResp ?? [];
+  //     const userRoles: UserRoleAssignment[] = userRolesResp ?? [];
 
-      setGroups(userGroups.map((g) => ({
-        ...g,
-        group_name: groupsMaster.find((x) => x.id === g.group_id)?.name ?? `Group #${g.group_id}`,
-      })));
+  //     setGroups(userGroups.map((g) => ({
+  //       ...g,
+  //       group_name: groupsMaster.find((x) => x.id === g.group_id)?.name ?? `Group #${g.group_id}`,
+  //     })));
 
-      setRoles(userRoles.map((r) => ({
-        ...r,
-        role_name: rolesMaster.find((x) => x.id === r.role_id)?.name ?? `Role #${r.role_id}`,
-      })));
-    } catch (error) {
-      console.error("Failed to fetch user roles/groups:", error);
-      setGroups([]);
-      setRoles([]);
-    } finally {
-      setLoading(false);
+  //     setRoles(userRoles.map((r) => ({
+  //       ...r,
+  //       role_name: rolesMaster.find((x) => x.id === r.role_id)?.name ?? `Role #${r.role_id}`,
+  //     })));
+  //   } catch (error) {
+  //     console.error("Failed to fetch user roles/groups:", error);
+  //     setGroups([]);
+  //     setRoles([]);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+
+  const isGroupsTab = activeTab === 0;
+  const assignLabel = isGroupsTab ? "Assign Group" : "Assign Role";
+
+  const handleAssign = () => {
+    if (isGroupsTab) {
+      console.log("Open Assign Group Dialog");
+      navigate(`/user-group-mapping?userId=${userId}`)
+    } else {
+      console.log("Open Assign Role Dialog");
+      navigate(`/user-role-mapping?userId=${userId}`)
     }
   };
+
 
   return (
     <Dialog
@@ -106,36 +141,76 @@ const UserRolesGroupsDialog = ({
 
           <TableContainer sx={{ maxHeight: 400 }}>
             <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Assignment ID</TableCell>
-                  <TableCell>{activeTab === 0 ? 'Group Identity' : 'Role Identity'}</TableCell>
-                  <TableCell>Scope</TableCell>
-                  <TableCell>Established</TableCell>
-                </TableRow>
-              </TableHead>
+                <TableHead>
+                  <TableRow>
+                    {activeTab === 0 ? (
+                      <>
+                        <TableCell>Name</TableCell>
+                        <TableCell>ID</TableCell>
+                        <TableCell>Scope Type</TableCell>
+                        <TableCell>Established</TableCell>
+                      </>
+                    ) : (
+                      <>
+                        <TableCell>Name</TableCell>
+                        <TableCell>Scope Type</TableCell>
+                        <TableCell>Tenant</TableCell>
+                        <TableCell>Assignment Type</TableCell>
+                        <TableCell>Assignment Name</TableCell>
+                      </>
+                    )}
+                  </TableRow>
+                </TableHead>
+
+          
+
+
               <TableBody>
                 {activeTab === 0 ? (
                   groups.length === 0 && !loading ? (
                     <TableRow><TableCell colSpan={4} align="center" sx={{ py: 8 }}><Typography color="text.secondary">No group assignments detected</Typography></TableCell></TableRow>
                   ) : (
-                    groups.map((g) => (
-                      <TableRow key={g.id}>
-                        <TableCell><Typography variant="body2" sx={{ fontFamily: 'monospace', opacity: 0.6 }}>#{g.group_id}</Typography></TableCell>
-                        <TableCell><Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{g.group_name}</Typography></TableCell>
-                        <TableCell>
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <Business sx={{ fontSize: 14, opacity: 0.6 }} />
-                            <Typography variant="body2">{g.tenant_id ?? "Global"}</Typography>
-                          </Stack>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <History sx={{ fontSize: 12 }} /> {new Date(g.created_at).toLocaleDateString()}
+                    groups.length === 0 && !loading ? (
+                      <TableRow>
+                        <TableCell colSpan={4} align="center" sx={{ py: 8 }}>
+                          <Typography color="text.secondary">
+                            No group assignments detected
                           </Typography>
                         </TableCell>
                       </TableRow>
-                    ))
+                    ) : (
+                      groups.map((g) => (
+                        <TableRow key={g.id}>
+                          <TableCell>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                              {g.name}
+                            </Typography>
+                          </TableCell>
+
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontFamily: "monospace", opacity: 0.6 }}>
+                              #{g.id}
+                            </Typography>
+                          </TableCell>
+
+                          {/* Type */}
+                          <TableCell>
+                            <Chip label={g.type} size="small" />
+                          </TableCell>
+
+                          {/* Established */}
+                          <TableCell>
+                            <Typography variant="caption">
+                              {g.type === "SYSTEM"
+                                ? "-"
+                                : (g.tenant as any)?.name ?? "-"}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))
+
+
+                    )
                   )
                 ) : (
                   roles.length === 0 && !loading ? (
@@ -143,17 +218,40 @@ const UserRolesGroupsDialog = ({
                   ) : (
                     roles.map((r) => (
                       <TableRow key={r.id}>
-                        <TableCell><Typography variant="body2" sx={{ fontFamily: 'monospace', opacity: 0.6 }}>#{r.role_id}</Typography></TableCell>
-                        <TableCell><Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{r.role_name}</Typography></TableCell>
                         <TableCell>
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <Business sx={{ fontSize: 14, opacity: 0.6 }} />
-                            <Typography variant="body2">{r.tenant_id ?? "Global"}</Typography>
-                          </Stack>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                            {r.name}
+                          </Typography>
                         </TableCell>
+
                         <TableCell>
-                          <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <History sx={{ fontSize: 12 }} /> {new Date(r.created_at).toLocaleDateString()}
+                          <Chip label={r.type} size="small" />
+                        </TableCell>
+
+                        {/* Tenant */}
+                        <TableCell>
+                          <Typography variant="caption">
+                            {r.type === "SYSTEM"
+                              ? "-"
+                              : (r.tenant as any)?.name ?? "-"}
+                          </Typography>
+                        </TableCell>
+
+                        {/* Assignment Type */}
+                        <TableCell>
+                          <Chip
+                            label={r.assignment_type}
+                            size="small"
+                            color={r.assignment_type === "DIRECT" ? "primary" : "default"}
+                          />
+                        </TableCell>
+
+                        {/* Assignment Name */}
+                        <TableCell>
+                          <Typography variant="caption">
+                            {r.assignment_type === "DIRECT"
+                              ? "-"
+                              : r.inherited_from_groups?.map(g => g.name).join(", ")}
                           </Typography>
                         </TableCell>
                       </TableRow>
@@ -167,6 +265,14 @@ const UserRolesGroupsDialog = ({
       </DialogContent>
 
       <DialogActions sx={{ p: 2.5, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <Button
+          variant="outlined"
+          startIcon={isGroupsTab ? <Group /> : <Security />}
+          onClick={handleAssign}
+          sx={{ px: 4, borderRadius: 2 }}
+        >
+          {assignLabel}
+        </Button>
         <Button onClick={onClose} variant="contained" sx={{ px: 4, borderRadius: 2 }}>Close Auditor</Button>
       </DialogActions>
     </Dialog>

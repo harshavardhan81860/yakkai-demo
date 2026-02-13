@@ -20,6 +20,8 @@ import {
 } from "../services/userGroupsService";
 import { fetchAllTenants, type TenantRow } from "../services/tenantsService";
 import { fetchCloudAccounts, type CloudAccountRow } from "../services/cloudAccountsService";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+
 
 const UserGroupMapping = () => {
   const navigate = useNavigate();
@@ -51,14 +53,30 @@ const UserGroupMapping = () => {
         setGroups(g.filter((x) => x.is_active));
         setTenants(t.filter((x) => x.is_active));
 
-        const userId = Number(params.get("userId"));
+        const userId = params.get("userId");
         if (userId) {
-          const user = u.find((x) => x.id === userId);
+          const user = u.find((x) => String(x.id) === String(userId));
           if (user) {
             setSelectedUser(user);
             setAssignments(await fetchUserGroups(user.id));
           }
         }
+
+        // ✅ Pre-fill group from groupId param
+        const groupId = params.get("groupId");
+        // console.log("groupId from URL:", groupId);
+        // console.log("available group ids:", g.map(x => ({ id: x.id, type: typeof x.id, name: x.name })));
+        console.log("Assigned Users:", assignments);
+
+        if (groupId) {
+          const group = g.find((x) => String(x.id) === String(groupId));
+          console.log("matched group:", group);
+          if (group) {
+            setSelectedGroup(group);
+            setAssignType(group.is_system_group ? "system" : "tenant");
+          }
+        }
+
       } catch (err) {
         console.error(err);
       } finally {
@@ -67,6 +85,15 @@ const UserGroupMapping = () => {
     };
     load();
   }, []);
+
+  useEffect(() => {
+    const groupId = params.get("groupId");
+    if (groupId && selectedGroup) {
+      setShowAssign(true);
+    }
+  }, [selectedGroup]);
+
+
 
   useEffect(() => {
     if (!selectedTenant) return;
@@ -101,8 +128,20 @@ const UserGroupMapping = () => {
   }, [assignments, cloudAccounts]);
 
   const confirmAssign = async () => {
-    if (!selectedUser || !selectedGroup) return;
-    const payload: any = { user_id: selectedUser.id, group_id: selectedGroup.id };
+    if (!selectedUser) {
+      alert("Please select a user");
+      return;
+    }
+
+    if (!selectedGroup) {
+      alert("Please select a group");
+      return;
+    }
+
+    const payload: any = {
+      user_id: selectedUser.id,
+      group_id: selectedGroup.id,
+    };
     if (assignType === "tenant") {
       if (selectedCloud) payload.cloud_account_id = selectedCloud.id;
       else payload.tenant_id = selectedTenant?.id;
@@ -279,6 +318,18 @@ const UserGroupMapping = () => {
         <DialogTitle sx={{ fontWeight: 700 }}>Add to Group</DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <Grid container spacing={2.5}>
+            {/* ✅ ADD THIS BLOCK HERE */}
+            {/* <Grid size={12}>
+              <Autocomplete
+                options={users}
+                getOptionLabel={(u) => `${u.username} (${u.email})`}
+                value={selectedUser}
+                onChange={(_, v) => setSelectedUser(v)}
+                renderInput={(params) => (
+                  <TextField {...params} label="Select User *" />
+                )}
+              />
+            </Grid> */}
             <Grid size={12}>
               <FormControl fullWidth>
                 <InputLabel>Enrollment Scope</InputLabel>
@@ -324,7 +375,18 @@ const UserGroupMapping = () => {
         </DialogContent>
         <DialogActions sx={{ p: 2.5 }}>
           <Button onClick={() => setShowAssign(false)}>Cancel</Button>
-          <Button variant="contained" onClick={confirmAssign} sx={{ background: 'linear-gradient(135deg,#6C63FF,#4A42D4)' }}>Add to Group</Button>
+          <Button
+            variant="contained"
+            onClick={confirmAssign}
+            disabled={
+              !selectedUser ||
+              !selectedGroup ||
+              (assignType === "tenant" && !selectedTenant)
+            }
+            sx={{ background: 'linear-gradient(135deg,#6C63FF,#4A42D4)' }}
+          >
+            Add to Group
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

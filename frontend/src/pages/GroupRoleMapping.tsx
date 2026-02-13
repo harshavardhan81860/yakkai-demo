@@ -44,29 +44,53 @@ const GroupRoleMapping = () => {
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true);
       try {
-        const [g, r, t] = await Promise.all([fetchAllGroups(), fetchAllRoles(), fetchAllTenants()]);
-        setGroups(g.filter((x) => x.is_active));
-        setRoles(r.filter((x) => x.is_active));
-        setTenants(t.filter((x) => x.is_active));
+        setLoading(true);
 
-        const groupId = Number(params.get("groupId"));
-        if (groupId) {
-          const group = g.find((x) => x.id === groupId);
-          if (group) {
-            setSelectedGroup(group);
-            setAssignments(await fetchGroupRoles(group.id));
-          }
+        const [groupsData, rolesData, tenantsData] = await Promise.all([
+          fetchAllGroups(),
+          fetchAllRoles(),
+          fetchAllTenants(),
+        ]);
+
+        const activeGroups = groupsData.filter((g: any) => g.is_active);
+        const activeRoles = rolesData.filter((r: any) => r.is_active);
+        const activeTenants = tenantsData.filter((t: any) => t.is_active);
+
+        setGroups(activeGroups);
+        setRoles(activeRoles);
+        setTenants(activeTenants);
+
+        // ✅ NEW
+        const groupIdParam = params.get("groupId");
+        const autoAssign = params.get("autoAssign") === "true";
+
+
+        if (!groupIdParam) return;
+
+       const group = activeGroups.find((g: any) => String(g.id) === groupIdParam);
+
+        if (!group) return;
+
+        setSelectedGroup(group);
+
+        const existingAssignments = await fetchGroupRoles(group.id);
+        setAssignments(existingAssignments);
+
+        if (autoAssign) {
+          setShowAssign(true);
         }
+
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
+
     load();
-  }, []);
+  }, [params]);
+
 
   useEffect(() => {
     if (!selectedTenant) return;

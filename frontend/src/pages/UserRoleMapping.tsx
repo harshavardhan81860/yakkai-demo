@@ -52,9 +52,10 @@ const UserRoleMapping = () => {
         setRoles(r.filter((x) => x.is_active));
         setTenants(t.filter((x) => x.is_active));
 
-        const userId = Number(params.get("userId"));
+        const userId = params.get("userId");
+
         if (userId) {
-          const user = u.find((x) => x.id === userId);
+          const user = u.find((x) => String(x.id) === String(userId));
           if (user) {
             setSelectedUser(user);
             setAssignments(await fetchUserRoles(user.id));

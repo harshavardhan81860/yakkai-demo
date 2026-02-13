@@ -15,13 +15,17 @@ import {
 } from "../services/groupsService";
 import { fetchAllTenants, type TenantRow } from "../services/tenantsService";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
+import { Tabs, Tab } from "@mui/material";
+import { fetchGroupRoles, GroupRoleAssignment }
+  from "../services/groupRolesService";
 
-const Groups = () => {
+
+const Groups = (
+) => {
   const navigate = useNavigate();
   const [groups, setGroups] = useState<GroupRow[]>([]);
   const [tenants, setTenants] = useState<TenantRow[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [showCreate, setShowCreate] = useState(false);
   const [editGroup, setEditGroup] = useState<GroupRow | null>(null);
   const [editDescription, setEditDescription] = useState("");
@@ -34,6 +38,12 @@ const Groups = () => {
   const [viewUsers, setViewUsers] = useState<GroupUser[]>([]);
   const [selectedGroupName, setSelectedGroupName] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [tabValue, setTabValue] = useState(0);
+  const [groupRoles, setGroupRoles] = useState<GroupRoleAssignment[]>([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const isUserTab = tabValue === 0;
+  const assignLabel = isUserTab ? "Assign User" : "Assign Role";
 
   const loadData = async () => {
     setLoading(true);
@@ -63,17 +73,43 @@ const Groups = () => {
 
   const handleViewUsers = async (group: GroupRow) => {
     setSelectedGroupName(group.name);
+    setSelectedGroupId(group.id);   // ✅ ADD THIS
     setViewUsersModal(true);
     setLoadingUsers(true);
+    setLoadingRoles(true);
+    setTabValue(0);
+
     try {
-      const users = await getGroupUsers(group.id);
+      const [users, roles] = await Promise.all([
+        getGroupUsers(group.id),
+        fetchGroupRoles(group.id)
+      ]);
+
       setViewUsers(users);
+      setGroupRoles(roles);
     } catch {
       setViewUsers([]);
+      setGroupRoles([]);
     } finally {
       setLoadingUsers(false);
+      setLoadingRoles(false);
     }
   };
+
+
+  const handleAssign = () => {
+    if (!selectedGroupId) return;
+
+    // 🔥 CLOSE MODAL FIRST
+    setViewUsersModal(false);
+
+    if (tabValue === 0) {
+      navigate(`/user-group-mapping?groupId=${selectedGroupId}`);
+    } else {
+      navigate(`/group-role-mapping?groupId=${selectedGroupId}&autoAssign=true`);
+    }
+  };
+
 
   const submitCreate = async () => {
     if (!form.name || !form.description) return;
@@ -185,72 +221,234 @@ const Groups = () => {
       {/* Members Modal */}
       <Dialog
         open={viewUsersModal}
+        // open={showCreate}
         onClose={() => setViewUsersModal(false)}
+        maxWidth="md"
+        fullWidth
+        slotProps={{
+          backdrop: {
+            sx: {
+              backgroundColor: "rgba(0, 0, 0, 0.4)",
+              backdropFilter: "blur(8px)",
+            },
+          },
+        }}
+      >
+
+        {/* Header */}
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" fontWeight={700}>
+            {selectedGroupName}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Manage access mappings
+          </Typography>
+        </DialogTitle>
+
+        <Divider />
+
+        {/* Tabs */}
+        <Tabs
+          value={tabValue}
+          onChange={(_, newValue) => setTabValue(newValue)}
+          sx={{ px: 2 }}
+        >
+          <Tab label="Users" />
+          <Tab label="Roles" />
+        </Tabs>
+
+        <Divider />
+        {/* Content */}
+        <DialogContent sx={{ p: 3 }}>
+          {tabValue === 0 && (
+            loadingUsers ? <LinearProgress /> : (
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>User</TableCell>
+                    <TableCell>Email</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {viewUsers.length ? viewUsers.map(u => (
+                    <TableRow key={u.id}>
+                      <TableCell>{u.username}</TableCell>
+                      <TableCell>{u.email}</TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={2} align="center">No members</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )
+          )}
+
+          {tabValue === 1 && (
+            loadingRoles ? <LinearProgress /> : (
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Role ID</TableCell>
+                    <TableCell>Scope</TableCell>
+                    <TableCell>Scope Name</TableCell>
+
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {groupRoles.length ? groupRoles.map(r => {
+                    const isSystem = !r.tenant_id;
+
+                    const tenantName = tenants.find(
+                      t => String(t.id) === String(r.tenant_id)
+                    )?.display_name ?? "";
+
+                    return (
+                      <TableRow key={r.id}>
+                        <TableCell>{r.role_id}</TableCell>
+
+                        {/* Scope Column */}
+                        <TableCell>
+                          {isSystem ? "System" : "Tenant"}
+                        </TableCell>
+
+                        {/* Scope Name Column */}
+                        <TableCell>
+                          {isSystem ? "" : tenantName}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }) : (
+                    <TableRow>
+                      <TableCell colSpan={3} align="center">
+                        No roles assigned
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )
+          )}
+        </DialogContent>
+
+        <Divider />
+
+        <DialogActions sx={{ p: 2.5, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <Button
+            variant="outlined"
+            startIcon={isUserTab ? <People /> : <Security />} onClick={handleAssign}
+            sx={{ px: 4, borderRadius: 2 }}
+          >
+            {assignLabel}
+          </Button>
+          <Button
+            onClick={() => setViewUsersModal(false)}
+            variant="contained"
+            sx={{ px: 4, borderRadius: 2 }}
+          >
+            Close Auditor
+          </Button>        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
         maxWidth="sm"
         fullWidth
         slotProps={{
-          backdrop: { sx: { backgroundColor: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)' } }
+          backdrop: {
+            sx: {
+              backgroundColor: "rgba(0, 0, 0, 0.4)",
+              backdropFilter: "blur(8px)",
+            },
+          },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 700 }}>{selectedGroupName} Members</DialogTitle>
-        <DialogContent sx={{ p: 0 }}>
-          {loadingUsers ? <LinearProgress /> : (
-            <Table>
-              <TableHead><TableRow><TableCell>User</TableCell><TableCell>Email</TableCell></TableRow></TableHead>
-              <TableBody>
-                {viewUsers.length ? viewUsers.map(u => (
-                  <TableRow key={u.id}>
-                    <TableCell>{u.username}</TableCell>
-                    <TableCell>{u.email}</TableCell>
-                  </TableRow>
-                )) : <TableRow><TableCell colSpan={2} align="center" sx={{ py: 4 }}>No members</TableCell></TableRow>}
-              </TableBody>
-            </Table>
-          )}
+        <DialogTitle>Create Group</DialogTitle>
+
+        <DialogContent sx={{ mt: 1 }}>
+          <TextField
+            fullWidth
+            label="Group Name"
+            margin="normal"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
+
+          <TextField
+            fullWidth
+            label="Description"
+            margin="normal"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+          />
+
+          <TextField
+            fullWidth
+            label="Email"
+            margin="normal"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+          />
         </DialogContent>
-        <DialogActions><Button onClick={() => setViewUsersModal(false)}>Close</Button></DialogActions>
+
+        <DialogActions>
+          <Button onClick={() => setShowCreate(false)}>
+            Cancel
+          </Button>
+
+          <Button
+            variant="contained"
+            onClick={submitCreate}
+          >
+            Create
+          </Button>
+        </DialogActions>
+
+
       </Dialog>
 
-      {/* Create/Edit Modal */}
       <Dialog
-        open={showCreate || !!editGroup}
-        onClose={() => { setShowCreate(false); setEditGroup(null); }}
-        maxWidth="xs"
+        open={!!editGroup}
+        onClose={() => setEditGroup(null)}
+        maxWidth="sm"
         fullWidth
         slotProps={{
-          backdrop: { sx: { backgroundColor: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)' } }
+          backdrop: {
+            sx: {
+              backgroundColor: "rgba(0, 0, 0, 0.4)",
+              backdropFilter: "blur(8px)",
+            },
+          },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 700 }}>{editGroup ? "Edit Group" : "Create Group"}</DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField fullWidth label="Name" value={editGroup ? editGroup.name : form.name} disabled={!!editGroup} />
-            <TextField fullWidth label="Description" multiline rows={3} value={editGroup ? editDescription : form.description} onChange={e => editGroup ? setEditDescription(e.target.value) : setForm({ ...form, description: e.target.value })} />
-            <TextField fullWidth label="Email" value={editGroup ? editEmail : form.email} onChange={e => editGroup ? setEditEmail(e.target.value) : setForm({ ...form, email: e.target.value })} />
-            {!editGroup && (
-              <FormControl fullWidth>
-                <InputLabel>Type</InputLabel>
-                <Select value={String(form.is_system_group)} label="Type" onChange={e => setForm({ ...form, is_system_group: e.target.value === 'true' })}>
-                  <MenuItem value="true">System Group</MenuItem>
-                  <MenuItem value="false">Tenant Group</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-            {!editGroup && !form.is_system_group && (
-              <FormControl fullWidth>
-                <InputLabel>Tenant</InputLabel>
-                <Select value={form.tenant_id || ""} label="Tenant" onChange={e => setForm({ ...form, tenant_id: e.target.value })}>
-                  {tenants.map(t => <MenuItem key={t.id} value={t.id}>{t.display_name}</MenuItem>)}
-                </Select>
-              </FormControl>
-            )}
-          </Stack>
+        <DialogTitle>Edit Group</DialogTitle>
+
+        <DialogContent sx={{ mt: 1 }}>
+          <TextField
+            fullWidth
+            label="Description"
+            margin="normal"
+            value={editDescription}
+            onChange={(e) => setEditDescription(e.target.value)}
+          />
+
+          <TextField
+            fullWidth
+            label="Email"
+            margin="normal"
+            value={editEmail}
+            onChange={(e) => setEditEmail(e.target.value)}
+          />
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => { setShowCreate(false); setEditGroup(null); }}>Cancel</Button>
-          <Button variant="contained" onClick={editGroup ? submitUpdate : submitCreate}>Save</Button>
+        <DialogActions>
+          <Button onClick={() => setEditGroup(null)}>Cancel</Button>
+          <Button variant="contained" onClick={submitUpdate}>
+            Save
+          </Button>
         </DialogActions>
       </Dialog>
+
     </Box>
   );
 };
