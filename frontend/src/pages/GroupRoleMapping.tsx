@@ -20,6 +20,7 @@ import {
 } from "../services/groupRolesService";
 import { fetchAllTenants, type TenantRow } from "../services/tenantsService";
 import { fetchCloudAccounts, type CloudAccountRow } from "../services/cloudAccountsService";
+import { UserRow } from "../services/usersService";
 
 const GroupRoleMapping = () => {
   const navigate = useNavigate();
@@ -41,55 +42,55 @@ const GroupRoleMapping = () => {
   const [selectedCloud, setSelectedCloud] = useState<any>(null);
 
   const [loading, setLoading] = useState(true);
-
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
+  const [usersAssignedToRole, setUsersAssignedToRole] = useState<number[]>([]);
   useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
+    if (!selectedRole) {
+      setUsersAssignedToRole([]);
+      return;
+    }
+    // Fetch assignments for ALL users, then filter by selectedRole
+    Promise.all(users.map(u => fetchGroupRoles(u.id))).then(allAssignments => {
+      const assigned = allAssignments
+        .flat()
+        .filter(a => String(a.role_id) === String(selectedRole.id))
+        .map(a => a.group_id);
+      setUsersAssignedToRole(assigned);
+    });
+  }, [selectedRole, users]);
+  useEffect(() => {
+    const groupId = params.get("groupId");
+    const roleId = params.get("roleId");
+    const autoAssign = params.get("autoAssign") === "true";
 
-        const [groupsData, rolesData, tenantsData] = await Promise.all([
-          fetchAllGroups(),
-          fetchAllRoles(),
-          fetchAllTenants(),
-        ]);
+    (async () => {
+      const [g, r] = await Promise.all([fetchAllGroups(), fetchAllRoles()]);
 
-        const activeGroups = groupsData.filter((g: any) => g.is_active);
-        const activeRoles = rolesData.filter((r: any) => r.is_active);
-        const activeTenants = tenantsData.filter((t: any) => t.is_active);
+      setGroups(g);
+      setRoles(r);
 
-        setGroups(activeGroups);
-        setRoles(activeRoles);
-        setTenants(activeTenants);
-
-        // ✅ NEW
-        const groupIdParam = params.get("groupId");
-        const autoAssign = params.get("autoAssign") === "true";
-
-
-        if (!groupIdParam) return;
-
-       const group = activeGroups.find((g: any) => String(g.id) === groupIdParam);
-
-        if (!group) return;
-
-        setSelectedGroup(group);
-
-        const existingAssignments = await fetchGroupRoles(group.id);
-        setAssignments(existingAssignments);
-
-        if (autoAssign) {
-          setShowAssign(true);
-        }
-
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
+      // If coming from Groups page
+      if (groupId) {
+        const group = g.find(x => String(x.id) === groupId);
+        if (group) setSelectedGroup(group);
       }
-    };
 
-    load();
-  }, [params]);
+      // If coming from Roles page
+      if (roleId) {
+        const role = r.find(x => String(x.id) === roleId);
+        if (role) {
+          setAssignType(role.is_system_role ? "system" : "tenant");
+          setSelectedRole(role);
+        }
+      }
+
+      // Auto open assign dialog
+      if (autoAssign) {
+        setShowAssign(true);
+      }
+    })();
+  }, []);
 
 
   useEffect(() => {
@@ -100,8 +101,8 @@ const GroupRoleMapping = () => {
   }, [selectedTenant]);
 
   const assignedRoleIds = assignments.map((a) => a.role_id);
-  const systemRoles = roles.filter((r) => r.is_system_role && !assignedRoleIds.includes(r.id));
-  const tenantRoles = roles.filter((r) => !r.is_system_role && r.tenant_id === selectedTenant?.id && !assignedRoleIds.includes(r.id));
+  const systemRoles = roles.filter((r) => r.is_system_role && !assignedRoleIds.includes(Number(r.id)));
+  const tenantRoles = roles.filter((r) => !r.is_system_role && r.tenant_id === selectedTenant?.id && !assignedRoleIds.includes(Number(r.id)));
 
   const tenantAssignments = useMemo(() => {
     const map: Record<string, GroupRoleAssignment[]> = {};
@@ -216,11 +217,11 @@ const GroupRoleMapping = () => {
                 <TableContainer>
                   <Table>
                     <TableBody>
-                      {assignments.filter(a => roles.find(r => r.id === a.role_id)?.is_system_role).length === 0 ? (
+                      {assignments.filter(a => roles.find(r => String(r.id) === String(a.role_id))?.is_system_role).length === 0 ? (
                         <TableRow><TableCell align="center" sx={{ py: 4 }}><Typography color="text.secondary">No administrative roles assigned</Typography></TableCell></TableRow>
-                      ) : assignments.filter(a => roles.find(r => r.id === a.role_id)?.is_system_role).map(a => (
+                      ) : assignments.filter(a => roles.find(r => String(r.id) === String(a.role_id))?.is_system_role).map(a => (
                         <TableRow key={a.id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                          <TableCell><Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{roles.find(r => r.id === a.role_id)?.name}</Typography></TableCell>
+                          <TableCell><Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{roles.find(r => String(r.id) === String(a.role_id))?.name}</Typography></TableCell>
                           <TableCell align="right"><Button size="small" color="error" startIcon={<Delete />} onClick={() => revoke(a.id)}>Revoke</Button></TableCell>
                         </TableRow>
                       ))}
@@ -247,7 +248,7 @@ const GroupRoleMapping = () => {
                         </Box>
                         {assigns.map(a => (
                           <ListItem key={a.id} sx={{ px: 3, '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                            <ListItemText primary={<Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{roles.find(r => r.id === a.role_id)?.name}</Typography>}
+                            <ListItemText primary={<Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{roles.find(r => String(r.id) === String(a.role_id))?.name}</Typography>}
                               secondary={a.cloud_account_id ? `Restricted to Cloud Account ID: ${a.cloud_account_id}` : 'Tenant-wide scope'} />
                             <ListItemSecondaryAction>
                               <IconButton edge="end" color="error" onClick={() => revoke(a.id)}><Delete fontSize="small" /></IconButton>
@@ -277,6 +278,22 @@ const GroupRoleMapping = () => {
         <DialogTitle sx={{ fontWeight: 700 }}>Assign Role</DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <Grid container spacing={2.5}>
+            {/* 1. Select User */}
+            <Grid size={12}>
+              <Autocomplete
+                options={users.filter(u => !usersAssignedToRole.includes(u.id))}
+                getOptionLabel={(u) => `${u.username} (${u.email})`}
+                value={selectedUser}
+                onChange={(_, user) => {
+                  setSelectedUser(user || null);
+                  if (user) fetchGroupRoles(user.id).then(setAssignments);
+                }}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                renderInput={(params) => <TextField {...params} label="Select User *" />}
+              />
+
+            </Grid>
+
             <Grid size={12}>
               <FormControl fullWidth>
                 <InputLabel>Assignment Logic</InputLabel>

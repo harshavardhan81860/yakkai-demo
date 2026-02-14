@@ -5,8 +5,8 @@ import { fetchAllGroups } from "./groupsService";
 
 /* ----------------- INTERFACES ----------------- */
 export interface RoleRow {
-  id: number;
-  tenant_id: number | null;
+  id: string;
+  tenant_id: string | null;
   name: string;
   description: string;
   email?: string;
@@ -16,10 +16,10 @@ export interface RoleRow {
   updated_at: string;
 }
 export interface UserRoleAssignment {
-  id: number;        // assignment id
-  user_id: number;
-  role_id: number;
-  tenant_id: number | null;
+  id: string;
+  user_id: string;
+  role_id: string;
+  tenant_id: string | null;
   created_at: string;
   username: string;
   email: string;
@@ -36,11 +36,11 @@ export const fetchAllRoles = async (): Promise<RoleRow[]> => {
 };
 
 // Activate a role
-export const activateRole = async (roleId: number) =>
+export const activateRole = async (roleId: string) =>
   api.patch(`/api/v1/roles/${roleId}/activate`);
 
 // Deactivate a role
-export const deactivateRole = async (roleId: number) =>
+export const deactivateRole = async (roleId: string) =>
   api.patch(`/api/v1/roles/${roleId}/deactivate`);
 
 // Create a new role
@@ -48,7 +48,7 @@ export const createRole = async (payload: {
   name: string;
   description: string;
   is_system_role: boolean;
-  tenant_id?: number;
+  tenant_id?: string;
   email?: string;
 }) => {
   const res = await api.post("api/v1/roles/create", payload);
@@ -57,7 +57,7 @@ export const createRole = async (payload: {
 
 // Update an existing role
 export const updateRole = async (
-  roleId: number,
+  roleId: string,
   payload: { description: string; email?: string }
 ) => {
   const res = await api.put(`/api/v1/roles/${roleId}`, payload);
@@ -70,7 +70,7 @@ export const updateRole = async (
  * Users assigned to role
  */
 export const getRoleUsers = async (
-  roleId: number
+  roleId: string
 ): Promise<UserRoleAssignment[]> => {
   const roleRes = await api.get(`/api/v1/roles/${roleId}/users`);
 
@@ -86,7 +86,7 @@ export const getRoleUsers = async (
 
   return assignments.map((a: any) => {
     const user = allUsers.find(
-      (u) => Number(u.id) === Number(a.user_id)
+      (u) => String(u.id) === String(a.user_id)
     );
 
     return {
@@ -112,8 +112,7 @@ export const getRoleUsers = async (
 /**
  * Get all groups mapped to a role
  */
-export const getRoleGroups = async (roleId: number) => {
-  // 1. Get assignments for the role
+export const getRoleGroups = async (roleId: string) => {
   const res = await api.get(
     `/api/v1/group-roles/role/${roleId}`
   );
@@ -121,14 +120,12 @@ export const getRoleGroups = async (roleId: number) => {
   const assignments = res.data?.data?.assignments ?? [];
   if (!assignments.length) return [];
 
-  // 2. Get all groups (to resolve names)
   const allGroups = await fetchAllGroups();
 
-  // 3. Map assignments → groups
   return assignments
     .map((a: any) => {
       const group = allGroups.find(
-        (g) => Number(g.id) === Number(a.group_id)
+        (g) => String(g.id) === String(a.group_id)
       );
 
       if (!group) return null;
@@ -136,6 +133,7 @@ export const getRoleGroups = async (roleId: number) => {
       return {
         id: group.id,
         name: group.name,
+        email : group.email?? "-",
       };
     })
     .filter(Boolean);

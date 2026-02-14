@@ -50,11 +50,11 @@ const Roles = () => {
         fetchAllGroups()
       ]);
 
-      setRoles([...rolesData].sort((a, b) => Number(b.is_active) - Number(a.is_active) || a.id - b.id));
+      setRoles([...rolesData].sort((a, b) => Number(b.is_active) - Number(a.is_active) || a.id.localeCompare(b.id)));
       setTenants(tenantsData.filter((t) => t.is_active));
       setAllGroups(groupsData);
-      setRoles([...rolesData].sort((a, b) => Number(b.is_active) - Number(a.is_active) || a.id - b.id));
-      setTenants(tenantsData.filter((t) => t.is_active));
+      // setRoles([...rolesData].sort((a, b) => Number(b.is_active) - Number(a.is_active) ||  a.id.localeCompare(b.id)));
+      // setTenants(tenantsData.filter((t) => t.is_active));
     } catch (err) {
       console.error(err);
     } finally {
@@ -127,8 +127,22 @@ const Roles = () => {
     }
   };
 
-  const getTenantName = (id: number | null) => tenants.find((t) => t.id === id)?.display_name ?? "—";
+  const getTenantName = (id: string | null) => tenants.find((t) => String(t.id) === String(id))?.display_name ?? "—";
 
+  const handleAssign = () => {
+    if (!selectedRole) return;
+
+    const basePath =
+      activeTab === 0 ? "/user-role-mapping" : "/group-role-mapping";
+
+    navigate(
+      `${basePath}?roleId=${selectedRole.id}&autoAssign=true`
+    );
+
+    setViewRoleModal(false);
+  };
+
+  
   return (
     <Box>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -238,27 +252,21 @@ const Roles = () => {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Group</TableCell>
-                  <TableCell>Status</TableCell>
+                  <TableCell>Name</TableCell>
+                  <TableCell>ID</TableCell>
+                  <TableCell>Email</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {roleGroups.length ? roleGroups.map(g => {
-                  const groupName =
-                    allGroups.find(gr => String(gr.id) === String(g.group_id))?.name
-                    || g.group_id;
-
-                  return (
-                    <TableRow key={g.id}>
-                      <TableCell>{groupName}</TableCell>
-                      <TableCell>
-                        <Chip label="Linked" size="small" variant="outlined" />
-                      </TableCell>
-                    </TableRow>
-                  );
-                }) : (
+                {roleGroups.length ? roleGroups.map(g => (
+                  <TableRow key={g.id}>
+                    <TableCell>{g.name}</TableCell>
+                    <TableCell>{g.id}</TableCell>
+                    <TableCell>{g.email?.trim() ? g.email : "-"}</TableCell>
+                  </TableRow>
+                )) : (
                   <TableRow>
-                    <TableCell colSpan={2} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
                       No groups linked
                     </TableCell>
                   </TableRow>
@@ -267,8 +275,32 @@ const Roles = () => {
             </Table>
           )}
         </DialogContent>
-        <DialogActions><Button onClick={() => setViewRoleModal(false)}>Close</Button></DialogActions>
-      </Dialog>
+        <DialogActions
+          sx={{
+            p: 2.5,
+            borderTop: "1px solid rgba(255,255,255,0.06)",
+            justifyContent: "flex-end"
+          }}
+        >
+          {/* Assign Button */}
+          <Button
+            variant="outlined"
+            startIcon={activeTab === 0 ? <People /> : <Groups />}
+            onClick={handleAssign}
+            sx={{ px: 4, borderRadius: 2 }}
+          >
+            {activeTab === 0 ? "Assign User" : "Assign Group"}
+          </Button>
+
+          {/* Close Button */}
+          <Button
+            onClick={() => setViewRoleModal(false)}
+            variant="contained"
+            sx={{ px: 4, borderRadius: 2 }}
+          >
+            Close
+          </Button>
+        </DialogActions>  </Dialog>
 
       {/* Create/Edit Modal */}
       <Dialog

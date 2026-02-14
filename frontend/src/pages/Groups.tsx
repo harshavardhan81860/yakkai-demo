@@ -100,7 +100,6 @@ const Groups = (
   const handleAssign = () => {
     if (!selectedGroupId) return;
 
-    // 🔥 CLOSE MODAL FIRST
     setViewUsersModal(false);
 
     if (tabValue === 0) {

@@ -41,8 +41,23 @@ const UserGroupMapping = () => {
   const [selectedGroup, setSelectedGroup] = useState<any>(null);
   const [selectedTenant, setSelectedTenant] = useState<any>(null);
   const [selectedCloud, setSelectedCloud] = useState<any>(null);
+  const [usersAssignedToRole, setUsersAssignedToRole] = useState<number[]>([]);
 
   const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (!selectedGroup) {
+      setUsersAssignedToRole([]);
+      return;
+    }
+    // Fetch assignments for ALL users, then filter by selectedRole
+    Promise.all(users.map(u => fetchUserGroups(u.id))).then(allAssignments => {
+      const assigned = allAssignments
+        .flat()
+        .filter(a => String(a.group_id) === String(selectedGroup.id))
+        .map(a => a.user_id);
+      setUsersAssignedToRole(assigned);
+    });
+  }, [selectedGroup, users]);
 
   useEffect(() => {
     const load = async () => {
@@ -330,6 +345,20 @@ const UserGroupMapping = () => {
                 )}
               />
             </Grid> */}
+            <Grid size={12}>
+              <Autocomplete
+                options={users.filter(u => !usersAssignedToRole.includes(u.id))}
+                getOptionLabel={(u) => `${u.username} (${u.email})`}
+                value={selectedUser}
+                onChange={(_, user) => {
+                  setSelectedUser(user || null);
+                  if (user) fetchUserGroups(user.id).then(setAssignments);
+                }}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                renderInput={(params) => <TextField {...params} label="Select User *" />}
+              />
+
+            </Grid>
             <Grid size={12}>
               <FormControl fullWidth>
                 <InputLabel>Enrollment Scope</InputLabel>

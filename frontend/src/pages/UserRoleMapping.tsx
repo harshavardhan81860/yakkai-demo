@@ -25,6 +25,8 @@ import { fetchCloudAccounts, type CloudAccountRow } from "../services/cloudAccou
 const UserRoleMapping = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const [usersForSelectedRole, setUsersForSelectedRole] = useState<number[]>([]);
+
 
   const [users, setUsers] = useState<UserRow[]>([]);
   const [roles, setRoles] = useState<RoleRow[]>([]);
@@ -42,33 +44,55 @@ const UserRoleMapping = () => {
   const [selectedCloud, setSelectedCloud] = useState<any>(null);
 
   const [loading, setLoading] = useState(true);
+  const [usersAssignedToRole, setUsersAssignedToRole] = useState<number[]>([]);
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [u, r, t] = await Promise.all([fetchAllUsers(), fetchAllRoles(), fetchAllTenants()]);
-        setUsers(u.filter((x) => x.is_active));
-        setRoles(r.filter((x) => x.is_active));
-        setTenants(t.filter((x) => x.is_active));
+    if (!selectedRole) {
+      setUsersAssignedToRole([]);
+      return;
+    }
+    // Fetch assignments for ALL users, then filter by selectedRole
+    Promise.all(users.map(u => fetchUserRoles(u.id))).then(allAssignments => {
+      const assigned = allAssignments
+        .flat()
+        .filter(a => String(a.role_id) === String(selectedRole.id))
+        .map(a => a.user_id);
+      setUsersAssignedToRole(assigned);
+    });
+  }, [selectedRole, users]);
 
-        const userId = params.get("userId");
+  useEffect(() => {
+    (async () => {
+      const [u, r] = await Promise.all([fetchAllUsers(), fetchAllRoles()]);
+      setUsers(u);
+      setRoles(r);
 
-        if (userId) {
-          const user = u.find((x) => String(x.id) === String(userId));
-          if (user) {
-            setSelectedUser(user);
-            setAssignments(await fetchUserRoles(user.id));
-          }
+      const userId = params.get("userId");
+      const roleId = params.get("roleId");
+      const autoAssign = params.get("autoAssign") === "true";
+
+      if (userId) {
+        // Find user in the fetched list — **this is critical**
+        const user = u.find(x => String(x.id) === String(userId));
+        if (user) {
+          setSelectedUser(user);  // <-- must use the exact object from `users` array
+          setAssignments(await fetchUserRoles(user.id));
         }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
       }
-    };
-    load();
+
+      if (roleId) {
+        const role = r.find(x => String(x.id) === String(roleId));
+        if (role) {
+          setAssignType(role.is_system_role ? "system" : "tenant");
+          setSelectedRole(role);
+        }
+      }
+
+      if (autoAssign && users) setShowAssign(true);
+    })();
   }, []);
+
+
 
   useEffect(() => {
     if (!selectedTenant) return;
@@ -78,8 +102,8 @@ const UserRoleMapping = () => {
   }, [selectedTenant]);
 
   const assignedRoleIds = assignments.map((a) => a.role_id);
-  const systemRoles = roles.filter((r) => r.is_system_role && !assignedRoleIds.includes(r.id));
-  const tenantRoles = roles.filter((r) => !r.is_system_role && r.tenant_id === selectedTenant?.id && !assignedRoleIds.includes(r.id));
+  const systemRoles = roles.filter((r) => r.is_system_role && !assignedRoleIds.includes(Number(r.id)));
+  const tenantRoles = roles.filter((r) => !r.is_system_role && r.tenant_id === selectedTenant?.id && !assignedRoleIds.includes(Number(r.id)));
 
   const tenantGroups = useMemo(() => {
     const map: Record<string, UserRoleAssignment[]> = {};
@@ -93,6 +117,9 @@ const UserRoleMapping = () => {
   }, [assignments]);
 
   const confirmAssign = async () => {
+    console.log("Selected User:", selectedUser); 
+    console.log("Selected Role:", selectedRole);
+
     if (!selectedUser || !selectedRole) return;
     const payload: any = { user_id: selectedUser.id, role_id: selectedRole.id };
     if (assignType === "tenant") {
@@ -119,6 +146,16 @@ const UserRoleMapping = () => {
       console.error(err);
     }
   };
+
+  useEffect(() => {
+    console.log("Selected User:", selectedUser);
+  }, [selectedUser]);
+
+  useEffect(() => {
+    console.log("Selected Role:", selectedRole);
+  }, [selectedRole]);
+
+
 
   return (
     <Box>
@@ -149,18 +186,18 @@ const UserRoleMapping = () => {
             <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
               <Person fontSize="small" /> Identity Selection
             </Typography>
+
             <Autocomplete
               options={users}
               getOptionLabel={(u) => `${u.username} (${u.email})`}
               value={selectedUser}
               onChange={(_, user) => {
-                if (!user) return;
-                setSelectedUser(user);
-                fetchUserRoles(user.id).then(setAssignments);
-                navigate(`/user-role-mapping?userId=${user.id}`, { replace: true });
+                setSelectedUser(user || null); // ensures state updates
+                if (user) fetchUserRoles(user.id).then(setAssignments);
+                if (user) navigate(`/user-role-mapping?userId=${user.id}`, { replace: true });
               }}
+              isOptionEqualToValue={(option, value) => option.id === value.id} // <-- critical
               renderInput={(params) => <TextField {...params} label="Search User" variant="outlined" fullWidth />}
-              sx={{ mt: 1 }}
             />
             {selectedUser && (
               <Box sx={{ mt: 3, p: 2, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -194,11 +231,11 @@ const UserRoleMapping = () => {
                 <TableContainer>
                   <Table>
                     <TableBody>
-                      {assignments.filter(a => roles.find(r => r.id === a.role_id)?.is_system_role).length === 0 ? (
+                      {assignments.filter(a => roles.find(r => String(r.id) === String(a.role_id))?.is_system_role).length === 0 ? (
                         <TableRow><TableCell align="center" sx={{ py: 4 }}><Typography color="text.secondary">No administrative roles assigned</Typography></TableCell></TableRow>
-                      ) : assignments.filter(a => roles.find(r => r.id === a.role_id)?.is_system_role).map(a => (
+                      ) : assignments.filter(a => roles.find(r => String(r.id) === String(a.role_id))?.is_system_role).map(a => (
                         <TableRow key={a.id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                          <TableCell><Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{roles.find(r => r.id === a.role_id)?.name}</Typography></TableCell>
+                          <TableCell><Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{roles.find(r => String(r.id) === String(a.role_id))?.name}</Typography></TableCell>
                           <TableCell align="right"><Button size="small" color="error" startIcon={<Delete />} onClick={() => revoke(a.id)}>Revoke</Button></TableCell>
                         </TableRow>
                       ))}
@@ -225,7 +262,7 @@ const UserRoleMapping = () => {
                         </Box>
                         {assigns.map(a => (
                           <ListItem key={a.id} sx={{ px: 3, '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                            <ListItemText primary={<Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{roles.find(r => r.id === a.role_id)?.name}</Typography>}
+                            <ListItemText primary={<Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{roles.find(r => String(r.id) === String(a.role_id))?.name}</Typography>}
                               secondary={a.cloud_account_id ? `Restricted to Cloud Account ID: ${a.cloud_account_id}` : 'Tenant-wide scope'} />
                             <ListItemSecondaryAction>
                               <IconButton edge="end" color="error" onClick={() => revoke(a.id)}><Delete fontSize="small" /></IconButton>
@@ -255,15 +292,41 @@ const UserRoleMapping = () => {
         <DialogTitle sx={{ fontWeight: 700 }}>Assign Role</DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <Grid container spacing={2.5}>
+            {/* 1. Select User */}
+            <Grid size={12}>
+              <Autocomplete
+                options={users.filter(u => !usersAssignedToRole.includes(u.id))}
+                getOptionLabel={(u) => `${u.username} (${u.email})`}
+                value={selectedUser}
+                onChange={(_, user) => {
+                  setSelectedUser(user || null);
+                  if (user) fetchUserRoles(user.id).then(setAssignments);
+                }}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                renderInput={(params) => <TextField {...params} label="Select User *" />}
+              />
+
+            </Grid>
+
+            {/* 2. Assignment Logic */}
             <Grid size={12}>
               <FormControl fullWidth>
                 <InputLabel>Assignment Logic</InputLabel>
-                <Select value={assignType} label="Assignment Logic" onChange={e => { setAssignType(e.target.value as any); setSelectedRole(null); }}>
+                <Select
+                  value={assignType}
+                  label="Assignment Logic"
+                  onChange={e => {
+                    setAssignType(e.target.value as any);
+                    setSelectedRole(null);
+                  }}
+                >
                   <MenuItem value="system">Global Platform Privilege</MenuItem>
                   <MenuItem value="tenant">Organizational Tenant Access</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
+
+            {/* 3. Tenant selection if assignType is tenant */}
             {assignType === 'tenant' && (
               <Grid size={12}>
                 <Autocomplete
@@ -275,6 +338,8 @@ const UserRoleMapping = () => {
                 />
               </Grid>
             )}
+
+            {/* 4. Cloud account restriction if tenant selected */}
             {assignType === "tenant" && selectedTenant && (
               <Grid size={12}>
                 <Autocomplete
@@ -286,12 +351,15 @@ const UserRoleMapping = () => {
                 />
               </Grid>
             )}
+
+            {/* 5. Role selection */}
             <Grid size={12}>
               <Autocomplete
                 options={assignType === "system" ? systemRoles : tenantRoles}
                 getOptionLabel={(r) => r.name}
                 value={selectedRole}
-                onChange={(_, v) => setSelectedRole(v)}
+                onChange={(_, role) => setSelectedRole(role || null)}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
                 renderInput={(params) => <TextField {...params} label="Select Role *" />}
                 disabled={assignType === 'tenant' && !selectedTenant}
               />
@@ -300,7 +368,14 @@ const UserRoleMapping = () => {
         </DialogContent>
         <DialogActions sx={{ p: 2.5 }}>
           <Button onClick={() => setShowAssign(false)}>Cancel</Button>
-          <Button variant="contained" onClick={confirmAssign} sx={{ background: 'linear-gradient(135deg,#6C63FF,#4A42D4)' }}>Assign Role</Button>
+          <Button
+            variant="contained"
+            onClick={confirmAssign}
+            disabled={!selectedUser || !selectedRole || usersAssignedToRole.length === users.length}
+          >
+
+            Assign Role
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
