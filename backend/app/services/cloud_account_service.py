@@ -120,14 +120,35 @@ class CloudAccountService:
 
         provider = cloud_provider.lower()
 
+        # ── Discovery-enriched metadata ──
+        # If account_type is present, this is from the discovery flow.
+        # Org-level containers and inherited-cred accounts have relaxed validation.
+        account_type = metadata.get("account_type")
+        credential_source = metadata.get("credential_source")
+
+        if account_type:
+            # Org-level containers (management, tenant, management_group)
+            # don't need the same credential fields as leaf accounts.
+            org_types = {"management", "tenant", "management_group", "organizational_unit"}
+            if account_type in org_types:
+                return  # validated by the discovery/import flow
+
+            # Accounts inheriting credentials from parent don't need own creds
+            if credential_source == "inherited":
+                return
+
+        # ── Legacy / simple format validation ──
         if provider == "aws":
             required = ["account_id", "role_name"]
 
         elif provider == "azure":
-            required = ["tenant_id", "client_id", "subscription_id"]
-
-        # elif provider == "gcp":
-        #     required = ["project_id"]
+            # New discovery format uses subscription_id at top level
+            # but may also have tenant_id + client_id without subscription_id
+            # for tenant-level records
+            if account_type == "subscription":
+                required = ["subscription_id"]
+            else:
+                required = ["tenant_id", "client_id", "subscription_id"]
 
         else:
             raise HTTPException(

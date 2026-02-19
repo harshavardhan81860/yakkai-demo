@@ -1,5 +1,5 @@
 import time
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from db.engine import async_session
 import os
 from core.config import load_config
@@ -49,6 +49,30 @@ class CloudAuthProvider:
             account = account[0] if account else None
 
         provider = account.cloud_provider.lower()
+        meta = account.cred_metadata
+
+        # ── Org-level guard ──
+        # Management accounts / tenants / management groups are containers.
+        # They must NOT execute resource operations.
+        account_type = meta.get("account_type", "")
+        if account_type in ("management", "tenant", "management_group"):
+            raise ValueError(
+                f"Account '{account.name}' is an org-level container "
+                f"(type={account_type}). Resource operations are not "
+                f"permitted on org-level accounts.  Use a member / "
+                f"subscription / standalone account instead."
+            )
+
+        # ── Inherited credential resolution ──
+        # If this account inherits creds from its parent, walk up the chain.
+        if meta.get("credential_source") == "inherited" and account.parent_id:
+            account = await self._resolve_inherited_account(account)
+            if not account:
+                raise ValueError(
+                    "Could not resolve inherited credentials for account"
+                )
+
+        provider = account.cloud_provider.lower()
 
         if provider == "aws":
             return await self._get_aws_credentials(account)
@@ -57,6 +81,34 @@ class CloudAuthProvider:
             return await self._get_azure_token(account)
 
         raise ValueError(f"Unsupported cloud provider: {provider}")
+
+    async def _resolve_inherited_account(self, account) -> Optional[Any]:
+        """
+        Walk up the parent_id chain to find an account whose
+        credential_source is 'own'.
+        Prevents infinite loops with a max-depth of 10.
+        """
+        visited = set()
+        current = account
+        for _ in range(10):
+            if not current.parent_id or current.id in visited:
+                return None
+            visited.add(current.id)
+            async with async_session() as session:
+                parent = await self._account_service.get_account_by_id(
+                    session, str(current.parent_id)
+                )
+            if not parent:
+                return None
+            if isinstance(parent, list):
+                parent = parent[0] if parent else None
+            if not parent:
+                return None
+            parent_meta = parent.cred_metadata
+            if parent_meta.get("credential_source", "own") != "inherited":
+                return parent
+            current = parent
+        return None
 
     # -----------------------------
     # AWS handling

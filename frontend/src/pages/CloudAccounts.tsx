@@ -1,27 +1,182 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, Fragment } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Box, Typography, Button, Card, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Chip, IconButton, TextField, Dialog,
-  DialogTitle, DialogContent, DialogActions, LinearProgress, Tooltip, Grid,
-  Avatar, Paper, Stack, Divider, Select, MenuItem, FormControl, InputLabel,
-  Snackbar, Alert
+  Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, Chip, IconButton, Dialog,
+  DialogTitle, DialogContent, DialogActions, LinearProgress, Tooltip,
+  Avatar, Paper, Stack, Snackbar, Alert
 } from "@mui/material";
 import {
-  Add, Cloud, CheckCircle, Block, Visibility, Refresh, ArrowBack,
-  Edit, PlayArrow, Check, ErrorOutline, Hub, ArrowForward
+  Add, Cloud, CheckCircle, Block, Refresh, ArrowBack,
+  Edit, Hub, ArrowForward, Search, Folder
 } from "@mui/icons-material";
 import {
-  fetchCloudAccounts, createCloudAccount, activateCloudAccount,
-  deactivateCloudAccount, fetchActiveCiCredentials, testCloudConnection,
+  fetchCloudAccounts, activateCloudAccount,
+  deactivateCloudAccount, fetchActiveCiCredentials,
   updateCloudAccount
 } from "../services/cloudAccountsService";
 import type {
   CloudAccountRow, CiCredentialDropdown
 } from "../services/cloudAccountsService";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
+import AccountOnboardingDialog from "../components/CloudAccounts/AccountOnboardingDialog";
+import AccountEditDialog from "../components/CloudAccounts/AccountEditDialog";
+import { testConnection } from "../services/cloudDiscoveryService";
 
-const PROVIDERS = ["aws", "azure", "gcp"];
+const getTimeAgo = (dateStr?: string | null) => {
+  if (!dateStr) return "Never tested";
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffInSecs = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSecs < 60) return "just now";
+  const diffInMins = Math.floor(diffInSecs / 60);
+  if (diffInMins < 60) return `${diffInMins}m ago`;
+  const diffInHours = Math.floor(diffInMins / 60);
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 30) return `${diffInDays}d ago`;
+  return date.toLocaleDateString();
+};
+
+const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoot, handlers }: {
+  row: CloudAccountRow,
+  allAccounts: CloudAccountRow[],
+  level: number,
+  expandedRoots: Record<string, boolean>,
+  toggleRoot: (id: string) => void,
+  handlers: any
+}) => {
+  const subs = allAccounts.filter(a => a.parent_id === row.id);
+  const isExpanded = expandedRoots[row.id];
+  const type = row.cred_metadata?.account_type || '';
+  const isContainer = ['management', 'tenant', 'management_group', 'organizational_unit', 'root'].includes(type);
+  const isRoot = level === 0;
+
+  // Type Label Logic
+  let typeLabel = "Standalone";
+  if (row.cloud_provider === 'azure') {
+    if (type === 'tenant') typeLabel = "Tenant";
+    else if (type === 'management_group') typeLabel = "Mgmt Group";
+    else if (type === 'subscription') typeLabel = "Subscription";
+  } else {
+    // AWS
+    if (type === 'management') typeLabel = "Organization Root";
+    else if (type === 'organizational_unit') typeLabel = "Organizational Unit";
+    else if (type === 'root') typeLabel = "Root Container";
+    else if (type === 'member') typeLabel = "Account";
+  }
+
+  return (
+    <Fragment>
+      <TableRow hover sx={{ '& > *': { borderBottom: 'unset' }, bgcolor: level > 0 ? `rgba(255,255,255,${0.02 * level})` : 'transparent' }}>
+        <TableCell padding="checkbox">
+          <Box sx={{ pl: level * 3, display: 'flex', alignItems: 'center' }}>
+            {subs.length > 0 ? (
+              <IconButton size="small" onClick={() => toggleRoot(row.id)}>
+                {isExpanded ? <ArrowForward sx={{ transform: 'rotate(90deg)', fontSize: 16 }} /> : <ArrowForward sx={{ fontSize: 16 }} />}
+              </IconButton>
+            ) : <Box sx={{ width: 34 }} />}
+          </Box>
+        </TableCell>
+        <TableCell>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            {isContainer ? (
+              <Avatar sx={{ width: 28, height: 28, bgcolor: 'rgba(255,255,255,0.1)', color: 'text.secondary' }}>
+                <Folder sx={{ fontSize: 16 }} />
+              </Avatar>
+            ) : (
+              <Avatar sx={{
+                width: 28, height: 28,
+                bgcolor: row.cloud_provider === 'aws' ? '#FF9900' : '#0078D4',
+                fontSize: 10, fontWeight: 'bold'
+              }}>
+                {row.cloud_provider === 'aws' ? 'AWS' : 'AZ'}
+              </Avatar>
+            )}
+            <Box>
+              <Typography variant="body2" fontWeight={isRoot || isContainer ? "bold" : "normal"}>
+                {row.name}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                {row.cred_metadata?.account_id || row.cred_metadata?.subscription_id || row.cred_metadata?.management_group_id || row.cred_metadata?.organizational_unit_id || row.tenant_id}
+              </Typography>
+            </Box>
+          </Stack>
+        </TableCell>
+        <TableCell>
+          <Chip label={row.cloud_provider} size="small" sx={{ textTransform: 'uppercase', fontWeight: 600, fontSize: '0.65rem' }} />
+        </TableCell>
+        <TableCell>
+          <Chip
+            label={typeLabel}
+            color={isContainer ? "secondary" : "default"}
+            size="small" variant="outlined" sx={{ fontSize: '0.7rem' }}
+          />
+        </TableCell>
+        <TableCell align="center">
+          {/* Read Status */}
+          <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
+            <Tooltip title={`Read: ${row.read_connection_status} (${getTimeAgo(row.read_last_validated_at)})`}>
+              <Box sx={{
+                width: 10, height: 10, borderRadius: '50%',
+                bgcolor: row.read_connection_status === 'success' ? '#10B981' : (row.read_connection_status === 'error' ? '#EF4444' : '#6B7280'),
+              }} />
+            </Tooltip>
+            {isContainer ? (
+              <IconButton size="small" disabled sx={{ p: 0.2, opacity: 0 }}>
+                <Refresh sx={{ fontSize: 13 }} />
+              </IconButton>
+            ) : (
+              <IconButton size="small" onClick={() => handlers.handleTestConnection(row.id, row.cloud_provider, 'read')} sx={{ p: 0.2 }}>
+                <Refresh sx={{ fontSize: 13 }} />
+              </IconButton>
+            )}
+          </Stack>
+        </TableCell>
+        <TableCell align="right">
+          <Stack direction="row" spacing={1} justifyContent="flex-end">
+            <Tooltip title="Edit Account">
+              <IconButton size="small" onClick={() => handlers.handleEditAccount(row)}>
+                <Edit fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            {isRoot && (
+              <Tooltip title="Cloud Discovery / Sync">
+                <IconButton size="small" onClick={() => handlers.openDiscoveryForAccount(row)} sx={{ color: '#FF9900' }}>
+                  <Search fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            {!isContainer && (
+              <Tooltip title="View Components">
+                <IconButton size="small" onClick={() => handlers.goToComponents(row)} color="primary">
+                  <Hub fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+            <Tooltip title={row.is_active ? "Deactivate" : "Activate"}>
+              <IconButton size="small" color={row.is_active ? "success" : "default"} onClick={() => handlers.handleToggleActive(row)}>
+                {row.is_active ? <CheckCircle fontSize="small" /> : <Block fontSize="small" />}
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        </TableCell>
+      </TableRow>
+      {isExpanded && subs.map(sub => (
+        <RecursiveAccountRow
+          key={sub.id}
+          row={sub}
+          allAccounts={allAccounts}
+          level={level + 1}
+          expandedRoots={expandedRoots}
+          toggleRoot={toggleRoot}
+          handlers={handlers}
+        />
+      ))}
+    </Fragment>
+  );
+};
 
 const CloudAccounts = () => {
   const { tenantId } = useParams();
@@ -29,23 +184,19 @@ const CloudAccounts = () => {
 
   const [tenantName, setTenantName] = useState<string>("");
   const [accounts, setAccounts] = useState<CloudAccountRow[]>([]);
-  const [ciRunners, setCiRunners] = useState<CiCredentialDropdown[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [showModal, setShowModal] = useState<'create' | 'edit' | null>(null);
-  const [selectedAccount, setSelectedAccount] = useState<CloudAccountRow | null>(null);
-  const [form, setForm] = useState<any>({
-    name: "",
-    account_type: "root",
-    cloud_provider: "aws",
-    parent_id: "",
-    ci_credentials_id: "",
-    cred_metadata: {}
-  });
+  // New Unified Dialog State
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [discoveryAccountId, setDiscoveryAccountId] = useState<string | undefined>();
+  const [discoveryProvider, setDiscoveryProvider] = useState<"aws" | "azure" | undefined>();
+
+  // Edit State
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editAccount, setEditAccount] = useState<CloudAccountRow | null>(null);
 
   const [expandedRoots, setExpandedRoots] = useState<Record<string, boolean>>({});
   const [msg, setMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  const [testing, setTesting] = useState<Record<string, boolean>>({});
 
   const loadAccounts = async () => {
     setLoading(true);
@@ -62,21 +213,15 @@ const CloudAccounts = () => {
     }
   };
 
-  const loadCiRunners = async () => {
-    try {
-      const runners = await fetchActiveCiCredentials();
-      setCiRunners(runners);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   useEffect(() => {
     if (tenantId) {
       loadAccounts();
-      loadCiRunners();
     }
   }, [tenantId]);
+
+  const toggleRoot = (id: string) => {
+    setExpandedRoots(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const goToComponents = (account: CloudAccountRow) => {
     navigate(`/tenants/${tenantId}/cloud-accounts/${account.id}/components`, {
@@ -89,90 +234,53 @@ const CloudAccounts = () => {
     });
   };
 
-  const handleTest = async (id: string, provider: string, type: 'read' | 'write') => {
-    const key = `${id}-${type}`;
-    setTesting(prev => ({ ...prev, [key]: true }));
+  const handleToggleActive = async (acc: CloudAccountRow) => {
     try {
-      const res = await testCloudConnection(id, provider, type);
-      setMsg({ type: res.status === 'success' ? 'success' : 'error', text: res.message });
+      if (acc.is_active) await deactivateCloudAccount(acc.id);
+      else await activateCloudAccount(acc.id);
       loadAccounts();
-    } catch (err: any) {
-      setMsg({ type: 'error', text: err.response?.data?.message || `Failed to test ${type} connection` });
-    } finally {
-      setTesting(prev => ({ ...prev, [key]: false }));
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  const openCreate = () => {
-    setForm({
-      name: "",
-      account_type: "root",
-      cloud_provider: "aws",
-      parent_id: "",
-      ci_credentials_id: "",
-      cred_metadata: { account_id: "", role_name: "", tenant_id: "", client_id: "", subscription_id: "" }
-    });
-    setShowModal('create');
-  };
-
-  const openEdit = (acc: CloudAccountRow) => {
-    setSelectedAccount(acc);
-    setForm({
-      name: acc.name,
-      account_type: acc.parent_id ? "sub" : "root",
-      cloud_provider: acc.cloud_provider,
-      parent_id: acc.parent_id || "",
-      ci_credentials_id: acc.ci_credentials_id || "",
-      cred_metadata: acc.cred_metadata || {}
-    });
-    setShowModal('edit');
-  };
-
-  const handleSubmit = async () => {
-    if (!form.name || !form.ci_credentials_id) {
-      setMsg({ type: 'error', text: "Name and Runner are required" });
-      return;
-    }
-
-    const payload = {
-      ...form,
-      tenant_id: tenantId,
-      parent_id: form.account_type === 'sub' ? form.parent_id : null
-    };
-
+  const handleTestConnection = async (accId: string, provider: string, type: 'read' | 'write' = 'read') => {
     try {
-      if (showModal === 'create') {
-        await createCloudAccount(payload);
-        setMsg({ type: 'success', text: "Account created successfully" });
-      } else {
-        // Only allow updating certain fields as per user request
-        const updatePayload = {
-          name: form.name,
-          cred_metadata: form.cred_metadata,
-          ci_credentials_id: form.ci_credentials_id
-        };
-        await updateCloudAccount(selectedAccount!.id, updatePayload);
-        setMsg({ type: 'success', text: "Account updated successfully" });
+      setLoading(true);
+      const res = await testConnection(accId, provider, false, type); // Provider specific
+
+      // Check for logical failure despite HTTP 200
+      if (res?.data?.status === 'failure' || res?.data?.status === 'error') {
+        throw new Error(res.data.message || 'Connection test failed');
       }
-      setShowModal(null);
+
+      setMsg({ type: 'success', text: `${type.toUpperCase()} connection verified` });
       loadAccounts();
     } catch (err: any) {
-      setMsg({ type: 'error', text: err.response?.data?.message || "Failed to save account" });
+      setMsg({ type: 'error', text: err.message || 'Verification failed' });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleToggleStatus = async (acc: CloudAccountRow) => {
-    try {
-      acc.is_active ? await deactivateCloudAccount(acc.id) : await activateCloudAccount(acc.id);
-      loadAccounts();
-      setMsg({ type: 'success', text: `Account ${acc.is_active ? 'deactivated' : 'activated'} successfully` });
-    } catch (err: any) {
-      setMsg({ type: 'error', text: err.response?.data?.message || "Failed to toggle status" });
-    }
+  const openOnboarding = () => {
+    setDiscoveryAccountId(undefined);
+    setDiscoveryProvider(undefined);
+    setShowOnboarding(true);
   };
 
-  const rootAccounts = accounts.filter(a => !a.parent_id);
+  const openDiscoveryForAccount = (acc: CloudAccountRow) => {
+    setDiscoveryAccountId(acc.id);
+    setDiscoveryProvider(acc.cloud_provider as "aws" | "azure");
+    setShowOnboarding(true);
+  };
+
   const getSubAccounts = (pid: string) => accounts.filter(a => a.parent_id === pid);
+
+  const handleEditAccount = (acc: CloudAccountRow) => {
+    setEditAccount(acc);
+    setShowEditDialog(true);
+  };
 
   return (
     <Box sx={{ maxWidth: 1000, mx: 'auto', px: 2 }}>
@@ -184,8 +292,13 @@ const CloudAccounts = () => {
         <Stack direction="row" spacing={1.5}>
           <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate("/tenants")}>Back</Button>
           <Button variant="outlined" onClick={loadAccounts}><Refresh /></Button>
-          <Button variant="contained" startIcon={<Add />} onClick={openCreate}
-            sx={{ background: 'linear-gradient(135deg,#6C63FF,#4A42D4)' }}>
+
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={openOnboarding}
+            sx={{ background: 'linear-gradient(135deg,#6C63FF,#4A42D4)' }}
+          >
             Add Account
           </Button>
         </Stack>
@@ -198,274 +311,81 @@ const CloudAccounts = () => {
         ]} />
       </Box>
 
-      {loading ? (
-        <Box sx={{ mt: 8, textAlign: 'center' }}>
-          <LinearProgress sx={{ width: '50%', mx: 'auto', borderRadius: 2 }} />
-        </Box>
-      ) : (
-        <Stack spacing={2.5}>
-          {rootAccounts.map(root => {
-            const allSubAccounts = getSubAccounts(root.id);
-            const isExpanded = expandedRoots[root.id];
-            const visibleSubAccounts = isExpanded ? allSubAccounts : allSubAccounts.slice(0, 6);
-
-            return (
-              <Box key={root.id} sx={{
-                borderRadius: 4,
-                border: '1px solid rgba(255,255,255,0.05)',
-                bgcolor: 'rgba(255,255,255,0.005)',
-                overflow: 'hidden',
-                opacity: root.is_active ? 1 : 0.5,
-                filter: root.is_active ? 'none' : 'grayscale(0.4)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
-              }}>
-                {/* Root Row - Dense */}
-                <Box sx={{
-                  p: 1.5, px: 2.5,
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  bgcolor: 'rgba(108,99,255,0.06)',
-                  borderBottom: '1px solid rgba(255,255,255,0.08)'
-                }}>
-                  <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1 }}>
-                    <Avatar sx={{
-                      width: 32, height: 32,
-                      bgcolor: root.cloud_provider === 'aws' ? '#FF990022' : '#0078D422',
-                      color: root.cloud_provider === 'aws' ? '#FF9900' : '#0078D4'
-                    }}>
-                      <Cloud sx={{ fontSize: 18 }} />
-                    </Avatar>
-                    <Box>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1 }}>{root.name}</Typography>
-                        <Button
-                          variant="contained"
-                          size="small"
-                          startIcon={<Visibility sx={{ fontSize: 16 }} />}
-                          onClick={() => goToComponents(root)}
-                          sx={{
-                            fontSize: '0.75rem',
-                            fontWeight: 800,
-                            borderRadius: 2,
-                            px: 2,
-                            background: 'linear-gradient(135deg, #6C63FF 0%, #4A42D4 100%)',
-                            '&:hover': { background: 'linear-gradient(135deg, #7D75FF 0%, #5B53E5 100%)' }
-                          }}
-                        >
-                          Resources
-                        </Button>
-                      </Stack>
-                      <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', fontWeight: 700, textTransform: 'uppercase', mt: 0.5, display: 'block' }}>
-                        {root.cloud_provider} • ROOT INFRASTRUCTURE
-                      </Typography>
-                    </Box>
-
-                    {/* Status & Last Test - ROOT */}
-                    <Divider orientation="vertical" flexItem sx={{ borderStyle: 'dashed', mx: 2 }} />
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: root.read_connection_status === 'success' ? '#10B981' : (root.read_connection_status === 'failed' ? '#EF4444' : '#4B5563') }} />
-                      <Box>
-                        <Typography variant="caption" sx={{ fontWeight: 900, fontSize: '0.65rem', color: root.read_connection_status === 'success' ? '#10B981' : (root.read_connection_status === 'failed' ? '#EF4444' : 'text.disabled') }}>
-                          {root.read_connection_status?.toUpperCase() || 'NOT VERIFIED'}
-                        </Typography>
-                        {root.read_last_test && (
-                          <Typography variant="caption" sx={{ display: 'block', fontSize: '0.55rem', color: 'text.secondary', mt: -0.4 }}>
-                            Last Check: {new Date(root.read_last_test).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </Typography>
-                        )}
-                      </Box>
-                    </Box>
-                  </Stack>
-
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Tooltip title="Trigger Connection Audit">
-                      <IconButton size="small" onClick={() => handleTest(root.id, root.cloud_provider, 'read')} disabled={testing[`${root.id}-read`]} sx={{ color: '#6C63FF', p: 0.7, bgcolor: 'rgba(108,99,255,0.1)', '&:hover': { bgcolor: 'rgba(108,99,255,0.2)' } }}>
-                        <PlayArrow sx={{ fontSize: 20 }} />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title={root.is_active ? "Deactivate Entity" : "Activate Entity"}>
-                      <IconButton size="small" onClick={() => handleToggleStatus(root)} sx={{ color: root.is_active ? '#EF4444' : '#10B981', p: 0.7, bgcolor: root.is_active ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)', '&:hover': { bgcolor: root.is_active ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)' } }}>
-                        {root.is_active ? <Block sx={{ fontSize: 20 }} /> : <CheckCircle sx={{ fontSize: 20 }} />}
-                      </IconButton>
-                    </Tooltip>
-                    <IconButton size="small" onClick={() => openEdit(root)} sx={{ p: 0.7 }}><Edit sx={{ fontSize: 20 }} /></IconButton>
-                  </Stack>
-                </Box>
-
-                {/* Sub-Accounts List - Dense */}
-                <Box sx={{ p: 1.5, bgcolor: 'rgba(0,0,0,0.15)' }}>
-                  <Stack spacing={0.8}>
-                    {visibleSubAccounts.map(sub => (
-                      <Paper key={sub.id} variant="outlined" sx={{
-                        p: 1, px: 2,
-                        borderRadius: 2,
-                        bgcolor: 'rgba(255,255,255,0.015)',
-                        borderColor: 'rgba(255,255,255,0.04)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        opacity: sub.is_active ? 1 : 0.6,
-                        transition: 'all 0.2s ease',
-                        '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(108,99,255,0.2)' }
-                      }}>
-                        <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1 }}>
-                          <Box sx={{ minWidth: 150 }}>
-                            <Typography variant="caption" sx={{ fontWeight: 800, fontSize: '0.8rem' }}>{sub.name}</Typography>
-                          </Box>
-                          <Button
-                            variant="text"
-                            size="small"
-                            startIcon={<Visibility sx={{ fontSize: 13 }} />}
-                            onClick={() => goToComponents(sub)}
-                            sx={{ fontSize: '0.65rem', color: 'text.secondary', '&:hover': { color: '#6C63FF' } }}
-                          >
-                            Resources
-                          </Button>
-
-                          {/* Status/Test for SUB */}
-                          <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 14, alignSelf: 'center' }} />
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: sub.read_connection_status === 'success' ? '#10B981' : (sub.read_connection_status === 'failed' ? '#EF4444' : '#4B5563') }} />
-                            <Box>
-                              <Typography variant="caption" sx={{ fontWeight: 800, fontSize: '0.6rem', textTransform: 'uppercase', color: sub.read_connection_status === 'success' ? '#10B981' : (sub.read_connection_status === 'failed' ? '#EF4444' : 'text.disabled') }}>
-                                {sub.read_connection_status || 'NOT DATAED'}
-                              </Typography>
-                              {sub.read_last_test && (
-                                <Typography variant="caption" sx={{ display: 'block', fontSize: '0.55rem', color: 'text.secondary', mt: -0.4 }}>
-                                  {new Date(sub.read_last_test).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </Typography>
-                              )}
-                            </Box>
-                          </Box>
-                        </Stack>
-
-                        <Stack direction="row" spacing={0.5}>
-                          <IconButton size="small" onClick={() => handleTest(sub.id, sub.cloud_provider, 'read')} disabled={testing[`${sub.id}-read`]} sx={{ p: 0.5 }}><PlayArrow sx={{ fontSize: 16 }} /></IconButton>
-                          <IconButton size="small" onClick={() => handleToggleStatus(sub)} sx={{ p: 0.5, color: sub.is_active ? '#EF4444' : '#10B981' }}>
-                            {sub.is_active ? <Block sx={{ fontSize: 16 }} /> : <CheckCircle sx={{ fontSize: 16 }} />}
-                          </IconButton>
-                          <IconButton size="small" onClick={() => openEdit(sub)} sx={{ p: 0.5 }}><Edit sx={{ fontSize: 16 }} /></IconButton>
-                        </Stack>
-                      </Paper>
-                    ))}
-
-                    {allSubAccounts.length > 6 && (
-                      <Button
-                        size="small"
-                        variant="text"
-                        onClick={() => setExpandedRoots(prev => ({ ...prev, [root.id]: !prev[root.id] }))}
-                        sx={{ mt: 1, color: 'text.secondary', fontWeight: 700, fontSize: '0.7rem' }}
-                      >
-                        {isExpanded ? 'Show Less' : `View All (${allSubAccounts.length})`}
-                      </Button>
-                    )}
-
-                    {allSubAccounts.length === 0 && (
-                      <Typography variant="caption" color="text.disabled" sx={{ py: 2, textAlign: 'center', fontStyle: 'italic', letterSpacing: 1 }}>NO SUB-ENVIRONMENTS IDENTIFIED</Typography>
-                    )}
-                  </Stack>
-                </Box>
-              </Box>
-            );
-          })}
-          {rootAccounts.length === 0 && (
-            <Paper sx={{ p: 10, textAlign: 'center', border: '1px dashed rgba(255,255,255,0.1)', bgcolor: 'rgba(255,255,255,0.01)', borderRadius: 6 }}>
-              <Cloud sx={{ fontSize: 60, mb: 1, opacity: 0.1 }} />
-              <Typography variant="h6" color="text.secondary">No organizational structures identified</Typography>
-              <Button size="medium" variant="contained" sx={{ mt: 3, background: 'linear-gradient(135deg,#6C63FF,#4A42D4)' }} onClick={openCreate}>Initialize First Environment</Button>
-            </Paper>
-          )}
-        </Stack>
-      )}
-
-      {/* Add / Edit Modal */}
-      <Dialog
-        open={!!showModal}
-        onClose={() => setShowModal(null)}
-        maxWidth="xs"
-        fullWidth
-        slotProps={{
-          backdrop: { sx: { backgroundColor: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)' } }
+      {/* Unified Onboarding & Discovery Dialog */}
+      <AccountOnboardingDialog
+        open={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        tenantId={tenantId as string}
+        initialAccountId={discoveryAccountId}
+        initialProvider={discoveryProvider}
+        onImportComplete={() => {
+          loadAccounts();
+          setMsg({ type: 'success', text: 'Operation completed' });
         }}
-      >
-        <DialogTitle sx={{ fontWeight: 800 }}>{showModal === 'create' ? "Add Cloud Account" : "Edit Cloud Account"}</DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={2.5} sx={{ py: 1 }}>
-            <TextField fullWidth label="Account Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+      />
 
-            <FormControl fullWidth disabled={showModal === 'edit'}>
-              <InputLabel>Parent Account (Optional)</InputLabel>
-              <Select
-                value={form.parent_id}
-                label="Parent Account (Optional)"
-                onChange={e => {
-                  const parentId = e.target.value;
-                  const parent = rootAccounts.find(r => r.id === parentId);
-                  setForm({
-                    ...form,
-                    parent_id: parentId,
-                    account_type: parentId ? 'sub' : 'root',
-                    cloud_provider: parent ? parent.cloud_provider : form.cloud_provider
-                  });
-                }}
-              >
-                <MenuItem value=""><em>None (Root)</em></MenuItem>
-                {rootAccounts.map(r => (
-                  <MenuItem key={r.id} value={r.id}>{r.name} ({r.cloud_provider.toUpperCase()})</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+      {msg && <Snackbar open autoHideDuration={4000} onClose={() => setMsg(null)}>
+        <Alert severity={msg.type}>{msg.text}</Alert>
+      </Snackbar>}
 
-            <Grid container spacing={2}>
-              <Grid size={6}>
-                <FormControl fullWidth disabled={showModal === 'edit' || !!form.parent_id}>
-                  <InputLabel>Provider</InputLabel>
-                  <Select value={form.cloud_provider} label="Provider" onChange={e => setForm({ ...form, cloud_provider: e.target.value })}>
-                    {PROVIDERS.map(p => <MenuItem key={p} value={p}>{p.toUpperCase()}</MenuItem>)}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid size={6}>
-                <TextField label="Type" fullWidth value={form.account_type.toUpperCase()} disabled />
-              </Grid>
-            </Grid>
+      {loading && <LinearProgress sx={{ mb: 2 }} />}
 
-            {/* Credentials - Only show relevant fields */}
-            <Divider sx={{ my: 1 }}><Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary' }}>CREDENTIAL METADATA</Typography></Divider>
+      <Paper sx={{ background: 'rgba(17, 24, 39, 0.6)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ background: 'rgba(255,255,255,0.02)' }}>
+                <TableCell padding="checkbox"></TableCell>
+                <TableCell>Name / ID</TableCell>
+                <TableCell>Provider</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell align="center">Connection</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {accounts.filter(a => !a.parent_id).map((row) => (
+                <RecursiveAccountRow
+                  key={row.id}
+                  row={row}
+                  allAccounts={accounts}
+                  level={0}
+                  expandedRoots={expandedRoots}
+                  toggleRoot={toggleRoot}
+                  handlers={{
+                    handleTestConnection,
+                    handleEditAccount,
+                    openDiscoveryForAccount,
+                    goToComponents,
+                    handleToggleActive
+                  }}
+                />
+              ))}
+              {accounts.length === 0 && !loading && (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                    <Cloud sx={{ fontSize: 48, color: 'text.secondary', mb: 1, opacity: 0.5 }} />
+                    <Typography color="text.secondary">No cloud accounts connected yet.</Typography>
+                    <Button variant="outlined" sx={{ mt: 2 }} onClick={openOnboarding}>
+                      Onboard Account
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
 
-            {form.cloud_provider === 'aws' && (
-              <Stack spacing={2}>
-                <TextField fullWidth label="AWS Account ID" value={form.cred_metadata.account_id || ""} onChange={e => setForm({ ...form, cred_metadata: { ...form.cred_metadata, account_id: e.target.value } })} />
-                <TextField fullWidth label="Role Name" value={form.cred_metadata.role_name || ""} onChange={e => setForm({ ...form, cred_metadata: { ...form.cred_metadata, role_name: e.target.value } })} />
-              </Stack>
-            )}
-
-            {form.cloud_provider === 'azure' && (
-              <Stack spacing={2}>
-                <TextField fullWidth label="Tenant ID" value={form.cred_metadata.tenant_id || ""} onChange={e => setForm({ ...form, cred_metadata: { ...form.cred_metadata, tenant_id: e.target.value } })} />
-                <TextField fullWidth label="Client ID" value={form.cred_metadata.client_id || ""} onChange={e => setForm({ ...form, cred_metadata: { ...form.cred_metadata, client_id: e.target.value } })} />
-                <TextField fullWidth label="Subscription ID" value={form.cred_metadata.subscription_id || ""} onChange={e => setForm({ ...form, cred_metadata: { ...form.cred_metadata, subscription_id: e.target.value } })} />
-              </Stack>
-            )}
-
-            <FormControl fullWidth>
-              <InputLabel>CI/CD Runner</InputLabel>
-              <Select value={form.ci_credentials_id || ""} label="CI/CD Runner" onChange={e => setForm({ ...form, ci_credentials_id: e.target.value })}>
-                {ciRunners.map(c => <MenuItem key={c.id} value={c.id}>{c.provider} — {c.id.slice(0, 8)}</MenuItem>)}
-              </Select>
-            </FormControl>
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setShowModal(null)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSubmit} sx={{ background: 'linear-gradient(135deg,#6C63FF,#4A42D4)', px: 3 }}>
-            {showModal === 'create' ? "Add Account" : "Save Configuration"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Snackbar open={!!msg} autoHideDuration={6000} onClose={() => setMsg(null)}>
-        <Alert onClose={() => setMsg(null)} severity={msg?.type} variant="filled" sx={{ width: '100%' }}>
-          {msg?.text}
-        </Alert>
-      </Snackbar>
+      <AccountEditDialog
+        open={showEditDialog}
+        onClose={() => setShowEditDialog(false)}
+        account={editAccount}
+        onUpdate={() => {
+          loadAccounts();
+          setMsg({ type: 'success', text: 'Account updated successfully' });
+        }}
+      />
     </Box>
   );
 };

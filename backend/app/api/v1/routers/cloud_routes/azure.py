@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from services.cloud_services import azure as azure_service
 from core.response import ApiResponse
+from db.engine import get_session
 from services.cloud_services.azure import list_subscriptions_for_account
+from services.cloud_discovery_service import discovery_service
 
 from core.enums.registry_enum import RESOURCE, ACTION
 from services.registry_validation_service import registry
@@ -13,8 +16,22 @@ resource = RESOURCE.CLOUD_ACCOUNT
 
 @router.get("/test_connection/{cloud_account_id}")
 @registry(resource=resource, action=ACTION.READ)
-async def test_azure_connection(cloud_account_id: str):
-    return await azure_service.test_connection(cloud_account_id)
+async def test_azure_connection(
+    cloud_account_id: str,
+    test_type: str = "read",  # "read" or "write"
+    test_mode: bool = False,
+    db: AsyncSession = Depends(get_session),
+):
+    """Refactored to use unified discovery service logic."""
+    result = await discovery_service.test_connection(
+        account_id=cloud_account_id,
+        db=db,
+        test_mode=test_mode,
+        test_type=test_type
+    )
+    if result["status"] == "success":
+        return ApiResponse.success(message=result["message"])
+    return ApiResponse.error(message=result["message"])
 
 # --------------------------------------------------
 # Regions

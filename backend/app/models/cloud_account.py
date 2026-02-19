@@ -32,7 +32,15 @@ class CloudAccount(Base):
     # Cloud type (aws, azure, gcp, etc)
     cloud_provider = mapped_column(String, nullable=False)
 
-    # READ layer credentials (provider specific)
+    # Discovery and Authentication Metadata (Unified JSONB)
+    # Structure:
+    # {
+    #   "auth": { "role_name": "...", "external_id": "...", "client_id": "...", "inherits_from_parent": bool },
+    #   "identity": { "cloud_id": "...", "account_type": "standalone|management|member|tenant|subscription" },
+    #   "strategy": { "source": "own|inherited" },
+    #   "organization": { "org_id": "...", "ou_path": "...", "is_root": bool },
+    #   "tracking": { "last_validated": "iso8601", "last_hierarchy_sync": "iso8601" }
+    # }
     cred_metadata = mapped_column(JSONB, nullable=False)
 
     # WRITE layer identity (OIDC / CI)

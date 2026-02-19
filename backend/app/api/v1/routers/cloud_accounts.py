@@ -37,6 +37,28 @@ async def list_accounts(
     )
 
 
+# ---------- GET BY ID ----------
+
+@router.get("/{record_id}")
+@registry(resource=resource, action=ACTION.READ)
+async def get_account(
+    record_id: str,
+    session: AsyncSession = Depends(get_session)
+):
+    """Retrieve a single cloud account by its record ID."""
+    account = await service.get_account_by_id(session, record_id)
+    if not account:
+        return ApiResponse.error(message="Account not found", status_code=404)
+    
+    # get_account_by_id might return a list or single object based on service implementation
+    data = orm_to_dict(account[0]) if isinstance(account, list) else orm_to_dict(account)
+    
+    return ApiResponse.success(
+        message="Cloud account fetched successfully",
+        data={"account": data}
+    )
+
+
 # ---------- CREATE ----------
 
 @router.post("/create")
