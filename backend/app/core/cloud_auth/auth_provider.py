@@ -114,6 +114,34 @@ class CloudAuthProvider:
     # AWS handling
     # -----------------------------
 
+    # -----------------------------
+    # Credential Extraction Helper
+    # -----------------------------
+    def _extract_field(self, meta: Dict[str, Any], keys: list) -> str:
+        """
+        Helper to find a value in metadata by checking multiple possible keys/paths.
+        Used to support both the new nested structure and legacy flat structure.
+        """
+        for path in keys:
+            value = meta
+            if isinstance(path, str):
+                value = value.get(path)
+            else:
+                for step in path:
+                    if isinstance(value, dict):
+                        value = value.get(step)
+                    else:
+                        value = None
+                        break
+            
+            if value:
+                return value
+        return None
+
+    # -----------------------------
+    # AWS handling
+    # -----------------------------
+
     async def _get_aws_credentials(self, account) -> Dict[str, Any]:
 
         aws_cache = self._cache.setdefault("aws", {})
@@ -128,8 +156,17 @@ class CloudAuthProvider:
         oidc_token = self._get_oidc_token()
 
         meta = account.cred_metadata
-        role_name = meta["role_name"]
-        aws_account_id = meta["account_id"]
+        
+        # Robust extraction for new vs old structure
+        role_name = self._extract_field(meta, [("auth", "role_name"), "role_name", ("auth", "role_arn")])
+        aws_account_id = self._extract_field(meta, [("identity", "cloud_id"), "account_id"])
+
+        if not role_name or not aws_account_id:
+             raise ValueError(f"Missing AWS credentials in metadata for account {account.id}")
+
+        # If role_name is an ARN, extract the name
+        if role_name.startswith("arn:"):
+             role_name = role_name.split("/")[-1]
 
         creds = assume_aws_role_with_oidc(
             role_name=role_name,
@@ -164,9 +201,14 @@ class CloudAuthProvider:
         oidc_token = self._get_oidc_token()
 
         meta = account.cred_metadata
-        tenant_id = meta["tenant_id"]
-        client_id = meta["client_id"]
-        subscription_id = meta["subscription_id"]
+        
+        # Robust extraction
+        tenant_id = self._extract_field(meta, [("auth", "tenant_id"), "tenant_id"])
+        client_id = self._extract_field(meta, [("auth", "client_id"), "client_id"])
+        subscription_id = self._extract_field(meta, [("identity", "cloud_id"), "subscription_id"])
+
+        if not tenant_id or not client_id:
+             raise ValueError(f"Missing Azure credentials in metadata for account {account.id}")
 
         # Exchange OIDC token for Azure token
         token = get_azure_token_with_oidc(

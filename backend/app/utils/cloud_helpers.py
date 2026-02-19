@@ -285,6 +285,15 @@ def extract_cloud_identifier(cred_metadata: Dict[str, Any], provider: str) -> Op
     Azure → subscription_id  or  tenant_id  or  management_group_id
     """
     provider = provider.lower()
+    
+    # Check for new nested structure first
+    identity = cred_metadata.get("identity", {})
+    if isinstance(identity, dict):
+        cloud_id = identity.get("cloud_id")
+        if cloud_id:
+            return cloud_id
+
+    # Fallback to legacy flat structure
     if provider == "aws":
         return cred_metadata.get("account_id")
     elif provider == "azure":
