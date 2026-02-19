@@ -78,6 +78,98 @@ class CloudAccountRepository:
         session.add(account)
         return account
 
+    # ─────────────── Discovery helpers ───────────────
 
-    async def update(self, session, account: CloudAccount):
-        session.add(account)
+    async def get_by_cloud_identifier(
+        self,
+        session: AsyncSession,
+        tenant_id: str,
+        cloud_provider: str,
+        identifier: str,
+    ) -> Optional[CloudAccount]:
+        """
+        Find account by cloud-side identifier within a tenant.
+        AWS  → cred_metadata->>'account_id'
+        Azure → cred_metadata->>'subscription_id' OR cred_metadata->>'tenant_id'
+        """
+        provider = cloud_provider.lower()
+        if provider == "aws":
+            json_key = "account_id"
+        elif provider == "azure":
+            # Try subscription_id first, fall back to tenant_id
+            stmt = (
+                select(CloudAccount)
+                .where(
+                    CloudAccount.tenant_id == tenant_id,
+                    CloudAccount.cloud_provider == cloud_provider,
+                    CloudAccount.cred_metadata["subscription_id"].astext == identifier,
+                )
+            )
+            result = await session.execute(stmt)
+            found = result.scalar_one_or_none()
+            if found:
+                return found
+            json_key = "tenant_id"
+        else:
+            return None
+
+        stmt = (
+            select(CloudAccount)
+            .where(
+                CloudAccount.tenant_id == tenant_id,
+                CloudAccount.cloud_provider == cloud_provider,
+                CloudAccount.cred_metadata[json_key].astext == identifier,
+            )
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_children(
+        self,
+        session: AsyncSession,
+        parent_id: str,
+    ) -> List[CloudAccount]:
+        """Get all accounts whose parent_id matches."""
+        stmt = select(CloudAccount).where(CloudAccount.parent_id == parent_id)
+        result = await session.execute(stmt)
+        return result.scalars().all()
+
+    async def get_by_org_id(
+        self,
+        session: AsyncSession,
+        tenant_id: str,
+        organization_id: str,
+    ) -> Optional[CloudAccount]:
+        """
+        Find the parent org/tenant record by organization_id inside
+        cred_metadata->'organization_context'->>'organization_id'.
+        """
+        stmt = (
+            select(CloudAccount)
+            .where(
+                CloudAccount.tenant_id == tenant_id,
+                CloudAccount.cred_metadata["organization_context"]["organization_id"].astext
+                == organization_id,
+                CloudAccount.parent_id.is_(None),
+            )
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_root_accounts_by_provider(
+        self,
+        session: AsyncSession,
+        tenant_id: str,
+        cloud_provider: str,
+    ) -> List[CloudAccount]:
+        """Get all root-level (no parent) accounts for a provider in a tenant."""
+        stmt = (
+            select(CloudAccount)
+            .where(
+                CloudAccount.tenant_id == tenant_id,
+                CloudAccount.cloud_provider == cloud_provider,
+                CloudAccount.parent_id.is_(None),
+            )
+        )
+        result = await session.execute(stmt)
+        return result.scalars().all()

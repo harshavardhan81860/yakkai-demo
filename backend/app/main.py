@@ -23,6 +23,7 @@ from api.v1.routers.resource_registry_routes import router as resource_registry_
 from api.v1.routers.governance_routes import router as governance_router
 from api.v1.routers.cloud_routes.aws import router as aws_router
 from api.v1.routers.cloud_routes.azure import router as azure_router
+from api.v1.routers.cloud_discovery import router as cloud_discovery_router
 
 from services.registry_validation_service import RegistryValidationService
 from db.engine import get_session
@@ -136,6 +137,7 @@ app.include_router(approval_template_router, prefix=api_prefix)
 app.include_router(approval_request_router, prefix=api_prefix)
 app.include_router(approval_mapping_router, prefix=api_prefix)
 app.include_router(governance_router, prefix=api_prefix)
+app.include_router(cloud_discovery_router, prefix=api_prefix)
 app.include_router(aws_router, prefix=api_prefix)
 app.include_router(azure_router, prefix=api_prefix)
 

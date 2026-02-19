@@ -28,3 +28,4 @@ azure-identity>=1.16
 azure-mgmt-resource==24.0.0
 azure-mgmt-compute>=30.0.0
 azure-mgmt-containerservice>=30.0.0
+azure-mgmt-managementgroups>=1.0.0

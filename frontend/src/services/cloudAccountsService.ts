@@ -23,8 +23,8 @@ export interface CloudAccountRow {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  read_last_test?: string | null;
-  write_last_test?: string | null;
+  read_last_validated_at?: string | null;
+  write_last_validated_at?: string | null;
 }
 
 
@@ -49,6 +49,14 @@ export const fetchCloudAccounts = async (
   );
 
   return res.data?.data?.accounts ?? [];
+};
+
+export const fetchCloudAccountById = async (
+  tenantId: string | number,
+  id: string
+): Promise<CloudAccountRow> => {
+  const res = await api.get(`api/v1/cloud-accounts/${id}`);
+  return res.data?.data;
 };
 
 /* ================= CREATE CLOUD ACCOUNT ================= */
