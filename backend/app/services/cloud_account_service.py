@@ -138,17 +138,35 @@ class CloudAccountService:
                 return
 
         # ── Legacy / simple format validation ──
+        # ── Legacy / simple format validation ──
+        # We need to check for presence in EITHER the old flat structure OR the new nested structure.
+        
+        def has_val(key: str, nested_path: list) -> bool:
+            # Check flat
+            if metadata.get(key): return True
+            # Check nested
+            val = metadata
+            for step in nested_path:
+                if isinstance(val, dict):
+                    val = val.get(step)
+                else:
+                    return False
+            return bool(val)
+
+        missing = []
+
         if provider == "aws":
-            required = ["account_id", "role_name"]
+            if not has_val("account_id", ["identity", "cloud_id"]): missing.append("account_id")
+            if not has_val("role_name", ["auth", "role_name"]): missing.append("role_name")
 
         elif provider == "azure":
-            # New discovery format uses subscription_id at top level
-            # but may also have tenant_id + client_id without subscription_id
-            # for tenant-level records
             if account_type == "subscription":
-                required = ["subscription_id"]
+                 if not has_val("subscription_id", ["identity", "cloud_id"]): missing.append("subscription_id")
             else:
-                required = ["tenant_id", "client_id", "subscription_id"]
+                 if not has_val("tenant_id", ["auth", "tenant_id"]): missing.append("tenant_id")
+                 if not has_val("client_id", ["auth", "client_id"]): missing.append("client_id")
+                 # Subscription ID is optional for tenant root, but if provided, check logic is handled by frontend/discovery usually
+                 # validation here focuses on connectivity basics.
 
         else:
             raise HTTPException(
@@ -156,12 +174,10 @@ class CloudAccountService:
                 detail=f"Unsupported cloud provider: {cloud_provider}"
             )
 
-        missing = [k for k in required if not metadata.get(k)]
-
         if missing:
             raise HTTPException(
                 status_code=400,
-                detail=f"Missing required fields in cred_metadata: {', '.join(missing)}"
+                detail=f"Missing required fields within cred_metadata (checked legacy and nested paths): {', '.join(missing)}"
             )
 
 
