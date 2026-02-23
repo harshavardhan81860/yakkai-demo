@@ -31,7 +31,7 @@ const Groups = (
   const [editDescription, setEditDescription] = useState("");
   const [editEmail, setEditEmail] = useState("");
 
-  const [form, setForm] = useState<any>({ name: "", description: "", is_system_group: true, email: "" });
+  const [form, setForm] = useState<any>({ name: "", description: "", is_system_group: true, email: "", tenant_id: null });
   const [resultDialog, setResultDialog] = useState<{ success: boolean; message: string } | null>(null);
 
   const [viewUsersModal, setViewUsersModal] = useState(false);
@@ -66,8 +66,9 @@ const Groups = (
     try {
       group.is_active ? await deactivateGroup(group.id) : await activateGroup(group.id);
       loadData();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert(err.response?.data?.message || "Failed to toggle group status.");
     }
   };
 
@@ -113,9 +114,13 @@ const Groups = (
   const submitCreate = async () => {
     if (!form.name || !form.description) return;
     try {
-      await createGroup(form);
+      const payload = { ...form };
+      if (payload.is_system_group) {
+        payload.tenant_id = null;
+      }
+      await createGroup(payload);
       setShowCreate(false);
-      setForm({ name: "", description: "", is_system_group: true, email: "" });
+      setForm({ name: "", description: "", is_system_group: true, email: "", tenant_id: null });
       loadData();
       setResultDialog({ success: true, message: "Group created successfully." });
     } catch (err: any) {
@@ -388,7 +393,35 @@ const Groups = (
             margin="normal"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
+            sx={{ mb: 2 }}
           />
+
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Group Scope</InputLabel>
+            <Select
+              value={form.is_system_group}
+              label="Group Scope"
+              onChange={(e) => setForm({ ...form, is_system_group: e.target.value, tenant_id: e.target.value ? null : form.tenant_id })}
+            >
+              <MenuItem value={true as any}>System Group (Global)</MenuItem>
+              <MenuItem value={false as any}>Tenant Group (Organization specific)</MenuItem>
+            </Select>
+          </FormControl>
+
+          {!form.is_system_group && (
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Select Tenant</InputLabel>
+              <Select
+                value={form.tenant_id || ""}
+                label="Select Tenant"
+                onChange={(e) => setForm({ ...form, tenant_id: e.target.value })}
+              >
+                {tenants.map(t => (
+                  <MenuItem key={t.id} value={t.id}>{t.display_name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
         </DialogContent>
 
         <DialogActions>
@@ -399,6 +432,7 @@ const Groups = (
           <Button
             variant="contained"
             onClick={submitCreate}
+            disabled={!form.name || !form.description || (!form.is_system_group && !form.tenant_id)}
           >
             Create
           </Button>

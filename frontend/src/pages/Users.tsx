@@ -46,8 +46,9 @@ const Users = () => {
     try {
       user.is_active ? await deactivateUser(user.id) : await activateUser(user.id);
       await loadUsers();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to toggle user status", err);
+      alert(err.response?.data?.message || "Failed to toggle user status.");
     }
   };
 

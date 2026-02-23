@@ -117,9 +117,9 @@ const UserGroupMapping = () => {
     );
   }, [selectedTenant]);
 
-  const assignedGroupIds = assignments.map((a) => a.group_id);
-  const systemGroups = groups.filter((g) => g.is_system_group && !assignedGroupIds.includes(g.id));
-  const tenantGroupsList = groups.filter((g) => !g.is_system_group && g.tenant_id === selectedTenant?.id && !assignedGroupIds.includes(g.id));
+  const assignedGroupIds = assignments.map((a) => String(a.group_id));
+  const systemGroups = groups.filter((g) => g.is_system_group && !assignedGroupIds.includes(String(g.id)));
+  const tenantGroupsList = groups.filter((g) => !g.is_system_group && String(g.tenant_id) === String(selectedTenant?.id) && !assignedGroupIds.includes(String(g.id)));
 
   const groupedAssignments = useMemo(() => {
     const map: Record<string, { tenantGroups: UserGroupAssignment[]; cloudGroups: Record<string, UserGroupAssignment[]> }> = {};
@@ -168,8 +168,9 @@ const UserGroupMapping = () => {
       setSelectedGroup(null);
       setSelectedTenant(null);
       setSelectedCloud(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert(err.response?.data?.message || "Failed to assign group. The user might not be a member of this tenant.");
     }
   };
 
@@ -177,8 +178,9 @@ const UserGroupMapping = () => {
     try {
       await revokeUserGroup(id);
       if (selectedUser) setAssignments(await fetchUserGroups(selectedUser.id));
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert(err.response?.data?.message || "Failed to revoke group membership.");
     }
   };
 

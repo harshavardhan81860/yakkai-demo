@@ -11,7 +11,7 @@ import {
   AccountCircle, AccountTree, Link as LinkIcon
 } from "@mui/icons-material";
 import {
-  fetchAllRoles, activateRole, deactivateRole, createRole, updateRole,
+  fetchAllRoles, activateRole, deactivateRole,
   getRoleUsers, getRoleGroups, type RoleRow,
 } from "../services/rolesService";
 import { fetchAllTenants, type TenantRow } from "../services/tenantsService";
@@ -25,15 +25,6 @@ const Roles = () => {
   const [tenants, setTenants] = useState<TenantRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [showCreate, setShowCreate] = useState(false);
-  const [editRole, setEditRole] = useState<RoleRow | null>(null);
-  const [editDescription, setEditDescription] = useState("");
-  const [editEmail, setEditEmail] = useState("");
-  const [allGroups, setAllGroups] = useState<any[]>([]);
-
-  const [form, setForm] = useState<any>({ name: "", description: "", is_system_role: true, email: "" });
-  const [resultDialog, setResultDialog] = useState<{ success: boolean; message: string } | null>(null);
-
   const [viewRoleModal, setViewRoleModal] = useState(false);
   const [selectedRole, setSelectedRole] = useState<RoleRow | null>(null);
   const [roleUsers, setRoleUsers] = useState<any[]>([]);
@@ -44,15 +35,13 @@ const Roles = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [rolesData, tenantsData, groupsData] = await Promise.all([
+      const [rolesData, tenantsData] = await Promise.all([
         fetchAllRoles(),
         fetchAllTenants(),
-        fetchAllGroups()
       ]);
 
       setRoles([...rolesData].sort((a, b) => Number(b.is_active) - Number(a.is_active) || a.id.localeCompare(b.id)));
       setTenants(tenantsData.filter((t) => t.is_active));
-      setAllGroups(groupsData);
       // setRoles([...rolesData].sort((a, b) => Number(b.is_active) - Number(a.is_active) ||  a.id.localeCompare(b.id)));
       // setTenants(tenantsData.filter((t) => t.is_active));
     } catch (err) {
@@ -70,8 +59,9 @@ const Roles = () => {
     try {
       role.is_active ? await deactivateRole(role.id) : await activateRole(role.id);
       loadData();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert(err.response?.data?.message || "Failed to toggle role status.");
     }
   };
 
@@ -102,30 +92,6 @@ const Roles = () => {
   };
 
 
-  const submitCreate = async () => {
-    if (!form.name || !form.description) return;
-    try {
-      await createRole({ ...form, email: form.email?.trim() || "" });
-      setShowCreate(false);
-      setForm({ name: "", description: "", is_system_role: true, email: "" });
-      loadData();
-      setResultDialog({ success: true, message: "Role created successfully." });
-    } catch (err: any) {
-      setResultDialog({ success: false, message: err.response?.data?.message || "Failed to create role" });
-    }
-  };
-
-  const submitUpdate = async () => {
-    if (!editRole) return;
-    try {
-      await updateRole(editRole.id, { description: editDescription, email: editEmail.trim() || "" });
-      setEditRole(null);
-      loadData();
-      setResultDialog({ success: true, message: "Role updated successfully." });
-    } catch (err: any) {
-      setResultDialog({ success: false, message: err.response?.data?.message || "Update failed" });
-    }
-  };
 
   const getTenantName = (id: string | null) => tenants.find((t) => String(t.id) === String(id))?.display_name ?? "—";
 
@@ -142,7 +108,7 @@ const Roles = () => {
     setViewRoleModal(false);
   };
 
-  
+
   return (
     <Box>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -157,8 +123,6 @@ const Roles = () => {
           <Button variant="outlined" startIcon={<LinkIcon />} onClick={() => navigate("/group-role-mapping")}>
             Map Groups
           </Button>
-          <Button variant="contained" startIcon={<Add />} onClick={() => setShowCreate(true)}
-            sx={{ background: 'linear-gradient(135deg,#6C63FF,#4A42D4)' }}>Create Role</Button>
         </Stack>
       </Box>
 
@@ -173,7 +137,6 @@ const Roles = () => {
               <TableRow>
                 <TableCell sx={{ fontWeight: 700 }}>Role Name</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Scope</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
               </TableRow>
@@ -200,17 +163,11 @@ const Roles = () => {
                     <Typography variant="body2">{r.is_system_role ? "System" : getTenantName(r.tenant_id)}</Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="caption" color="text.secondary">{(r as any).email || '—'}</Typography>
-                  </TableCell>
-                  <TableCell>
                     <Chip label={r.is_active ? "Active" : "Inactive"} size="small" variant="outlined" color={r.is_active ? "success" : "default"} />
                   </TableCell>
                   <TableCell align="right">
                     <Tooltip title="View Assignments">
                       <IconButton size="small" onClick={() => handleViewPeople(r)} sx={{ mr: 1 }}><People fontSize="small" /></IconButton>
-                    </Tooltip>
-                    <Tooltip title="Edit">
-                      <IconButton size="small" onClick={() => { setEditRole(r); setEditDescription(r.description); setEditEmail((r as any).email || ""); }} sx={{ mr: 1 }}><Edit fontSize="small" /></IconButton>
                     </Tooltip>
                     <IconButton size="small" onClick={() => handleToggle(r)} sx={{ color: r.is_active ? '#EF4444' : '#10B981' }}>
                       {r.is_active ? <Block fontSize="small" /> : <CheckCircle fontSize="small" />}
@@ -241,11 +198,15 @@ const Roles = () => {
           </Tabs>
           {loadingRoleData ? <LinearProgress /> : activeTab === 0 ? (
             <Table size="small">
-              <TableHead><TableRow><TableCell>User</TableCell><TableCell>Email</TableCell></TableRow></TableHead>
+              <TableHead><TableRow><TableCell>User</TableCell><TableCell>Tenant</TableCell><TableCell>Email</TableCell></TableRow></TableHead>
               <TableBody>
                 {roleUsers.length ? roleUsers.map(u => (
-                  <TableRow key={u.id}><TableCell>{u.username}</TableCell><TableCell>{u.email}</TableCell></TableRow>
-                )) : <TableRow><TableCell colSpan={2} align="center" sx={{ py: 4 }}>No users assigned</TableCell></TableRow>}
+                  <TableRow key={u.id}>
+                    <TableCell>{u.username}</TableCell>
+                    <TableCell>{getTenantName(u.tenant_id)}</TableCell>
+                    <TableCell>{u.email}</TableCell>
+                  </TableRow>
+                )) : <TableRow><TableCell colSpan={3} align="center" sx={{ py: 4 }}>No users assigned</TableCell></TableRow>}
               </TableBody>
             </Table>
           ) : (
@@ -253,6 +214,7 @@ const Roles = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>Name</TableCell>
+                  <TableCell>Tenant</TableCell>
                   <TableCell>ID</TableCell>
                   <TableCell>Email</TableCell>
                 </TableRow>
@@ -261,12 +223,13 @@ const Roles = () => {
                 {roleGroups.length ? roleGroups.map(g => (
                   <TableRow key={g.id}>
                     <TableCell>{g.name}</TableCell>
+                    <TableCell>{getTenantName(g.tenant_id)}</TableCell>
                     <TableCell>{g.id}</TableCell>
                     <TableCell>{g.email?.trim() ? g.email : "-"}</TableCell>
                   </TableRow>
                 )) : (
                   <TableRow>
-                    <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                       No groups linked
                     </TableCell>
                   </TableRow>
@@ -300,49 +263,7 @@ const Roles = () => {
           >
             Close
           </Button>
-        </DialogActions>  </Dialog>
-
-      {/* Create/Edit Modal */}
-      <Dialog
-        open={showCreate || !!editRole}
-        onClose={() => { setShowCreate(false); setEditRole(null); }}
-        maxWidth="xs"
-        fullWidth
-        slotProps={{
-          backdrop: { sx: { backgroundColor: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)' } }
-        }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>{editRole ? "Edit Role" : "Create Role"}</DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField fullWidth label="Name" value={editRole ? editRole.name : form.name} disabled={!!editRole} />
-            <TextField fullWidth label="Description" multiline rows={3} value={editRole ? editDescription : form.description} onChange={e => editRole ? setEditDescription(e.target.value) : setForm({ ...form, description: e.target.value })} />
-            <TextField fullWidth label="Alert Email" value={editRole ? editEmail : form.email} onChange={e => editRole ? setEditEmail(e.target.value) : setForm({ ...form, email: e.target.value })} />
-            {!editRole && (
-              <FormControl fullWidth>
-                <InputLabel>Type</InputLabel>
-                <Select value={String(form.is_system_role)} label="Type" onChange={e => setForm({ ...form, is_system_role: e.target.value === 'true' })}>
-                  <MenuItem value="true">System Role</MenuItem>
-                  <MenuItem value="false">Tenant Role</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-            {!editRole && !form.is_system_role && (
-              <FormControl fullWidth>
-                <InputLabel>Tenant</InputLabel>
-                <Select value={form.tenant_id || ""} label="Tenant" onChange={e => setForm({ ...form, tenant_id: e.target.value })}>
-                  {tenants.map(t => <MenuItem key={t.id} value={t.id}>{t.display_name}</MenuItem>)}
-                </Select>
-              </FormControl>
-            )}
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => { setShowCreate(false); setEditRole(null); }}>Cancel</Button>
-          <Button variant="contained" onClick={editRole ? submitUpdate : submitCreate}>Save</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+        </DialogActions>  </Dialog>    </Box>
   );
 };
 

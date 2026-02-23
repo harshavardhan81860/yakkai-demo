@@ -87,7 +87,8 @@ export const importDiscoveredAccounts = async (
     selectedAccountIds: string[],
     awsCreds?: AWSCredentials,
     azureCreds?: AzureCredentials,
-    testMode: boolean = false
+    testMode: boolean = false,
+    discoveredAccounts?: DiscoveredAccount[]
 ): Promise<ImportResult> => {
     const res = await api.post(`api/v1/cloud-discovery/import`, {
         tenant_id: tenantId,
@@ -97,6 +98,7 @@ export const importDiscoveredAccounts = async (
         aws_credentials: provider === "aws" ? awsCreds : undefined,
         azure_credentials: provider === "azure" ? azureCreds : undefined,
         test_mode: testMode,
+        discovered_accounts: discoveredAccounts,
     });
     return res.data?.data;
 };

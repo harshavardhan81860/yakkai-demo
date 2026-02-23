@@ -1,12 +1,13 @@
 import { useParams, useNavigate } from "react-router-dom";
 import {
-    Box, Typography, Grid, Card, Avatar, Button, Stack, Breadcrumbs as MuiBreadcrumbs,
+    Box, Typography, Grid, Card, Avatar, Button,
     Link, Paper
 } from "@mui/material";
 import {
     CloudCircle, Dashboard, Payments, People, GroupWork, Security,
-    ArrowBack, ChevronRight, Business
+    ArrowBack, Business, ChevronRight
 } from "@mui/icons-material";
+import Breadcrumbs from "../components/Common/Breadcrumbs";
 
 const TenantWorkspace = () => {
     const { tenantId } = useParams();
@@ -33,7 +34,7 @@ const TenantWorkspace = () => {
             title: "Cost Analytics",
             subtitle: "Budget tracking and cost optimization summaries",
             icon: <Payments sx={{ fontSize: 32 }} />,
-            path: "/costs",
+            path: `/tenants/${tenantId}/finops`,
             color: "#F59E0B",
             active: true
         },
@@ -41,7 +42,7 @@ const TenantWorkspace = () => {
             title: "Tenant Users",
             subtitle: "Access control for tenant-specific members",
             icon: <People sx={{ fontSize: 32 }} />,
-            path: "/users",
+            path: `/tenants/${tenantId}/users`,
             color: "#3B82F6",
             active: true
         },
@@ -67,14 +68,10 @@ const TenantWorkspace = () => {
         <Box>
             <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Box>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                        <MuiBreadcrumbs separator={<ChevronRight fontSize="small" sx={{ color: 'text.disabled' }} />}>
-                            <Link underline="hover" color="inherit" onClick={() => navigate('/tenants')} sx={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '0.875rem' }}>
-                                <Business sx={{ fontSize: 16 }} /> Infrastructure
-                            </Link>
-                            <Typography color="text.primary" sx={{ fontSize: '0.875rem', fontWeight: 700 }}>Workspace</Typography>
-                        </MuiBreadcrumbs>
-                    </Stack>
+                    <Breadcrumbs items={[
+                        { label: "Infrastructure", path: "/tenants" },
+                        { label: "Workspace" }
+                    ]} />
                     <Typography variant="h4" sx={{ fontWeight: 800 }}>Workspace Studio</Typography>
                     <Typography variant="body2" color="text.secondary">Orchestrate resources and governance for your organizational unit</Typography>
                 </Box>

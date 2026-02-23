@@ -6,10 +6,10 @@ from typing import Optional, List
 
 class RoleRepository:
 
-    async def list_roles(self, session: AsyncSession, tenant_id: Optional[str] = None) -> List[Role]:
-        stmt = select(Role)
-        if tenant_id is not None:
-            stmt = stmt.where(Role.tenant_id == tenant_id)
+    async def list_roles(self, session: AsyncSession, is_system: Optional[bool] = None) -> List[Role]:
+        stmt = select(Role).where(Role.tenant_id.is_(None))
+        if is_system is not None:
+            stmt = stmt.where(Role.is_system_role == is_system)
         result = await session.execute(stmt)
         return result.scalars().all()
 

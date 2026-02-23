@@ -5,7 +5,7 @@ import api from "./api";
 ============================ */
 
 export interface UserRoleAssignment {
-  id: number;
+  id: number | string;
   user_id: number;
   role_id: number;
   role_name?: string;
@@ -13,8 +13,10 @@ export interface UserRoleAssignment {
   cloud_account_id: number | string | null;
   component_id: number | null;
   assigned_by: number | null;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
+  is_inherited?: boolean;
+  source_group_name?: string | null;
 }
 
 /* ============================
@@ -24,7 +26,7 @@ export interface UserRoleAssignment {
 export const fetchUserRoles = async (
   userId: number
 ): Promise<UserRoleAssignment[]> => {
-  const res = await api.get(`/api/v1/roles/user/${userId}`);
+  const res = await api.get(`/api/v1/roles/user/${userId}/effective`);
   return res.data?.data?.assignments ?? [];
 };
 /* ============================

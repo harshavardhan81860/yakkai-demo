@@ -31,6 +31,33 @@ class GroupRoleAssignmentRepository:
         res = await session.execute(stmt)
         return res.scalar_one_or_none()
 
+    async def get_by_scope(
+        self,
+        session: AsyncSession,
+        group_id: str,
+        tenant_id: Optional[str],
+        cloud_account_id: Optional[str],
+        component_id: Optional[str],
+    ):
+        stmt = select(GroupRoleAssignment).where(GroupRoleAssignment.group_id == group_id)
+        if tenant_id:
+            stmt = stmt.where(GroupRoleAssignment.tenant_id == tenant_id)
+        else:
+            stmt = stmt.where(GroupRoleAssignment.tenant_id.is_(None))
+
+        if cloud_account_id:
+            stmt = stmt.where(GroupRoleAssignment.cloud_account_id == cloud_account_id)
+        else:
+            stmt = stmt.where(GroupRoleAssignment.cloud_account_id.is_(None))
+
+        if component_id:
+            stmt = stmt.where(GroupRoleAssignment.component_id == component_id)
+        else:
+            stmt = stmt.where(GroupRoleAssignment.component_id.is_(None))
+
+        res = await session.execute(stmt)
+        return res.scalar_one_or_none()
+
     async def list_by_group(self, session: AsyncSession, group_id: str):
         stmt = select(GroupRoleAssignment).where(
             GroupRoleAssignment.group_id == group_id

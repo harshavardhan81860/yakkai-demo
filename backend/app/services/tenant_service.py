@@ -3,6 +3,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 from models.tenant import Tenant
+from models.tenant_user import TenantUser
 from repositories.tenant_repository import TenantRepository
 
 class TenantService:
@@ -12,6 +13,9 @@ class TenantService:
 
     async def list_tenants(self, session: AsyncSession, is_active: bool | None = None):
         return await self.repo.list_tenants(session, is_active)
+
+    async def list_tenants_by_user(self, session: AsyncSession, user_id: str):
+        return await self.repo.list_tenants_by_user(session, user_id)
 
     async def create_tenant(self, session: AsyncSession, name: str, display_name: str):
         existing = await self.repo.get_by_name(session, name)
@@ -60,3 +64,41 @@ class TenantService:
             tenant.display_name = display_name
         
         return await self.repo.update(session, tenant)
+
+    async def get_tenant_users(self, session: AsyncSession, tenant_id: str):
+        # Validate tenant exists
+        tenant = await self.repo.get_by_id(session, tenant_id)
+        if not tenant:
+            raise HTTPException(status_code=404, detail="Tenant not found")
+            
+        return await self.repo.get_users_by_tenant(session, tenant_id)
+
+    async def add_user_to_tenant(self, session: AsyncSession, tenant_id: str, user_id: str):
+        # Validate tenant exists
+        tenant = await self.repo.get_by_id(session, tenant_id)
+        if not tenant:
+            raise HTTPException(status_code=404, detail="Tenant not found")
+
+        # Check if already mapped
+        existing = await self.repo.get_tenant_user(session, tenant_id, user_id)
+        if existing:
+            raise HTTPException(status_code=400, detail="User already added to this tenant")
+            
+        # Create mapping
+        tenant_user = TenantUser(
+            tenant_id=tenant_id,
+            user_id=user_id
+        )
+        return await self.repo.add_user_to_tenant(session, tenant_user)
+
+    async def remove_user_from_tenant(self, session: AsyncSession, tenant_id: str, user_id: str):
+        # Validate tenant exists
+        tenant = await self.repo.get_by_id(session, tenant_id)
+        if not tenant:
+            raise HTTPException(status_code=404, detail="Tenant not found")
+
+        success = await self.repo.remove_user_from_tenant(session, tenant_id, user_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="User is not part of this tenant")
+            
+        return {"success": True, "message": "User removed from tenant and cascade revokes applied"}

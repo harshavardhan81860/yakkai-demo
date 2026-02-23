@@ -16,10 +16,8 @@ import {
 import Breadcrumbs from "../components/Common/Breadcrumbs";
 import { fetchAllUsers, type UserRow } from "../services/usersService";
 import { fetchAllRoles, type RoleRow } from "../services/rolesService";
-import {
-  fetchUserRoles, assignUserRole, revokeUserRole, type UserRoleAssignment,
-} from "../services/userRolesService";
-import { fetchAllTenants, type TenantRow } from "../services/tenantsService";
+import { fetchUserRoles, assignUserRole, revokeUserRole, type UserRoleAssignment, } from "../services/userRolesService";
+import { fetchAllTenants, fetchUserTenants, type TenantRow } from "../services/tenantsService";
 import { fetchCloudAccounts, type CloudAccountRow } from "../services/cloudAccountsService";
 
 const UserRoleMapping = () => {
@@ -63,9 +61,10 @@ const UserRoleMapping = () => {
 
   useEffect(() => {
     (async () => {
-      const [u, r] = await Promise.all([fetchAllUsers(), fetchAllRoles()]);
+      const [u, r, t] = await Promise.all([fetchAllUsers(), fetchAllRoles(), fetchAllTenants()]);
       setUsers(u);
       setRoles(r);
+      setTenants(t);
 
       const userId = params.get("userId");
       const roleId = params.get("roleId");
@@ -76,7 +75,12 @@ const UserRoleMapping = () => {
         const user = u.find(x => String(x.id) === String(userId));
         if (user) {
           setSelectedUser(user);  // <-- must use the exact object from `users` array
-          setAssignments(await fetchUserRoles(user.id));
+          const [roles, userTenants] = await Promise.all([
+            fetchUserRoles(user.id),
+            fetchUserTenants(user.id)
+          ]);
+          setAssignments(roles);
+          setTenants(userTenants);
         }
       }
 
@@ -101,9 +105,24 @@ const UserRoleMapping = () => {
     );
   }, [selectedTenant]);
 
-  const assignedRoleIds = assignments.map((a) => a.role_id);
-  const systemRoles = roles.filter((r) => r.is_system_role && !assignedRoleIds.includes(Number(r.id)));
-  const tenantRoles = roles.filter((r) => !r.is_system_role && r.tenant_id === selectedTenant?.id && !assignedRoleIds.includes(Number(r.id)));
+  const systemRoles = roles.filter((r) => {
+    if (!r.is_system_role) return false;
+    const isAssigned = assignments.some(a => !a.tenant_id && String(a.role_id) === String(r.id));
+    return !isAssigned;
+  });
+
+  const tenantRoles = roles.filter((r) => {
+    if (r.is_system_role) return false;
+    // If role has its own tenant_id, it must match the selected tenant
+    if (r.tenant_id && String(r.tenant_id) !== String(selectedTenant?.id)) return false;
+
+    // Logic: exclude if this generic/specific role is already assigned to THIS specific tenant
+    const isAssigned = assignments.some(a =>
+      String(a.tenant_id) === String(selectedTenant?.id) &&
+      String(a.role_id) === String(r.id)
+    );
+    return !isAssigned;
+  });
 
   const tenantGroups = useMemo(() => {
     const map: Record<string, UserRoleAssignment[]> = {};
@@ -117,14 +136,13 @@ const UserRoleMapping = () => {
   }, [assignments]);
 
   const confirmAssign = async () => {
-    console.log("Selected User:", selectedUser); 
+    console.log("Selected User:", selectedUser);
     console.log("Selected Role:", selectedRole);
 
     if (!selectedUser || !selectedRole) return;
     const payload: any = { user_id: selectedUser.id, role_id: selectedRole.id };
     if (assignType === "tenant") {
-      if (selectedCloud) payload.cloud_account_id = selectedCloud.id;
-      else payload.tenant_id = selectedTenant?.id;
+      payload.tenant_id = selectedTenant?.id;
     }
     try {
       await assignUserRole(payload);
@@ -133,8 +151,10 @@ const UserRoleMapping = () => {
       setSelectedRole(null);
       setSelectedTenant(null);
       setSelectedCloud(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      const msg = err.response?.data?.message || err.response?.data?.detail || "Failed to assign role.";
+      alert(msg);
     }
   };
 
@@ -142,8 +162,9 @@ const UserRoleMapping = () => {
     try {
       await revokeUserRole(id);
       if (selectedUser) setAssignments(await fetchUserRoles(selectedUser.id));
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert(err.response?.data?.message || "Failed to revoke role assignment.");
     }
   };
 
@@ -193,7 +214,10 @@ const UserRoleMapping = () => {
               value={selectedUser}
               onChange={(_, user) => {
                 setSelectedUser(user || null); // ensures state updates
-                if (user) fetchUserRoles(user.id).then(setAssignments);
+                if (user) {
+                  fetchUserRoles(user.id).then(setAssignments);
+                  fetchUserTenants(user.id).then(setTenants);
+                }
                 if (user) navigate(`/user-role-mapping?userId=${user.id}`, { replace: true });
               }}
               isOptionEqualToValue={(option, value) => option.id === value.id} // <-- critical
@@ -235,8 +259,21 @@ const UserRoleMapping = () => {
                         <TableRow><TableCell align="center" sx={{ py: 4 }}><Typography color="text.secondary">No administrative roles assigned</Typography></TableCell></TableRow>
                       ) : assignments.filter(a => roles.find(r => String(r.id) === String(a.role_id))?.is_system_role).map(a => (
                         <TableRow key={a.id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                          <TableCell><Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{roles.find(r => String(r.id) === String(a.role_id))?.name}</Typography></TableCell>
-                          <TableCell align="right"><Button size="small" color="error" startIcon={<Delete />} onClick={() => revoke(a.id)}>Revoke</Button></TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{roles.find(r => String(r.id) === String(a.role_id))?.name}</Typography>
+                              {a.is_inherited && (
+                                <Tooltip title={`Inherited from group: ${a.source_group_name}`}>
+                                  <Chip size="small" icon={<Info fontSize="small" />} label={a.source_group_name} color="info" variant="outlined" sx={{ height: 20 }} />
+                                </Tooltip>
+                              )}
+                            </Box>
+                          </TableCell>
+                          <TableCell align="right">
+                            {!a.is_inherited && (
+                              <Button size="small" color="error" startIcon={<Delete />} onClick={() => revoke(a.id as number)}>Revoke</Button>
+                            )}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -263,9 +300,20 @@ const UserRoleMapping = () => {
                         {assigns.map(a => (
                           <ListItem key={a.id} sx={{ px: 3, '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
                             <ListItemText primary={<Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{roles.find(r => String(r.id) === String(a.role_id))?.name}</Typography>}
-                              secondary={a.cloud_account_id ? `Restricted to Cloud Account ID: ${a.cloud_account_id}` : 'Tenant-wide scope'} />
+                              secondary={
+                                <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                                  <Typography variant="body2" component="span">{a.cloud_account_id ? `Restricted to Cloud: ${a.cloud_account_id}` : 'Tenant-wide scope'}</Typography>
+                                  {a.is_inherited && (
+                                    <Tooltip title={`Inherited from group: ${a.source_group_name}`}>
+                                      <Chip size="small" icon={<Info fontSize="small" />} label={a.source_group_name} color="info" variant="outlined" sx={{ height: 20 }} />
+                                    </Tooltip>
+                                  )}
+                                </Box>
+                              } />
                             <ListItemSecondaryAction>
-                              <IconButton edge="end" color="error" onClick={() => revoke(a.id)}><Delete fontSize="small" /></IconButton>
+                              {!a.is_inherited && (
+                                <IconButton edge="end" color="error" onClick={() => revoke(a.id as number)}><Delete fontSize="small" /></IconButton>
+                              )}
                             </ListItemSecondaryAction>
                           </ListItem>
                         ))}
@@ -300,7 +348,10 @@ const UserRoleMapping = () => {
                 value={selectedUser}
                 onChange={(_, user) => {
                   setSelectedUser(user || null);
-                  if (user) fetchUserRoles(user.id).then(setAssignments);
+                  if (user) {
+                    fetchUserRoles(user.id).then(setAssignments);
+                    fetchUserTenants(user.id).then(setTenants);
+                  }
                 }}
                 isOptionEqualToValue={(option, value) => option.id === value.id}
                 renderInput={(params) => <TextField {...params} label="Select User *" />}
@@ -339,24 +390,12 @@ const UserRoleMapping = () => {
               </Grid>
             )}
 
-            {/* 4. Cloud account restriction if tenant selected */}
-            {assignType === "tenant" && selectedTenant && (
-              <Grid size={12}>
-                <Autocomplete
-                  options={cloudAccounts}
-                  getOptionLabel={(c) => c.display_name || c.name}
-                  value={selectedCloud}
-                  onChange={(_, v) => setSelectedCloud(v)}
-                  renderInput={(params) => <TextField {...params} label="Restrict to Cloud Account (Optional)" />}
-                />
-              </Grid>
-            )}
 
             {/* 5. Role selection */}
             <Grid size={12}>
               <Autocomplete
                 options={assignType === "system" ? systemRoles : tenantRoles}
-                getOptionLabel={(r) => r.name}
+                getOptionLabel={(r) => r.tenant_id ? `${r.name} (${tenants.find(t => String(t.id) === String(r.tenant_id))?.display_name || 'Legacy Tenant'})` : r.name}
                 value={selectedRole}
                 onChange={(_, role) => setSelectedRole(role || null)}
                 isOptionEqualToValue={(option, value) => option.id === value.id}

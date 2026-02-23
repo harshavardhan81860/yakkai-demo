@@ -87,6 +87,8 @@ const AccountOnboardingDialog = ({
     const [azureCreds, setAzureCreds] = useState<AzureCredentials>({
         tenant_id: "", client_id: "", client_secret: "",
     });
+    // Step 1 - Account Name (optional/custom)
+    const [accountName, setAccountName] = useState("");
 
     // Step 2/3 – discovery results
     const [discoveryResult, setDiscoveryResult] = useState<DiscoveryResult | null>(null);
@@ -290,6 +292,46 @@ const AccountOnboardingDialog = ({
 
                 result = await importIncrementalAccounts(initialAccountId, accountsToImport, testMode);
             } else {
+                // Helper to inject user-provided name for the root account
+                let finalDiscoveredAccounts = discoveryResult?.discovered_accounts ? [...discoveryResult.discovered_accounts] : [];
+
+                // If user provided a name, ensure the root/tenant account in the list has this name
+                if (accountName && !isDiscoveryOnly && onboardingType === "root") {
+                    if (provider === "aws") {
+                        // Find management account
+                        const rootId = awsCreds.account_id;
+                        const rootIdx = finalDiscoveredAccounts.findIndex(a => a.account_id === rootId);
+                        if (rootIdx >= 0) {
+                            finalDiscoveredAccounts[rootIdx] = { ...finalDiscoveredAccounts[rootIdx], name: accountName };
+                        } else {
+                            // If not found (unlikely for mgmt account?), append it so backend sees it
+                            finalDiscoveredAccounts.push({
+                                account_id: rootId,
+                                name: accountName,
+                                already_imported: false,
+                                // Add other required fields if needed by backend, though backend mostly checks account_id match
+                            } as any);
+                        }
+                    } else if (provider === "azure") {
+                        // Azure Tenant is often not in the list of subscriptions
+                        // We append a "fake" entry for the tenant to carry the name
+                        const tenantId = azureCreds.tenant_id;
+                        // Check if it exists (unlikely)
+                        const idx = finalDiscoveredAccounts.findIndex(a => a.account_id === tenantId); // Tenant usually doesn't have account_id in this context, but check anyway
+                        if (idx >= 0) {
+                            finalDiscoveredAccounts[idx] = { ...finalDiscoveredAccounts[idx], name: accountName };
+                        } else {
+                            // Append special tenant entry
+                            finalDiscoveredAccounts.push({
+                                account_id: tenantId, // Use this for ID matching override
+                                name: accountName,
+                                type: 'tenant',
+                                already_imported: false
+                            } as any);
+                        }
+                    }
+                }
+
                 result = await importDiscoveredAccounts(
                     tenantId,
                     provider,
@@ -298,6 +340,7 @@ const AccountOnboardingDialog = ({
                     provider === "aws" ? awsCreds : undefined,
                     provider === "azure" ? azureCreds : undefined,
                     testMode,
+                    finalDiscoveredAccounts // Pass the modified list
                 );
             }
             setImportResult(result);
@@ -470,46 +513,56 @@ const AccountOnboardingDialog = ({
             )}
 
             {onboardingType === "root" && !isDiscoveryOnly ? (
-                provider === "aws" ? (
-                    <Stack spacing={2.5}>
-                        <TextField
-                            fullWidth label="AWS Account ID" placeholder="12 digit identifier"
-                            value={awsCreds.account_id}
-                            onChange={(e) => setAwsCreds({ ...awsCreds, account_id: e.target.value })}
-                        />
-                        <TextField
-                            fullWidth label="IAM Role Name" placeholder="DeploymentRole"
-                            value={awsCreds.role_name}
-                            onChange={(e) => setAwsCreds({ ...awsCreds, role_name: e.target.value })}
-                        />
-                        <TextField
-                            fullWidth label="External ID (Optional)" placeholder="For cross-account role assumption"
-                            value={awsCreds.external_id}
-                            onChange={(e) => setAwsCreds({ ...awsCreds, external_id: e.target.value })}
-                        />
-                    </Stack>
-                ) : (
-                    <Stack spacing={2.5}>
-                        <Typography variant="caption" color="warning.main" sx={{ mb: 1 }}>
-                            Note: Azure Tenant is a root container and does not hold resources directly.
-                        </Typography>
-                        <TextField
-                            fullWidth label="Azure Tenant ID"
-                            value={azureCreds.tenant_id}
-                            onChange={(e) => setAzureCreds({ ...azureCreds, tenant_id: e.target.value })}
-                        />
-                        <TextField
-                            fullWidth label="Client ID"
-                            value={azureCreds.client_id}
-                            onChange={(e) => setAzureCreds({ ...azureCreds, client_id: e.target.value })}
-                        />
-                        <TextField
-                            fullWidth label="Client Secret" type="password"
-                            value={azureCreds.client_secret}
-                            onChange={(e) => setAzureCreds({ ...azureCreds, client_secret: e.target.value })}
-                        />
-                    </Stack>
-                )
+                <>
+                    <TextField
+                        fullWidth label="Account Name" placeholder="e.g. Production AWS, Corp Azure Tenant"
+                        value={accountName}
+                        onChange={(e) => setAccountName(e.target.value)}
+                        margin="normal"
+                        required
+                    />
+                    {provider === "aws" ? (
+                        <Stack spacing={2.5}>
+                            <TextField
+                                fullWidth label="AWS Account ID" placeholder="12 digit identifier"
+                                value={awsCreds.account_id}
+                                onChange={(e) => setAwsCreds({ ...awsCreds, account_id: e.target.value })}
+                            />
+                            <TextField
+                                fullWidth label="IAM Role Name" placeholder="DeploymentRole"
+                                value={awsCreds.role_name}
+                                onChange={(e) => setAwsCreds({ ...awsCreds, role_name: e.target.value })}
+                            />
+                            <TextField
+                                fullWidth label="External ID (Optional)" placeholder="For cross-account role assumption"
+                                value={awsCreds.external_id}
+                                onChange={(e) => setAwsCreds({ ...awsCreds, external_id: e.target.value })}
+                            />
+                        </Stack>
+                    ) : (
+                        <Stack spacing={2.5}>
+                            <Typography variant="caption" color="warning.main" sx={{ mb: 1 }}>
+                                Note: Azure Tenant is a root container and does not hold resources directly.
+                            </Typography>
+                            <TextField
+                                fullWidth label="Azure Tenant ID"
+                                value={azureCreds.tenant_id}
+                                onChange={(e) => setAzureCreds({ ...azureCreds, tenant_id: e.target.value })}
+                            />
+                            <TextField
+                                fullWidth label="Client ID"
+                                value={azureCreds.client_id}
+                                onChange={(e) => setAzureCreds({ ...azureCreds, client_id: e.target.value })}
+                            />
+                            <TextField
+                                fullWidth label="Client Secret" type="password"
+                                value={azureCreds.client_secret}
+                                onChange={(e) => setAzureCreds({ ...azureCreds, client_secret: e.target.value })}
+                                helperText="Optional. Leave empty if using other auth methods."
+                            />
+                        </Stack>
+                    )}
+                </>
             ) : (
                 <Box sx={{ p: 2, bgcolor: "rgba(255,255,255,0.03)", borderRadius: 1, border: "1px solid rgba(255,255,255,0.1)" }}>
                     <Typography variant="subtitle2" gutterBottom>

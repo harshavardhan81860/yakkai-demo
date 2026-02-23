@@ -1,6 +1,6 @@
 # routes/role_routes.py
 from typing import Optional
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.engine import get_session
 from services.role_service import RoleService
@@ -20,8 +20,8 @@ resource = RESOURCE.ROLE
 # Roles
 @router.get("/")
 @registry(resource=resource, action=ACTION.READ)
-async def list_roles(tenant_id: Optional[str] = None, session: AsyncSession = Depends(get_session)):
-    roles = await service.list_roles(session, tenant_id)
+async def list_roles(is_system: Optional[bool] = None, session: AsyncSession = Depends(get_session)):
+    roles = await service.list_roles(session, is_system)
     return ApiResponse.success(
         message="Roles fetched successfully",
         data={"roles": [orm_to_dict(r) for r in roles]}
@@ -37,6 +37,8 @@ async def create_role(req: RoleCreateRequest, session: AsyncSession = Depends(ge
             status_code=201,
             data={"role": orm_to_dict(role)}
         )
+    except HTTPException as e:
+        return ApiResponse.error(message=e.detail, status_code=e.status_code)
     except Exception as e:
         return ApiResponse.error(message=str(e), status_code=400)
 
@@ -49,6 +51,8 @@ async def update_role(role_id: str, req: RoleUpdateRequest, session: AsyncSessio
             message="Role updated successfully",
             data={"role": orm_to_dict(role)}
         )
+    except HTTPException as e:
+        return ApiResponse.error(message=e.detail, status_code=e.status_code)
     except Exception as e:
         return ApiResponse.error(message=str(e), status_code=400)
 
@@ -58,6 +62,8 @@ async def activate_role(role_id: str, session: AsyncSession = Depends(get_sessio
     try:
         role = await service.update_role(session, role_id, None, None, True)
         return ApiResponse.success(message="Role activated", data={"role": orm_to_dict(role)})
+    except HTTPException as e:
+        return ApiResponse.error(message=e.detail, status_code=e.status_code)
     except Exception as e:
         return ApiResponse.error(message=str(e), status_code=400)
 
@@ -67,6 +73,8 @@ async def deactivate_role(role_id: str, session: AsyncSession = Depends(get_sess
     try:
         role = await service.update_role(session, role_id, None, None, False)
         return ApiResponse.success(message="Role deactivated", data={"role": orm_to_dict(role)})
+    except HTTPException as e:
+        return ApiResponse.error(message=e.detail, status_code=e.status_code)
     except Exception as e:
         return ApiResponse.error(message=str(e), status_code=400)
 
@@ -85,6 +93,8 @@ async def assign_role(req: RoleAssignmentCreateRequest, session: AsyncSession = 
             assigned_by=req.assigned_by
         )
         return ApiResponse.success(message="Role assigned", status_code=201, data={"assignment": orm_to_dict(assignment)})
+    except HTTPException as e:
+        return ApiResponse.error(message=e.detail, status_code=e.status_code)
     except Exception as e:
         return ApiResponse.error(message=str(e), status_code=400)
 
@@ -94,6 +104,8 @@ async def revoke_role(assignment_id: str, session: AsyncSession = Depends(get_se
     try:
         res = await assign_service.revoke_role(session, assignment_id)
         return ApiResponse.success(message="Role revoked", data={"result": res})
+    except HTTPException as e:
+        return ApiResponse.error(message=e.detail, status_code=e.status_code)
     except Exception as e:
         return ApiResponse.error(message=str(e), status_code=400)
 
@@ -102,6 +114,12 @@ async def revoke_role(assignment_id: str, session: AsyncSession = Depends(get_se
 async def list_user_roles(user_id: str, session: AsyncSession = Depends(get_session)):
     assignments = await assign_service.list_user_assignments(session, user_id)
     return ApiResponse.success(message="User roles fetched", data={"assignments": [orm_to_dict(a) for a in assignments]})
+
+@router.get("/user/{user_id}/effective")
+@registry(resource=resource, action=ACTION.READ)
+async def list_effective_user_roles(user_id: str, session: AsyncSession = Depends(get_session)):
+    assignments = await assign_service.list_effective_user_assignments(session, user_id)
+    return ApiResponse.success(message="Effective user roles fetched", data={"assignments": assignments})
 
 @router.get("/{role_id}/users")
 @registry(resource=resource, action=ACTION.READ)

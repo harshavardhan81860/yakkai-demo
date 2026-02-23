@@ -1,16 +1,22 @@
 import { createTheme } from '@mui/material/styles';
 
-const theme = createTheme({
+export const getAppTheme = (mode: 'light' | 'dark') => createTheme({
     palette: {
-        mode: 'dark',
+        mode,
         primary: { main: '#6C63FF', light: '#958FFF', dark: '#4A42D4' },
         secondary: { main: '#00D9FF', light: '#5CE6FF', dark: '#00A8C6' },
-        background: { default: '#0A0E1A', paper: '#111827' },
+        background: {
+            default: mode === 'dark' ? '#0A0E1A' : '#F9FAFB',
+            paper: mode === 'dark' ? '#111827' : '#FFFFFF'
+        },
         success: { main: '#10B981' },
         warning: { main: '#F59E0B' },
         error: { main: '#EF4444' },
         info: { main: '#3B82F6' },
-        text: { primary: '#F3F4F6', secondary: '#9CA3AF' },
+        text: {
+            primary: mode === 'dark' ? '#F3F4F6' : '#111827',
+            secondary: mode === 'dark' ? '#9CA3AF' : '#4B5563'
+        },
     },
     typography: {
         fontFamily: "'Inter', 'Roboto', -apple-system, sans-serif",
@@ -25,12 +31,12 @@ const theme = createTheme({
         MuiCard: {
             styleOverrides: {
                 root: {
-                    background: 'linear-gradient(145deg, rgba(17,24,39,0.9) 0%, rgba(17,24,39,0.7) 100%)',
+                    background: mode === 'dark' ? 'linear-gradient(145deg, rgba(17,24,39,0.9) 0%, rgba(17,24,39,0.7) 100%)' : '#FFFFFF',
                     backdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                    border: mode === 'dark' ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
+                    boxShadow: mode === 'dark' ? '0 8px 32px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.05)',
                     transition: 'all 0.3s ease',
-                    '&:hover': { border: '1px solid rgba(108,99,255,0.3)', boxShadow: '0 12px 40px rgba(108,99,255,0.15)' },
+                    '&:hover': { border: '1px solid rgba(108,99,255,0.3)', boxShadow: mode === 'dark' ? '0 12px 40px rgba(108,99,255,0.15)' : '0 8px 24px rgba(108,99,255,0.1)' },
                 },
             },
         },
@@ -46,8 +52,8 @@ const theme = createTheme({
         MuiDrawer: {
             styleOverrides: {
                 paper: {
-                    background: 'linear-gradient(180deg, #0F1629 0%, #0A0E1A 100%)',
-                    borderRight: '1px solid rgba(255,255,255,0.06)',
+                    background: mode === 'dark' ? 'linear-gradient(180deg, #0F1629 0%, #0A0E1A 100%)' : '#FFFFFF',
+                    borderRight: mode === 'dark' ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
                 },
             },
         },
@@ -64,15 +70,15 @@ const theme = createTheme({
         },
         MuiTableCell: {
             styleOverrides: {
-                root: { borderBottom: '1px solid rgba(255,255,255,0.06)' },
-                head: { fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' },
+                root: { borderBottom: mode === 'dark' ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)' },
+                head: { fontWeight: 700, color: mode === 'dark' ? '#9CA3AF' : '#6B7280', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' },
             },
         },
         MuiDialog: {
             styleOverrides: {
                 paper: {
-                    background: 'linear-gradient(145deg, #1a2235 0%, #111827 100%)',
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: mode === 'dark' ? 'linear-gradient(145deg, #1a2235 0%, #111827 100%)' : '#FFFFFF',
+                    border: mode === 'dark' ? '1px solid rgba(255,255,255,0.08)' : 'none',
                     borderRadius: 16,
                 },
             },
@@ -83,4 +89,5 @@ const theme = createTheme({
     },
 });
 
+const theme = getAppTheme('dark');
 export default theme;

@@ -29,6 +29,11 @@ export const fetchAllTenants = async (): Promise<TenantRow[]> => {
   return res.data?.data?.tenants ?? [];
 };
 
+export const fetchUserTenants = async (userId: number): Promise<TenantRow[]> => {
+  const res = await api.get(`api/v1/tenants/user/${userId}`);
+  return res.data?.data?.tenants ?? [];
+};
+
 /**
  * Create tenant
  * Payload:
