@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box, Typography, Button, Card, Table, TableBody, TableCell, TableContainer,
@@ -15,12 +15,14 @@ import {
   getRoleUsers, getRoleGroups, type RoleRow,
 } from "../services/rolesService";
 import { fetchAllTenants, type TenantRow } from "../services/tenantsService";
+import { useRole } from "../contexts/RoleContext";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
 import { fetchAllGroups } from "../services/groupsService";
 
 
 const Roles = () => {
   const navigate = useNavigate();
+  const { viewMode, activeTenant } = useRole();
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [tenants, setTenants] = useState<TenantRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,6 +52,12 @@ const Roles = () => {
       setLoading(false);
     }
   };
+
+  // Filter roles by tenant scope
+  const filteredRoles = useMemo(() => {
+    if (viewMode !== 'tenant' || !activeTenant) return roles;
+    return roles.filter(r => !r.is_system_role);
+  }, [roles, viewMode, activeTenant]);
 
   useEffect(() => {
     loadData();
@@ -142,7 +150,7 @@ const Roles = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {roles.map((r) => (
+              {filteredRoles.map((r) => (
                 <TableRow key={r.id} sx={{ opacity: r.is_active ? 1 : 0.5 }}>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

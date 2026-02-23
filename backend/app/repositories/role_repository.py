@@ -7,7 +7,7 @@ from typing import Optional, List
 class RoleRepository:
 
     async def list_roles(self, session: AsyncSession, is_system: Optional[bool] = None) -> List[Role]:
-        stmt = select(Role).where(Role.tenant_id.is_(None))
+        stmt = select(Role)
         if is_system is not None:
             stmt = stmt.where(Role.is_system_role == is_system)
         result = await session.execute(stmt)

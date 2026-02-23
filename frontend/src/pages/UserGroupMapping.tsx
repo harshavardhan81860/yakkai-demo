@@ -21,11 +21,12 @@ import {
 import { fetchAllTenants, type TenantRow } from "../services/tenantsService";
 import { fetchCloudAccounts, type CloudAccountRow } from "../services/cloudAccountsService";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
-
+import { useRole } from "../contexts/RoleContext";
 
 const UserGroupMapping = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const { viewMode, activeTenant } = useRole();
 
   const [users, setUsers] = useState<UserRow[]>([]);
   const [groups, setGroups] = useState<GroupRow[]>([]);
@@ -108,7 +109,16 @@ const UserGroupMapping = () => {
     }
   }, [selectedGroup]);
 
-
+  // Set default selection based on viewMode
+  useEffect(() => {
+    if (showAssign && viewMode === "tenant" && activeTenant && tenants.length > 0) {
+      setAssignType("tenant");
+      const matchedTenant = tenants.find(t => String(t.id) === String(activeTenant.tenant_id));
+      if (matchedTenant) {
+        setSelectedTenant(matchedTenant);
+      }
+    }
+  }, [showAssign, viewMode, activeTenant, tenants]);
 
   useEffect(() => {
     if (!selectedTenant) return;
@@ -362,10 +372,10 @@ const UserGroupMapping = () => {
 
             </Grid>
             <Grid size={12}>
-              <FormControl fullWidth>
+              <FormControl fullWidth disabled={viewMode === "tenant"}>
                 <InputLabel>Enrollment Scope</InputLabel>
                 <Select value={assignType} label="Enrollment Scope" onChange={e => { setAssignType(e.target.value as any); setSelectedGroup(null); }}>
-                  <MenuItem value="system">Global Groups</MenuItem>
+                  {viewMode === "system" && <MenuItem value="system">Global Groups</MenuItem>}
                   <MenuItem value="tenant">Organization Teams</MenuItem>
                 </Select>
               </FormControl>
@@ -373,10 +383,11 @@ const UserGroupMapping = () => {
             {assignType === 'tenant' && (
               <Grid size={12}>
                 <Autocomplete
-                  options={tenants}
+                  options={viewMode === "tenant" && activeTenant ? tenants.filter(t => String(t.id) === String(activeTenant.tenant_id)) : tenants}
                   getOptionLabel={(t) => t.display_name}
                   value={selectedTenant}
                   onChange={(_, v) => { setSelectedTenant(v); setSelectedCloud(null); }}
+                  disabled={viewMode === "tenant"}
                   renderInput={(params) => <TextField {...params} label="Select Organization *" />}
                 />
               </Grid>

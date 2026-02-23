@@ -8,13 +8,15 @@ import {
 } from "@mui/material";
 import {
   PersonAdd, Person, Mail, MoreVert, Block, CheckCircle,
-  AccountCircle, GroupWork, Security, Link as LinkIcon
+  AccountCircle, GroupWork, Security, Link as LinkIcon, Edit
 } from "@mui/icons-material";
 import {
   fetchAllUsers, activateUser, deactivateUser, createUser, type UserRow,
 } from "../services/usersService";
 import UserRolesGroupsDialog from "../components/Common/UserRolesGroupsDialog";
+import ProfileDialog from "../components/Profile/ProfileDialog";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
+import GenericResultDialog from "../components/Common/GenericResultDialog";
 
 const Users = () => {
   const navigate = useNavigate();
@@ -23,6 +25,7 @@ const Users = () => {
   const [showInvite, setShowInvite] = useState(false);
   const [form, setForm] = useState<any>({ email: "" });
   const [viewRolesUser, setViewRolesUser] = useState<{ id: number; name: string } | null>(null);
+  const [editUser, setEditUser] = useState<UserRow | null>(null);
   const [resultDialog, setResultDialog] = useState<{ success: boolean; message: string; user?: UserRow } | null>(null);
 
   const loadUsers = async () => {
@@ -141,6 +144,11 @@ const Users = () => {
                         <AccountCircle fontSize="small" />
                       </IconButton>
                     </Tooltip>
+                    <Tooltip title="Edit Details">
+                      <IconButton size="small" onClick={() => setEditUser(u)} sx={{ mr: 1 }}>
+                        <Edit fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip title={u.is_active ? "Disable" : "Enable"}>
                       <IconButton size="small" onClick={() => handleToggle(u)} sx={{ color: u.is_active ? '#EF4444' : '#10B981' }}>
                         {u.is_active ? <Block fontSize="small" /> : <CheckCircle fontSize="small" />}
@@ -181,23 +189,25 @@ const Users = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog
-        open={!!resultDialog}
+      <GenericResultDialog
+        isOpen={!!resultDialog}
+        success={resultDialog?.success}
+        message={resultDialog?.message}
         onClose={() => setResultDialog(null)}
-        slotProps={{
-          backdrop: { sx: { backgroundColor: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)' } }
-        }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>{resultDialog?.success ? "Success" : "Error"}</DialogTitle>
-        <DialogContent><Typography variant="body2">{resultDialog?.message}</Typography></DialogContent>
-        <DialogActions><Button onClick={() => setResultDialog(null)}>OK</Button></DialogActions>
-      </Dialog>
+      />
 
       <UserRolesGroupsDialog
         userId={viewRolesUser?.id ?? 0}
         userName={viewRolesUser?.name}
         isOpen={!!viewRolesUser}
         onClose={() => setViewRolesUser(null)}
+      />
+
+      {/* Admin Edit Profile Dialog */}
+      <ProfileDialog
+        open={!!editUser}
+        onClose={() => { setEditUser(null); loadUsers(); }}
+        targetUser={editUser}
       />
     </Box>
   );

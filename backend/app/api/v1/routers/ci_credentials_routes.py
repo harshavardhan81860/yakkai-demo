@@ -34,15 +34,12 @@ async def create_credentials(
     req: CICredentialsCreate,
     session: AsyncSession = Depends(get_session)
 ):
-    try:
-        cred = await service.create_credentials(session, **req.model_dump())
-        return ApiResponse.success(
-            message="CI credentials created successfully",
-            status_code=201,
-            data={"credentials": orm_to_dict(cred)}
-        )
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    cred = await service.create_credentials(session, **req.model_dump())
+    return ApiResponse.success(
+        message="CI credentials created successfully",
+        status_code=201,
+        data={"credentials": orm_to_dict(cred)}
+    )
 
 
 @router.patch("/{record_id}/activate")
@@ -51,14 +48,11 @@ async def activate_credentials(
     record_id: str,
     session: AsyncSession = Depends(get_session)
 ):
-    try:
-        cred = await service.activate_credentials(session, record_id)
-        return ApiResponse.success(
-            message="CI credentials activated",
-            data={"credentials": orm_to_dict(cred)}
-        )
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    cred = await service.activate_credentials(session, record_id)
+    return ApiResponse.success(
+        message="CI credentials activated",
+        data={"credentials": orm_to_dict(cred)}
+    )
 
 
 @router.patch("/{record_id}/deactivate")
@@ -67,14 +61,11 @@ async def deactivate_credentials(
     record_id: str,
     session: AsyncSession = Depends(get_session)
 ):
-    try:
-        cred = await service.deactivate_credentials(session, record_id)
-        return ApiResponse.success(
-            message="CI credentials deactivated",
-            data={"credentials": orm_to_dict(cred)}
-        )
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    cred = await service.deactivate_credentials(session, record_id)
+    return ApiResponse.success(
+        message="CI credentials deactivated",
+        data={"credentials": orm_to_dict(cred)}
+    )
 
 
 @router.patch("/{record_id}/update")
@@ -84,11 +75,8 @@ async def update_credentials(
     req: CICredentialsUpdate,
     session: AsyncSession = Depends(get_session)
 ):
-    try:
-        cred = await service.update_credentials(session, record_id, **req.model_dump(exclude_unset=True))
-        return ApiResponse.success(
-            message="CI credentials updated",
-            data={"credentials": orm_to_dict(cred)}
-        )
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    cred = await service.update_credentials(session, record_id, **req.model_dump(exclude_unset=True))
+    return ApiResponse.success(
+        message="CI credentials updated",
+        data={"credentials": orm_to_dict(cred)}
+    )

@@ -17,6 +17,7 @@ import {
   activateApprovalTemplate,
   deactivateApprovalTemplate,
 } from "../services/approvalTemplatesService";
+import { useRole } from "../contexts/RoleContext";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
 
 type TemplateGroup = {
@@ -28,6 +29,7 @@ type TemplateGroup = {
 
 const ApprovalTemplates = () => {
   const navigate = useNavigate();
+  const { viewMode, activeTenant } = useRole();
   const [groups, setGroups] = useState<TemplateGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewTemplate, setViewTemplate] = useState<any | null>(null);
@@ -35,7 +37,11 @@ const ApprovalTemplates = () => {
   const loadTemplates = async () => {
     setLoading(true);
     try {
-      const all = await fetchApprovalTemplates();
+      let all = await fetchApprovalTemplates();
+      // Filter by tenant if in tenant view
+      if (viewMode === 'tenant' && activeTenant) {
+        all = all.filter((t: any) => t.tenant_id === activeTenant.tenant_id);
+      }
       const map = new Map<string, any[]>();
       all.forEach((t: any) => {
         if (!map.has(t.template_name)) map.set(t.template_name, []);
@@ -44,13 +50,13 @@ const ApprovalTemplates = () => {
 
       const grouped: TemplateGroup[] = [];
       map.forEach((versions, name) => {
-        versions.sort((a, b) => b.version - a.version);
-        const active = versions.find((v) => v.is_active);
+        versions.sort((a, b: any) => b.version - a.version);
+        const active = versions.find((v: any) => v.is_active);
         const latest = active ?? versions[0];
         grouped.push({
           name,
           latest,
-          inactive: versions.filter((v) => v.id !== latest.id),
+          inactive: versions.filter((v: any) => v.id !== latest.id),
           expanded: false,
         });
       });

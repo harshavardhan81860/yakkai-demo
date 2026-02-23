@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box, Typography, Button, Card, Table, TableBody, TableCell, TableContainer,
@@ -15,14 +15,17 @@ import {
 } from "../services/groupsService";
 import { fetchAllTenants, type TenantRow } from "../services/tenantsService";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
+import GenericResultDialog from "../components/Common/GenericResultDialog";
 import { Tabs, Tab } from "@mui/material";
 import { fetchGroupRoles, GroupRoleAssignment }
   from "../services/groupRolesService";
+import { useRole } from "../contexts/RoleContext";
 
 
 const Groups = (
 ) => {
   const navigate = useNavigate();
+  const { viewMode, activeTenant } = useRole();
   const [groups, setGroups] = useState<GroupRow[]>([]);
   const [tenants, setTenants] = useState<TenantRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +60,12 @@ const Groups = (
       setLoading(false);
     }
   };
+
+  // Filter groups by tenant scope
+  const filteredGroups = useMemo(() => {
+    if (viewMode !== 'tenant' || !activeTenant) return groups;
+    return groups.filter(g => String(g.tenant_id) === String(activeTenant.tenant_id));
+  }, [groups, viewMode, activeTenant]);
 
   useEffect(() => {
     loadData();
@@ -178,7 +187,7 @@ const Groups = (
               </TableRow>
             </TableHead>
             <TableBody>
-              {groups.map((g) => (
+              {filteredGroups.map((g) => (
                 <TableRow key={g.id} sx={{ opacity: g.is_active ? 1 : 0.5 }}>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -482,7 +491,13 @@ const Groups = (
         </DialogActions>
       </Dialog>
 
-    </Box>
+      <GenericResultDialog
+        isOpen={!!resultDialog}
+        success={resultDialog?.success}
+        message={resultDialog?.message}
+        onClose={() => { setResultDialog(null); loadData(); }}
+      />
+    </Box >
   );
 };
 

@@ -10,3 +10,8 @@ export const fetchTenantHeader = async () => {
   const res = await api.get("api/v1/tenants/");
   return res.data?.data?.header ?? null;
 };
+
+export const fetchCloudAccountsHeader = async () => {
+  const res = await api.get("api/v1/cloud-accounts/");
+  return res.data?.data?.header ?? null;
+};

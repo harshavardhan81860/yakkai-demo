@@ -3,6 +3,7 @@ import App from "./App";
 import { AuthProvider } from "./auth/AuthProvider";
 import { BrowserRouter } from "react-router-dom";
 import { SettingsProvider } from "./contexts/SettingsContext";
+import { RoleProvider } from "./contexts/RoleContext";
 import "./index.css";
 
 console.log("VITE MODE:", import.meta.env.MODE);
@@ -13,7 +14,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <AuthProvider>
         <SettingsProvider>
             <BrowserRouter basename={basePath ? `/${basePath}` : "/"}>
-                <App />
+                <RoleProvider>
+                    <App />
+                </RoleProvider>
             </BrowserRouter>
         </SettingsProvider>
     </AuthProvider>

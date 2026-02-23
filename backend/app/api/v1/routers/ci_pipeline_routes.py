@@ -19,14 +19,8 @@ async def trigger_pipeline(
     req: CIPipelineTrigger,
     session: AsyncSession = Depends(get_session)
 ):
-    try:
-        result = await service.trigger_pipeline(session, req)
-        return ApiResponse.success(
-            message="Pipeline triggered successfully",
-            data=result
-        )
-    except Exception as e:
-        return ApiResponse.error(
-            message=str(e),
-            status_code=400
-        )
+    result = await service.trigger_pipeline(session, req)
+    return ApiResponse.success(
+        message="Pipeline triggered successfully",
+        data=result
+    )

@@ -12,6 +12,7 @@ import { useAuth } from "../auth/AuthProvider";
 import {
   fetchUserHeader,
   fetchTenantHeader,
+  fetchCloudAccountsHeader
 } from "../services/dashboardService";
 
 type Stats = {
@@ -27,6 +28,7 @@ const Dashboard = () => {
 
   const [users, setUsers] = useState<Stats>({ total: "N/A", active: "N/A", inactive: "N/A" });
   const [tenants, setTenants] = useState<Stats>({ total: "N/A", active: "N/A", inactive: "N/A" });
+  const [cloudAccounts, setCloudAccounts] = useState<Stats>({ total: "N/A", active: "N/A", inactive: "N/A" });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,6 +45,11 @@ const Dashboard = () => {
         total: h?.total_tenants ?? "N/A",
         active: h?.active_tenants ?? "N/A",
         inactive: h?.inactive_tenants ?? "N/A",
+      })),
+      fetchCloudAccountsHeader().then(h => setCloudAccounts({
+        total: h?.total_accounts ?? "N/A",
+        active: h?.active_accounts ?? "N/A",
+        inactive: h?.inactive_accounts ?? "N/A",
       }))
     ]).finally(() => setLoading(false));
   }, [authState]);
@@ -114,7 +121,7 @@ const Dashboard = () => {
       {loading && <LinearProgress sx={{ mb: 4, borderRadius: 2 }} />}
 
       <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <MetricCard
             title="Identity Management"
             stats={users}
@@ -124,7 +131,7 @@ const Dashboard = () => {
             description="Global user accounts, administrative privileges, and regional identity mappings across the platform."
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <MetricCard
             title="Tenant Architecture"
             stats={tenants}
@@ -132,6 +139,16 @@ const Dashboard = () => {
             color="#00D9FF"
             onClick={() => navigate("/tenants")}
             description="Customer organizations, multi-tenant boundaries, and shared resource isolation management."
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <MetricCard
+            title="Cloud Environments"
+            stats={cloudAccounts}
+            icon={<CloudCircle />}
+            color="#10B981"
+            onClick={() => navigate("/cloud-accounts")}
+            description="Integrated cloud platforms, service accounts, and cross-cloud resource discovery endpoints."
           />
         </Grid>
 

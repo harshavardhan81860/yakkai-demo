@@ -18,6 +18,7 @@ import { fetchRegistryCatalog } from "../services/registryService";
 import { fetchApprovalTemplates } from "../services/approvalTemplatesService";
 import { fetchAllTenants } from "../services/tenantsService";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
+import GenericResultDialog from "../components/Common/GenericResultDialog";
 
 /* ---------- TYPES ---------- */
 type Condition = {
@@ -307,16 +308,19 @@ const ApprovalPolicyCreate = () => {
       )}
 
       {/* Result Dialog */}
-      <Dialog open={result.open} onClose={() => setResult({ ...result, open: false })}>
-        <DialogTitle sx={{ fontWeight: 800 }}>{result.success ? "Design Propagated" : "Design Conflict"}</DialogTitle>
-        <DialogContent>
-          <Typography variant="body1">{result.message}</Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: 2.5 }}>
-          <Button onClick={() => setResult({ ...result, open: false })}>Close</Button>
-          {result.success && <Button variant="contained" onClick={() => navigate("/approvals-management/policy-mapping")} sx={{ background: 'linear-gradient(135deg,#6C63FF,#4A42D4)' }}>View Policies</Button>}
-        </DialogActions>
-      </Dialog>
+      <GenericResultDialog
+        isOpen={result.open}
+        success={result.success}
+        message={result.message}
+        onClose={() => setResult({ ...result, open: false })}
+        title={result.success ? "Design Propagated" : "Design Conflict"}
+        actions={
+          <>
+            <Button onClick={() => setResult({ ...result, open: false })}>Close</Button>
+            {result.success && <Button variant="contained" onClick={() => navigate("/approvals-management/policy-mapping")} sx={{ background: 'linear-gradient(135deg,#6C63FF,#4A42D4)' }}>View Policies</Button>}
+          </>
+        }
+      />
     </Box>
   );
 };

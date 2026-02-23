@@ -19,10 +19,13 @@ import { fetchAllRoles, type RoleRow } from "../services/rolesService";
 import { fetchUserRoles, assignUserRole, revokeUserRole, type UserRoleAssignment, } from "../services/userRolesService";
 import { fetchAllTenants, fetchUserTenants, type TenantRow } from "../services/tenantsService";
 import { fetchCloudAccounts, type CloudAccountRow } from "../services/cloudAccountsService";
+import { useRole } from "../contexts/RoleContext";
 
 const UserRoleMapping = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const { viewMode, activeTenant } = useRole();
+
   const [usersForSelectedRole, setUsersForSelectedRole] = useState<number[]>([]);
 
 
@@ -71,10 +74,9 @@ const UserRoleMapping = () => {
       const autoAssign = params.get("autoAssign") === "true";
 
       if (userId) {
-        // Find user in the fetched list — **this is critical**
         const user = u.find(x => String(x.id) === String(userId));
         if (user) {
-          setSelectedUser(user);  // <-- must use the exact object from `users` array
+          setSelectedUser(user);
           const [roles, userTenants] = await Promise.all([
             fetchUserRoles(user.id),
             fetchUserTenants(user.id)
@@ -96,6 +98,17 @@ const UserRoleMapping = () => {
     })();
   }, []);
 
+  // Set default selection based on viewMode
+  useEffect(() => {
+    if (showAssign && viewMode === "tenant" && activeTenant && tenants.length > 0) {
+      setAssignType("tenant");
+      const matchedTenant = tenants.find(t => String(t.id) === String(activeTenant.tenant_id));
+      if (matchedTenant) {
+        setSelectedTenant(matchedTenant);
+      }
+    }
+  }, [showAssign, viewMode, activeTenant, tenants]);
+
 
 
   useEffect(() => {
@@ -111,19 +124,27 @@ const UserRoleMapping = () => {
     return !isAssigned;
   });
 
-  const tenantRoles = roles.filter((r) => {
-    if (r.is_system_role) return false;
-    // If role has its own tenant_id, it must match the selected tenant
-    if (r.tenant_id && String(r.tenant_id) !== String(selectedTenant?.id)) return false;
+  const tenantRoles = useMemo(() => {
+    const result = roles.filter((r) => {
+      if (r.is_system_role) return false;
+      if (r.tenant_id && String(r.tenant_id) !== String(selectedTenant?.id)) return false;
+      const isAssigned = assignments.some(a =>
+        String(a.tenant_id) === String(selectedTenant?.id) &&
+        String(a.role_id) === String(r.id)
+      );
+      return !isAssigned;
+    });
+    console.log('[DEBUG] tenantRoles filter', {
+      selectedTenant: selectedTenant ? { id: selectedTenant.id, name: selectedTenant.display_name } : null,
+      totalRoles: roles.length,
+      nonSystemRoles: roles.filter(r => !r.is_system_role).length,
+      matchingRoles: result.length,
+      sampleRoleTenantIds: roles.filter(r => !r.is_system_role).slice(0, 3).map(r => ({ name: r.name, tenant_id: r.tenant_id })),
+    });
+    return result;
+  }, [roles, selectedTenant, assignments]);
 
-    // Logic: exclude if this generic/specific role is already assigned to THIS specific tenant
-    const isAssigned = assignments.some(a =>
-      String(a.tenant_id) === String(selectedTenant?.id) &&
-      String(a.role_id) === String(r.id)
-    );
-    return !isAssigned;
-  });
-
+  // For display: group tenant assignments by tenant
   const tenantGroups = useMemo(() => {
     const map: Record<string, UserRoleAssignment[]> = {};
     assignments.forEach((a) => {
@@ -361,7 +382,7 @@ const UserRoleMapping = () => {
 
             {/* 2. Assignment Logic */}
             <Grid size={12}>
-              <FormControl fullWidth>
+              <FormControl fullWidth disabled={viewMode === "tenant"}>
                 <InputLabel>Assignment Logic</InputLabel>
                 <Select
                   value={assignType}
@@ -371,7 +392,7 @@ const UserRoleMapping = () => {
                     setSelectedRole(null);
                   }}
                 >
-                  <MenuItem value="system">Global Platform Privilege</MenuItem>
+                  {viewMode === "system" && <MenuItem value="system">Global Platform Privilege</MenuItem>}
                   <MenuItem value="tenant">Organizational Tenant Access</MenuItem>
                 </Select>
               </FormControl>
@@ -381,10 +402,11 @@ const UserRoleMapping = () => {
             {assignType === 'tenant' && (
               <Grid size={12}>
                 <Autocomplete
-                  options={tenants}
+                  options={viewMode === "tenant" && activeTenant ? tenants.filter(t => String(t.id) === String(activeTenant.tenant_id)) : tenants}
                   getOptionLabel={(t) => t.display_name}
                   value={selectedTenant}
                   onChange={(_, v) => setSelectedTenant(v)}
+                  disabled={viewMode === "tenant"}
                   renderInput={(params) => <TextField {...params} label="Target Tenant *" />}
                 />
               </Grid>

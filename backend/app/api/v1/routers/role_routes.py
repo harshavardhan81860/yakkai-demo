@@ -30,84 +30,54 @@ async def list_roles(is_system: Optional[bool] = None, session: AsyncSession = D
 @router.post("/create")
 @registry(resource=resource, action=ACTION.CREATE)
 async def create_role(req: RoleCreateRequest, session: AsyncSession = Depends(get_session)):
-    try:
-        role = await service.create_role(session, req.tenant_id, req.name, req.description, req.email,req.is_system_role)
-        return ApiResponse.success(
-            message="Role created successfully",
-            status_code=201,
-            data={"role": orm_to_dict(role)}
-        )
-    except HTTPException as e:
-        return ApiResponse.error(message=e.detail, status_code=e.status_code)
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    role = await service.create_role(session, req.tenant_id, req.name, req.description, req.email,req.is_system_role)
+    return ApiResponse.success(
+        message="Role created successfully",
+        status_code=201,
+        data={"role": orm_to_dict(role)}
+    )
 
 @router.put("/{role_id}")
 @registry(resource=resource, action=ACTION.UPDATE)
 async def update_role(role_id: str, req: RoleUpdateRequest, session: AsyncSession = Depends(get_session)):
-    try:
-        role = await service.update_role(session, role_id, req.name, req.description, req.email, req.is_active)
-        return ApiResponse.success(
-            message="Role updated successfully",
-            data={"role": orm_to_dict(role)}
-        )
-    except HTTPException as e:
-        return ApiResponse.error(message=e.detail, status_code=e.status_code)
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    role = await service.update_role(session, role_id, req.name, req.description, req.email, req.is_active)
+    return ApiResponse.success(
+        message="Role updated successfully",
+        data={"role": orm_to_dict(role)}
+    )
 
 @router.patch("/{role_id}/activate")
 @registry(resource=resource, action=ACTION.ACTIVATE)
 async def activate_role(role_id: str, session: AsyncSession = Depends(get_session)):
-    try:
-        role = await service.update_role(session, role_id, None, None, True)
-        return ApiResponse.success(message="Role activated", data={"role": orm_to_dict(role)})
-    except HTTPException as e:
-        return ApiResponse.error(message=e.detail, status_code=e.status_code)
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    role = await service.update_role(session, role_id, None, None, True)
+    return ApiResponse.success(message="Role activated", data={"role": orm_to_dict(role)})
 
 @router.patch("/{role_id}/deactivate")
 @registry(resource=resource, action=ACTION.DEACTIVATE)
 async def deactivate_role(role_id: str, session: AsyncSession = Depends(get_session)):
-    try:
-        role = await service.update_role(session, role_id, None, None, False)
-        return ApiResponse.success(message="Role deactivated", data={"role": orm_to_dict(role)})
-    except HTTPException as e:
-        return ApiResponse.error(message=e.detail, status_code=e.status_code)
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    role = await service.update_role(session, role_id, None, None, False)
+    return ApiResponse.success(message="Role deactivated", data={"role": orm_to_dict(role)})
 
 # Role assignments
 @router.post("/assign")
 @registry(resource=resource, action=ACTION.ASSIGN)
 async def assign_role(req: RoleAssignmentCreateRequest, session: AsyncSession = Depends(get_session)):
-    try:
-        assignment = await assign_service.assign_role(
-            session,
-            user_id=req.user_id,
-            role_id=req.role_id,
-            tenant_id=req.tenant_id,
-            cloud_account_id=req.cloud_account_id,
-            component_id=req.component_id,
-            assigned_by=req.assigned_by
-        )
-        return ApiResponse.success(message="Role assigned", status_code=201, data={"assignment": orm_to_dict(assignment)})
-    except HTTPException as e:
-        return ApiResponse.error(message=e.detail, status_code=e.status_code)
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    assignment = await assign_service.assign_role(
+        session,
+        user_id=req.user_id,
+        role_id=req.role_id,
+        tenant_id=req.tenant_id,
+        cloud_account_id=req.cloud_account_id,
+        component_id=req.component_id,
+        assigned_by=req.assigned_by
+    )
+    return ApiResponse.success(message="Role assigned", status_code=201, data={"assignment": orm_to_dict(assignment)})
 
 @router.post("/revoke/{assignment_id}")
 @registry(resource=resource, action=ACTION.REVOKE)
 async def revoke_role(assignment_id: str, session: AsyncSession = Depends(get_session)):
-    try:
-        res = await assign_service.revoke_role(session, assignment_id)
-        return ApiResponse.success(message="Role revoked", data={"result": res})
-    except HTTPException as e:
-        return ApiResponse.error(message=e.detail, status_code=e.status_code)
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    res = await assign_service.revoke_role(session, assignment_id)
+    return ApiResponse.success(message="Role revoked", data={"result": res})
 
 @router.get("/user/{user_id}")
 @registry(resource=resource, action=ACTION.READ)

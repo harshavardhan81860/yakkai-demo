@@ -24,22 +24,17 @@ async def assign_role_to_group(
     req: GroupRoleAssignmentCreateRequest,
     session: AsyncSession = Depends(get_session)
 ):
-    try:
-        assignment = await service.assign_role_to_group(
-            session,
-            group_id=req.group_id,
-            role_id=req.role_id,
-            assigned_by=req.assigned_by
-        )
-        return ApiResponse.success(
-            message="Role assigned to group",
-            status_code=201,
-            data={"assignment": orm_to_dict(assignment)}
-        )
-    except HTTPException as e:
-        return ApiResponse.error(message=e.detail, status_code=e.status_code)
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    assignment = await service.assign_role_to_group(
+        session,
+        group_id=req.group_id,
+        role_id=req.role_id,
+        assigned_by=req.assigned_by
+    )
+    return ApiResponse.success(
+        message="Role assigned to group",
+        status_code=201,
+        data={"assignment": orm_to_dict(assignment)}
+    )
 
 @router.post("/revoke/{assignment_id}")
 @registry(resource=resource, action=ACTION.REVOKE)
@@ -47,16 +42,11 @@ async def revoke_group_role(
     assignment_id: str,
     session: AsyncSession = Depends(get_session)
 ):
-    try:
-        res = await service.revoke_group_role(session, assignment_id)
-        return ApiResponse.success(
-            message="Group role revoked",
-            data=res
-        )
-    except HTTPException as e:
-        return ApiResponse.error(message=e.detail, status_code=e.status_code)
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    res = await service.revoke_group_role(session, assignment_id)
+    return ApiResponse.success(
+        message="Group role revoked",
+        data=res
+    )
 
 @router.get("/group/{group_id}")
 @registry(resource=resource, action=ACTION.READ)

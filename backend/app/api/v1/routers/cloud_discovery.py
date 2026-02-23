@@ -168,46 +168,39 @@ async def discover_cloud_account(
         return ApiResponse.success(message=data["message"], data=data)
     # ── END TEST MODE ──
 
-    try:
-        if provider == "aws":
-            if not req.aws_credentials:
-                return ApiResponse.error(message="AWS credentials required")
-            result = await discovery_service.discover_aws_account(
-                account_id=req.aws_credentials.account_id,
-                role_name=req.aws_credentials.role_name,
-                external_id=req.aws_credentials.external_id,
-                tenant_id=tenant_id,
-                db=db,
-            )
-        elif provider == "azure":
-            if not req.azure_credentials:
-                return ApiResponse.error(message="Azure credentials required")
-            result = await discovery_service.discover_azure_tenant(
-                az_tenant_id=req.azure_credentials.tenant_id,
-                client_id=req.azure_credentials.client_id,
-                client_secret=req.azure_credentials.client_secret,
-                tenant_id=tenant_id,
-                db=db,
-            )
-        else:
-            return ApiResponse.error(message=f"Unsupported provider: {provider}")
-
-        if result.status == "error":
-            return JSONResponse(
-                status_code=400,
-                content=ApiResponse.error(message=result.message or "Discovery failed")
-            )
-
-        return ApiResponse.success(
-            message=result.message or "Discovery completed",
-            data=result.model_dump(),
+    if provider == "aws":
+        if not req.aws_credentials:
+            return ApiResponse.error(message="AWS credentials required")
+        result = await discovery_service.discover_aws_account(
+            account_id=req.aws_credentials.account_id,
+            role_name=req.aws_credentials.role_name,
+            external_id=req.aws_credentials.external_id,
+            tenant_id=tenant_id,
+            db=db,
         )
-    except Exception as e:
-        logger.error("Discovery error: %s", str(e), exc_info=True)
+    elif provider == "azure":
+        if not req.azure_credentials:
+            return ApiResponse.error(message="Azure credentials required")
+        result = await discovery_service.discover_azure_tenant(
+            az_tenant_id=req.azure_credentials.tenant_id,
+            client_id=req.azure_credentials.client_id,
+            client_secret=req.azure_credentials.client_secret,
+            tenant_id=tenant_id,
+            db=db,
+        )
+    else:
+        return ApiResponse.error(message=f"Unsupported provider: {provider}")
+
+    if result.status == "error":
         return JSONResponse(
-            status_code=500,
-            content=ApiResponse.error(message=str(e), status_code=500)
+            status_code=400,
+            content=ApiResponse.error(message=result.message or "Discovery failed")
         )
+
+    return ApiResponse.success(
+        message=result.message or "Discovery completed",
+        data=result.model_dump(),
+    )
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -231,15 +224,11 @@ async def import_cloud_accounts(
         return ApiResponse.success(message=data["message"], data=data)
     # ── END TEST MODE ──
 
-    try:
-        result = await import_service.import_accounts(req, db)
-        return ApiResponse.success(
-            message=result.message,
-            data=result.model_dump(),
-        )
-    except Exception as e:
-        logger.error("Import error: %s", str(e), exc_info=True)
-        return ApiResponse.error(message=str(e))
+    result = await import_service.import_accounts(req, db)
+    return ApiResponse.success(
+        message=result.message,
+        data=result.model_dump(),
+    )
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -257,29 +246,22 @@ async def discover_new_accounts(
     Re-query cloud provider for the given org/tenant account
     and return newly discovered accounts not yet imported.
     """
-    try:
-        result = await discovery_service.discover_new_accounts_in_organization(
-            parent_account_id=account_id,
-            db=db,
-            test_mode=req.test_mode,
-        )
+    result = await discovery_service.discover_new_accounts_in_organization(
+        parent_account_id=account_id,
+        db=db,
+        test_mode=req.test_mode,
+    )
 
-        if result.status == "error":
-            return JSONResponse(
-                status_code=400,
-                content=ApiResponse.error(message=result.message or "Incremental discovery failed")
-            )
-
-        return ApiResponse.success(
-            message=f"Found {result.new_accounts_found} new accounts",
-            data=result.model_dump(),
-        )
-    except Exception as e:
-        logger.error("Incremental discovery error: %s", str(e), exc_info=True)
+    if result.status == "error":
         return JSONResponse(
-            status_code=500,
-            content=ApiResponse.error(message=str(e), status_code=500)
+            status_code=400,
+            content=ApiResponse.error(message=result.message or "Incremental discovery failed")
         )
+
+    return ApiResponse.success(
+        message=f"Found {result.new_accounts_found} new accounts",
+        data=result.model_dump(),
+    )
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -301,19 +283,16 @@ async def import_new_accounts(
         return ApiResponse.success(message=data["message"], data=data)
     # ── END TEST MODE ──
 
-    try:
-        result = await import_service.import_incremental_accounts(
-            parent_account_id=account_id,
-            selected_accounts=req.selected_accounts,
-            db=db,
-        )
+    result = await import_service.import_incremental_accounts(
+        parent_account_id=account_id,
+        selected_accounts=req.selected_accounts,
+        db=db,
+    )
 
-        return ApiResponse.success(
-            message=result.message,
-            data=result.model_dump(),
-        )
-    except Exception as e:
-        return ApiResponse.error(message=str(e))
+    return ApiResponse.success(
+        message=result.message,
+        data=result.model_dump(),
+    )
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -328,19 +307,16 @@ async def update_account_credentials(
     db: AsyncSession = Depends(get_session),
 ):
     """Update credential source from inherited→own or own→inherited."""
-    try:
-        result = await import_service.update_account_credentials(
-            account_id=account_id,
-            req=req,
-            db=db,
-        )
+    result = await import_service.update_account_credentials(
+        account_id=account_id,
+        req=req,
+        db=db,
+    )
 
-        return ApiResponse.success(
-            message=result.message,
-            data=result.model_dump(),
-        )
-    except Exception as e:
-        return ApiResponse.error(message=str(e))
+    return ApiResponse.success(
+        message=result.message,
+        data=result.model_dump(),
+    )
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -354,19 +330,16 @@ async def sync_account_hierarchy(
     db: AsyncSession = Depends(get_session),
 ):
     """Manually sync an account's hierarchy status with the cloud provider."""
-    try:
-        result = await sync_service.sync_account_hierarchy(
-            account_id=account_id,
-            db=db,
-        )
+    result = await sync_service.sync_account_hierarchy(
+        account_id=account_id,
+        db=db,
+    )
 
-        return ApiResponse.success(
-            message="Hierarchy sync completed"
-            + (f" with {len(result.changes)} changes" if result.changes else ""),
-            data=result.model_dump(),
-        )
-    except Exception as e:
-        return ApiResponse.error(message=str(e))
+    return ApiResponse.success(
+        message="Hierarchy sync completed"
+        + (f" with {len(result.changes)} changes" if result.changes else ""),
+        data=result.model_dump(),
+    )
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -380,20 +353,17 @@ async def check_duplicate_account(
     db: AsyncSession = Depends(get_session),
 ):
     """Pre-import check: does this account already exist in the tenant?"""
-    try:
-        result = await discovery_service.check_duplicate_account(
-            cloud_provider=req.cloud_provider,
-            account_identifier=req.account_identifier,
-            tenant_id=req.tenant_id,
-            db=db,
-        )
+    result = await discovery_service.check_duplicate_account(
+        cloud_provider=req.cloud_provider,
+        account_identifier=req.account_identifier,
+        tenant_id=req.tenant_id,
+        db=db,
+    )
 
-        return ApiResponse.success(
-            message="Duplicate found" if result.exists else "No duplicate",
-            data=result.model_dump(),
-        )
-    except Exception as e:
-        return ApiResponse.error(message=str(e))
+    return ApiResponse.success(
+        message="Duplicate found" if result.exists else "No duplicate",
+        data=result.model_dump(),
+    )
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -408,19 +378,16 @@ async def sync_all_hierarchies(
     db: AsyncSession = Depends(get_session),
 ):
     """Bulk hierarchy sync for all accounts in a tenant. Used by admin or cron job."""
-    try:
-        result = await sync_service.sync_all_accounts_for_tenant(
-            tenant_id=tenant_id,
-            db=db,
-            cloud_provider=cloud_provider,
-        )
+    result = await sync_service.sync_all_accounts_for_tenant(
+        tenant_id=tenant_id,
+        db=db,
+        cloud_provider=cloud_provider,
+    )
 
-        return ApiResponse.success(
-            message=f"Checked {result.total_accounts_checked} accounts, {result.changes_detected} changes",
-            data=result.model_dump(),
-        )
-    except Exception as e:
-        return ApiResponse.error(message=str(e))
+    return ApiResponse.success(
+        message=f"Checked {result.total_accounts_checked} accounts, {result.changes_detected} changes",
+        data=result.model_dump(),
+    )
 
 
 @router.post("/{account_id}/test-connection")

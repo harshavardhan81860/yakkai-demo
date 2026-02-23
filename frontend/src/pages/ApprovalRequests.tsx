@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Box, Typography, Button, Card, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Chip, IconButton, LinearProgress, Tooltip, Avatar,
@@ -16,6 +16,7 @@ import {
   closeApprovalRequest,
 } from "../services/approvalRequestsService";
 import { fetchApprovalTemplates } from "../services/approvalTemplatesService";
+import { useRole } from "../contexts/RoleContext";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
 
 type ApprovalRequest = {
@@ -29,17 +30,27 @@ type ApprovalRequest = {
 };
 
 const ApprovalRequests = () => {
+  const { viewMode, activeTenant } = useRole();
   const [requests, setRequests] = useState<ApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdminView, setIsAdminView] = useState(false);
+  // In tenant view: always show user's own requests (use_current_user=true)
+  // In system view: default OFF = show all, ON = show only mine
+  const [onlyMine, setOnlyMine] = useState(false);
   const [viewDetails, setViewDetails] = useState<any | null>(null);
   const [templateMap, setTemplateMap] = useState<Record<string, string>>({});
+  const [templateTenantMap, setTemplateTenantMap] = useState<Record<string, string | null>>({});
+  const [scopeFilter, setScopeFilter] = useState<"all" | "tenant">(
+    viewMode === "tenant" ? "tenant" : "all"
+  );
 
   const loadRequests = async () => {
     setLoading(true);
     try {
+      // Tenant view: always current user's requests
+      // System view: onlyMine=true → current user, onlyMine=false → all
+      const useCurrentUser = viewMode === 'tenant' ? true : onlyMine;
       const res = await fetchApprovalRequests({
-        use_current_user: !isAdminView,
+        use_current_user: useCurrentUser,
       });
       setRequests(Array.isArray(res?.data) ? res.data : []);
     } catch (err) {
@@ -52,11 +63,14 @@ const ApprovalRequests = () => {
   const loadTemplates = async () => {
     try {
       const all = await fetchApprovalTemplates();
-      const map: Record<string, string> = {};
+      const nameMap: Record<string, string> = {};
+      const tenantMap: Record<string, string | null> = {};
       all.forEach((t: any) => {
-        map[t.id] = `${t.template_name} (v${t.version})`;
+        nameMap[t.id] = `${t.template_name} (v${t.version})`;
+        tenantMap[t.id] = t.tenant_id || null;
       });
-      setTemplateMap(map);
+      setTemplateMap(nameMap);
+      setTemplateTenantMap(tenantMap);
     } catch (err) {
       console.error(err);
     }
@@ -65,7 +79,16 @@ const ApprovalRequests = () => {
   useEffect(() => {
     loadRequests();
     loadTemplates();
-  }, [isAdminView]);
+  }, [onlyMine, viewMode]);
+
+  // In tenant view: filter by tenant. In system view: no filter needed.
+  const filteredRequests = useMemo(() => {
+    if (viewMode !== 'tenant' || !activeTenant) return requests;
+    return requests.filter(r => {
+      const tmplTenantId = templateTenantMap[r.template_id];
+      return tmplTenantId === activeTenant.tenant_id;
+    });
+  }, [requests, viewMode, activeTenant, templateTenantMap]);
 
   const openView = async (requestId: string) => {
     const res = await fetchApprovalRequestDetails(requestId);
@@ -91,10 +114,13 @@ const ApprovalRequests = () => {
           <Typography variant="body2" color="text.secondary">Monitor and manage operational change requests</Typography>
         </Box>
         <Stack direction="row" spacing={2} alignItems="center">
-          <FormControlLabel
-            control={<Switch checked={isAdminView} onChange={(e) => setIsAdminView(e.target.checked)} color="primary" />}
-            label={<Typography variant="body2" sx={{ fontWeight: 600 }}>Elevation View</Typography>}
-          />
+          {/* Only Mine toggle — only in system view */}
+          {viewMode === "system" && (
+            <FormControlLabel
+              control={<Switch checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} color="primary" />}
+              label={<Typography variant="body2" sx={{ fontWeight: 600 }}>Only Mine</Typography>}
+            />
+          )}
           <Button variant="contained" startIcon={<Refresh />} onClick={loadRequests} sx={{ background: 'linear-gradient(135deg,#6C63FF,#4A42D4)' }}>
             Sync
           </Button>
@@ -116,10 +142,10 @@ const ApprovalRequests = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {requests.length === 0 ? (
+              {filteredRequests.length === 0 ? (
                 <TableRow><TableCell colSpan={7} align="center" sx={{ py: 8 }}><Typography color="text.secondary">No active approval requests</Typography></TableCell></TableRow>
               ) : (
-                requests.map((r) => (
+                filteredRequests.map((r) => (
                   <TableRow key={r.request_id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
