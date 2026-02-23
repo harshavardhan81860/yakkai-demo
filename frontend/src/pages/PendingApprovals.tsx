@@ -17,20 +17,25 @@ import {
 } from "../services/pendingApprovalsService";
 import type { PendingApproval } from "../services/pendingApprovalsService";
 import { fetchApprovalTemplates } from "../services/approvalTemplatesService";
+import { useRole } from "../contexts/RoleContext";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
 
 const PendingApprovals = () => {
+  const { viewMode, activeTenant } = useRole();
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAdminView, setIsAdminView] = useState(false);
+  // In tenant view: always show user's pending (use_current_user=true)
+  // In system view: default OFF = show all, ON = show only mine
+  const [onlyMine, setOnlyMine] = useState(false);
   const [viewDetails, setViewDetails] = useState<any | null>(null);
   const [templateMap, setTemplateMap] = useState<Record<string, string>>({});
+  const [templateTenantMap, setTemplateTenantMap] = useState<Record<string, string | null>>({});
 
   const loadPending = async () => {
     setLoading(true);
     try {
       const res = await fetchPendingApprovals({
-        use_current_user: !isAdminView,
+        use_current_user: onlyMine,
       });
       setApprovals(Array.isArray(res?.data) ? res.data : []);
     } catch (err) {
@@ -43,11 +48,14 @@ const PendingApprovals = () => {
   const loadTemplates = async () => {
     try {
       const all = await fetchApprovalTemplates();
-      const map: Record<string, string> = {};
+      const nameMap: Record<string, string> = {};
+      const tMap: Record<string, string | null> = {};
       all.forEach((t: any) => {
-        map[t.id] = `${t.template_name} (v${t.version})`;
+        nameMap[t.id] = `${t.template_name} (v${t.version})`;
+        tMap[t.id] = t.tenant_id ?? null;
       });
-      setTemplateMap(map);
+      setTemplateMap(nameMap);
+      setTemplateTenantMap(tMap);
     } catch (err) {
       console.error(err);
     }
@@ -56,7 +64,14 @@ const PendingApprovals = () => {
   useEffect(() => {
     loadPending();
     loadTemplates();
-  }, [isAdminView]);
+  }, [onlyMine, viewMode]);
+
+  const filteredApprovals = approvals.filter(a => {
+    if (viewMode === 'tenant' && activeTenant) {
+      return templateTenantMap[a.template_id] === activeTenant.tenant_id;
+    }
+    return true;
+  });
 
   const openView = async (id: string) => {
     const res = await fetchApprovalRequestDetails(id);
@@ -93,8 +108,8 @@ const PendingApprovals = () => {
         </Box>
         <Stack direction="row" spacing={2} alignItems="center">
           <FormControlLabel
-            control={<Switch checked={isAdminView} onChange={(e) => setIsAdminView(e.target.checked)} color="primary" />}
-            label={<Typography variant="body2" sx={{ fontWeight: 600 }}>Delegated Tasks</Typography>}
+            control={<Switch checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} color="primary" />}
+            label={<Typography variant="body2" sx={{ fontWeight: 600 }}>Only Mine</Typography>}
           />
           <Button variant="contained" startIcon={<Refresh />} onClick={loadPending} sx={{ background: 'linear-gradient(135deg,#6C63FF,#4A42D4)' }}>
             Refresh List
@@ -116,10 +131,10 @@ const PendingApprovals = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {approvals.length === 0 ? (
+              {filteredApprovals.length === 0 ? (
                 <TableRow><TableCell colSpan={6} align="center" sx={{ py: 8 }}><Typography color="text.secondary">Operational queue is clear</Typography></TableCell></TableRow>
               ) : (
-                approvals.map((a) => (
+                filteredApprovals.map((a) => (
                   <TableRow key={a.id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -145,7 +160,7 @@ const PendingApprovals = () => {
                       <Typography variant="caption">{new Date(a.created_at).toLocaleString()}</Typography>
                     </TableCell>
                     <TableCell align="right">
-                      {!isAdminView && (
+                      {(viewMode === 'tenant' || !onlyMine) && (
                         <Stack direction="row" spacing={1} justifyContent="flex-end">
                           <Tooltip title="Approve">
                             <IconButton size="small" onClick={() => handleApprove(a.id)} sx={{ color: '#10B981' }}>

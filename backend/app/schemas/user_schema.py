@@ -10,6 +10,13 @@ class CreateUserRequest(BaseModel):
     gender: Optional[str] = None
     password: Optional[str] = None  # optional, can be used to set KC password
 
+class UpdateUserRequest(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    mobile: Optional[str] = None
+    department: Optional[str] = None
+    gender: Optional[str] = None
+
 class UserResponse(BaseModel):
     id: str
     keycloak_id: str

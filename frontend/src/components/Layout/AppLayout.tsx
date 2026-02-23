@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
     Box, Drawer, List, ListItem, ListItemIcon, ListItemText, ListItemButton,
@@ -10,73 +10,166 @@ import {
     Business, GroupWork, Security, Lan, Terminal, RocketLaunch
 } from '@mui/icons-material';
 import { useAuth } from '../../auth/AuthProvider';
+import { useRole } from '../../contexts/RoleContext';
 
 import UnauthorizedView from '../Error/UnauthorizedView';
 import GlobalHeader from './GlobalHeader';
+
 import SettingsDialog from '../Settings/SettingsDialog';
 import { Settings as SettingsIcon } from '@mui/icons-material';
 
 const DRAWER_WIDTH = 280;
 
+interface MenuItemType {
+    header?: string;
+    text?: string;
+    icon?: React.ReactNode;
+    path?: string;
+    divider?: boolean;
+    disabled?: boolean;
+}
+
+/* ────────────────────────────────────────────
+   Menu definitions per view mode & role
+   ──────────────────────────────────────────── */
+
+const getSystemMenuItems = (roleName: string | null): MenuItemType[] => {
+    const isAdmin = roleName === 'system_admin';
+    const isManager = roleName === 'system_manager';
+    const isUser = roleName === 'system_user';
+    const canManage = isAdmin || isManager;
+
+    const items: MenuItemType[] = [
+        // ── Infrastructure ──
+        { header: 'Infrastructure' },
+        { text: 'Tenants', icon: <Business />, path: '/tenants' },
+    ];
+
+    if (canManage) {
+        items.push({ text: 'Runners', icon: <Terminal />, path: '/ci-credentials' });
+    }
+
+    items.push({ divider: true });
+
+    // ── Provisioning (view-only for system roles — no resource creation) ──
+    items.push({ header: 'Provisioning' });
+    items.push({ text: 'All Requests', icon: <Inventory />, path: '/resource-request/list' });
+    items.push({ divider: true });
+
+    // ── Identity ── (admin + manager see full, user sees subset)
+    items.push({ header: 'Identity' });
+    items.push({ text: 'Users', icon: <People />, path: '/users' });
+    if (canManage) {
+        items.push({ text: 'Tenant Users', icon: <Business />, path: '/tenant-users' });
+        items.push({ text: 'Groups', icon: <GroupWork />, path: '/groups' });
+        items.push({ text: 'Roles', icon: <Security />, path: '/roles' });
+    }
+    items.push({ divider: true });
+
+    // ── Approvals ──
+    items.push({ header: 'Approvals' });
+    items.push({ text: 'My Approval Requests', icon: <Assignment />, path: '/approvals/requests' });
+    items.push({ text: 'Pending Approvals', icon: <CheckCircle />, path: '/approvals/pending' });
+    items.push({ text: 'History', icon: <BarChart />, path: '/approvals/history' });
+    if (canManage) {
+        items.push({ text: 'Workflow Defined', icon: <Category />, path: '/approvals-management/templates' });
+        items.push({ text: 'Workflow Mapping', icon: <Lan />, path: '/approvals-management/policy-mapping' });
+    }
+    items.push({ divider: true });
+
+    // ── Governance ── (admin + manager only)
+    if (canManage) {
+        items.push({ header: 'Governance' });
+        items.push({ text: 'Policy List', icon: <Policy />, path: '/permissions-management/policy_list' });
+        items.push({ text: 'Policy Subjects', icon: <People />, path: '/permissions-management/policy_subjects' });
+        items.push({ text: 'Resource Registry', icon: <Inventory />, path: '/registry' });
+        items.push({ divider: true });
+    }
+
+    return items;
+};
+
+const getTenantMenuItems = (tenantId: string, roleName: string | null): MenuItemType[] => {
+    const isAdmin = roleName === 'tenant_admin';
+    const isManager = roleName === 'tenant_manager';
+    const isUser = roleName === 'tenant_user';
+    const canManage = isAdmin || isManager;
+
+    const base = `/tenants/${tenantId}`;
+
+    const items: MenuItemType[] = [
+        // ── Workspace ──
+        { header: 'Workspace' },
+        { text: 'Cloud Accounts', icon: <Cloud />, path: `${base}/cloud-accounts` },
+        { text: 'Cost Analytics', icon: <BarChart />, path: `${base}/finops` },
+        { divider: true },
+    ];
+
+    // ── Tenant Identity ──
+    items.push({ header: 'Identity' });
+    items.push({ text: 'Tenant Users', icon: <People />, path: `${base}/users` });
+    if (canManage) {
+        items.push({ text: 'Groups', icon: <GroupWork />, path: '/groups' });
+        items.push({ text: 'Roles', icon: <Security />, path: '/roles' });
+    }
+    items.push({ divider: true });
+
+    // ── Provisioning ──
+    items.push({ header: 'Provisioning' });
+    items.push({ text: 'My Requests', icon: <Inventory />, path: '/resource-request/list' });
+    items.push({ text: 'New Request', icon: <RocketLaunch />, path: '/resource-request/new' });
+    items.push({ divider: true });
+
+    // ── Approvals ──
+    items.push({ header: 'Approvals' });
+    items.push({ text: 'My Approval Requests', icon: <Assignment />, path: '/approvals/requests' });
+    items.push({ text: 'Pending Approvals', icon: <CheckCircle />, path: '/approvals/pending' });
+    items.push({ text: 'History', icon: <BarChart />, path: '/approvals/history' });
+    if (isAdmin) {
+        items.push({ text: 'Workflow Defined', icon: <Category />, path: '/approvals-management/templates' });
+    }
+    items.push({ divider: true });
+
+    // ── Governance ── (admin only at tenant level)
+    if (isAdmin) {
+        items.push({ header: 'Governance' });
+        items.push({ text: 'Policy List', icon: <Policy />, path: '/permissions-management/policy_list' });
+        items.push({ text: 'Resource Registry', icon: <Inventory />, path: '/registry' });
+        items.push({ divider: true });
+    }
+
+    // ── CICD ──
+    items.push({ text: 'Runners', icon: <Terminal />, path: '/ci-credentials' });
+
+    return items;
+};
+
+/* ────────────────────────────────────────────
+   AppLayout Component
+   ──────────────────────────────────────────── */
+
 const AppLayout = () => {
     const { user, logout, isActive } = useAuth();
+    const { viewMode, activeRoleName, activeTenant, loading: roleLoading, goToLanding } = useRole();
     const navigate = useNavigate();
     const location = useLocation();
     const [collapsed, setCollapsed] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const width = !isActive ? 0 : (collapsed ? 72 : DRAWER_WIDTH);
 
-    interface MenuItemType {
-        header?: string;
-        text?: string;
-        icon?: React.ReactNode;
-        path?: string;
-        divider?: boolean;
-        disabled?: boolean;
-    }
+    // Build menu items based on current view mode and role
+    const menuItems = useMemo<MenuItemType[]>(() => {
+        if (viewMode === 'system') {
+            return getSystemMenuItems(activeRoleName);
+        }
+        if (viewMode === 'tenant' && activeTenant) {
+            return getTenantMenuItems(activeTenant.tenant_id, activeRoleName);
+        }
+        // Landing mode — no sidebar items
+        return [];
+    }, [viewMode, activeRoleName, activeTenant]);
 
-    const menuItems: MenuItemType[] = [
-        // ── Main ──
-        { header: 'Infrastructure' },
-        { text: 'Tenants', icon: <Business />, path: '/tenants' },
-        { text: 'Runners', icon: <Terminal />, path: '/ci-credentials' },
-        { divider: true },
-
-        // ── Provisioning ──
-        { header: 'Provisioning' },
-        { text: 'My Requests', icon: <Inventory />, path: '/resource-request/list' },
-        { text: 'New Request', icon: <RocketLaunch />, path: '/resource-request/new' },
-        { divider: true },
-
-        // ── Identity ──
-        { header: 'Identity' },
-        { text: 'Users', icon: <People />, path: '/users' },
-        { text: 'Tenant Users', icon: <Business />, path: '/tenant-users' },
-        { text: 'Groups', icon: <GroupWork />, path: '/groups' },
-        { text: 'Roles', icon: <Security />, path: '/roles' },
-        { divider: true },
-
-        // ── Approvals ──
-        { header: 'Approvals' },
-        { text: 'My Approval Requests', icon: <Assignment />, path: '/approvals/requests' },
-        { text: 'Pending Approvals', icon: <CheckCircle />, path: '/approvals/pending' },
-        { text: 'History', icon: <BarChart />, path: '/approvals/history' },
-        { text: 'Workflow Defined', icon: <Category />, path: '/approvals-management/templates' },
-        { text: 'Workflow Mapping', icon: <Lan />, path: '/approvals-management/policy-mapping' },
-        { text: 'Dummy Request', icon: <RocketLaunch />, path: '/approvals/approvalrequestcreate' },
-
-        { divider: true },
-
-        // ── Governance ──
-        { header: 'Governance' },
-        { text: 'Policy List', icon: <Policy />, path: '/permissions-management/policy_list' },
-        { text: 'Policy Subjects', icon: <People />, path: '/permissions-management/policy_subjects' },
-        { text: 'Resource Registry', icon: <Inventory />, path: '/registry' },
-        { divider: true },
-    ];
-
-    // Prevent rendering if not authenticated (extra safety layer)
-    /* If the user is authenticated but not active (e.g. INACTIVE or NOT_FOUND), show the Unauthorized view */
+    // Prevent rendering if not authenticated
     if (!isActive || !user) {
         return (
             <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -106,7 +199,6 @@ const AppLayout = () => {
                     onClick={() => navigate('/')}
                     sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2, minHeight: 90, cursor: 'pointer' }}
                 >
-                    {/* SWAPPABLE LOGO CONTAINER */}
                     <Box id="platform-logo" sx={{
                         display: 'flex', p: 1, borderRadius: '12px',
                         background: 'linear-gradient(135deg, #6C63FF 0%, #3B82F6 100%)',
@@ -133,6 +225,8 @@ const AppLayout = () => {
                 </Box>
 
                 <Divider sx={{ borderColor: 'rgba(128,128,128,0.1)' }} />
+
+
 
                 {/* Navigation Menu */}
                 <List sx={{ px: 1.5, flex: 1, pt: 2, overflowY: 'auto' }}>
@@ -181,40 +275,35 @@ const AppLayout = () => {
                 </List>
 
                 {/* User Profile */}
-                <Box sx={{ p: 2, borderTop: '1px solid rgba(128,128,128,0.1)' }}>
-                    <Tooltip title={user?.email || user?.username || 'User Profile'} placement="right" arrow>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1, cursor: 'default', mb: collapsed ? 0 : 1 }}>
-                            <Avatar sx={{ width: 32, height: 32, bgcolor: '#6C63FF', fontSize: '0.8rem' }}>
+                <Box sx={{ p: collapsed ? 1.5 : 2, borderTop: '1px solid rgba(128,128,128,0.1)' }}>
+                    <Box sx={{ display: 'flex', flexDirection: collapsed ? 'column' : 'row', alignItems: 'center', gap: 1, cursor: 'default' }}>
+                        <Tooltip title={user?.email || user?.username || 'User Profile'} placement="right" arrow>
+                            <Avatar sx={{ width: 32, height: 32, bgcolor: '#6C63FF', fontSize: '0.8rem', mb: collapsed ? 1 : 0 }}>
                                 {user?.username?.charAt(0)?.toUpperCase()}
                             </Avatar>
-                            {!collapsed && (
-                                <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography variant="body2" noWrap sx={{ fontWeight: 600, color: 'text.primary' }}>
-                                        {user?.username || 'User'}
-                                    </Typography>
-                                </Box>
-                            )}
-                            {!collapsed && (
-                                <IconButton size="small" onClick={logout} sx={{ color: 'text.secondary' }}>
+                        </Tooltip>
+
+                        {!collapsed && (
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography variant="body2" noWrap sx={{ fontWeight: 600, color: 'text.primary' }}>
+                                    {user?.username || 'User'}
+                                </Typography>
+                            </Box>
+                        )}
+
+                        <Box sx={{ display: 'flex', gap: collapsed ? 0.5 : 0.5, flexDirection: collapsed ? 'column' : 'row' }}>
+                            <Tooltip title="Settings" arrow placement={collapsed ? "right" : "bottom"}>
+                                <IconButton size="small" onClick={() => setSettingsOpen(true)} sx={{ color: 'text.secondary' }}>
+                                    <SettingsIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Logout" arrow placement={collapsed ? "right" : "bottom"}>
+                                <IconButton size="small" onClick={logout} sx={{ color: '#ef4444' }}>
                                     <Logout fontSize="small" />
                                 </IconButton>
-                            )}
+                            </Tooltip>
                         </Box>
-                    </Tooltip>
-
-                    {!collapsed && (
-                        <ListItemButton onClick={() => setSettingsOpen(true)} sx={{ borderRadius: '12px', minHeight: 40, px: 2, color: 'text.secondary', '&:hover': { bgcolor: 'rgba(128,128,128,0.05)' } }}>
-                            <ListItemIcon sx={{ minWidth: 36, color: 'inherit' }}><SettingsIcon fontSize="small" /></ListItemIcon>
-                            <ListItemText primary="Settings" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }} />
-                        </ListItemButton>
-                    )}
-                    {collapsed && (
-                        <Box sx={{ mt: 1, textAlign: 'center' }}>
-                            <IconButton size="small" onClick={() => setSettingsOpen(true)} sx={{ color: 'text.secondary' }}>
-                                <SettingsIcon fontSize="small" />
-                            </IconButton>
-                        </Box>
-                    )}
+                    </Box>
                 </Box>
 
                 {/* Sidebar Toggle */}

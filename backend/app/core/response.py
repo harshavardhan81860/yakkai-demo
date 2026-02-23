@@ -40,14 +40,19 @@ class ApiResponse(BaseModel):
         status_code: int = 400,
         data: Optional[Dict[str, Any]] = None,
         dropdown: Optional[Dict[str, Any]] = None,
+        as_json_response: bool = False,
     ):
-        return {
+        body = {
             "status": "error",
             "status_code": status_code,
             "message": message,
             "data": data,                # default None
             "dropdown": dropdown,        # default None
         }
+        if as_json_response:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=status_code, content=body)
+        return body
 
 
 # Backward compatibility (if old imports exist)

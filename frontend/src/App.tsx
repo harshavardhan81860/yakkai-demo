@@ -1,12 +1,13 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "./components/Layout/AppLayout";
+import RoleGuard from "./components/Auth/RoleGuard";
 
-// ── Promted MUI Pages (polished UI) ──
+// ── Pages ──
 import Home from "./pages/Home";
 import StatisticsPage from "./components/Statistics/StatisticsPage";
 import CostAnalyticsPage from "./components/Costs/CostAnalyticsPage";
 
-// ── Developed Pages (functional, all business logic) ──
+// ── Core Management ──
 import Users from "./pages/Users";
 import Tenants from "./pages/Tenants";
 import CloudAccounts from "./pages/CloudAccounts";
@@ -21,21 +22,21 @@ import UserGroupMapping from "./pages/UserGroupMapping";
 import GroupRoleMapping from "./pages/GroupRoleMapping";
 import Registry from "./pages/Registry";
 
-// ── Approvals (Developed) ──
+// ── Approvals ──
 import ApprovalsLayout from "./pages/ApprovalsLayout";
 import ApprovalRequests from "./pages/ApprovalRequests";
 import ApprovalRequestCreate from "./pages/ApprovalRequestCreate";
 import PendingApprovals from "./pages/PendingApprovals";
 import DecisionHistory from "./pages/DecisionHistory";
 
-// ── Approval Management (Developed) ──
+// ── Approval Management ──
 import ApprovalManagementLayout from "./pages/ApprovalManagementLayout";
 import ApprovalTemplates from "./pages/ApprovalTemplates";
 import ApprovalTemplateEditor from "./pages/ApprovalTemplateEditor";
 import ApprovalMappingList from "./pages/ApprovalMappingList";
 import ApprovalMappingCreate from "./pages/ApprovalMappingCreate";
 
-// ── Permissions (Developed) ──
+// ── Permissions ──
 import PermissionLayout from "./pages/PermissionLayout";
 import PermissionPolicyLists from "./pages/PermissionPolicyLists";
 import PermissionPolicyCreate from "./pages/PermissionPolicyCreate";
@@ -45,43 +46,129 @@ import BuildInProgress from "./pages/BuildInProgress";
 import ResourceRequestWizard from "./pages/ResourceRequest/ResourceRequestWizard";
 import ResourceRequestsList from "./pages/ResourceRequest/ResourceRequestsList";
 
+/* ────────────────────────────────────────────
+   Role Constants for Guards
+   ──────────────────────────────────────────── */
+const ALL_ROLES = [
+    "system_admin", "system_manager", "system_user",
+    "tenant_admin", "tenant_manager", "tenant_user"
+];
+const ADMIN_MANAGER = [
+    "system_admin", "system_manager",
+    "tenant_admin", "tenant_manager"
+];
+const ADMIN_ONLY = ["system_admin", "tenant_admin"];
+const TENANT_ROLES = ["tenant_admin", "tenant_manager", "tenant_user"];
+
 function App() {
     return (
         <Routes>
             {/* Main Layout with Sidebar */}
             <Route element={<AppLayout />}>
-                {/* Dashboard (MUI from promted) */}
+                {/* Home / Landing — accessible by all */}
                 <Route path="/" element={<Home />} />
 
-                {/* Core Management (from developed) */}
-                <Route path="/users" element={<Users />} />
-                <Route path="/tenants" element={<Tenants />} />
-                <Route path="/ci-credentials" element={<CiCredentials />} />
-                <Route path="/roles" element={<Roles />} />
-                <Route path="/user-role-mapping" element={<UserRoleMapping />} />
-                <Route path="/groups" element={<Groups />} />
-                <Route path="/user-group-mapping" element={<UserGroupMapping />} />
-                <Route path="/group-role-mapping" element={<GroupRoleMapping />} />
-                <Route path="/tenant-users" element={<TenantUsers />} />
+                {/* ── Core Management ── */}
+                <Route path="/users" element={
+                    <RoleGuard allowed={["system_admin", "system_manager", "system_user"]}>
+                        <Users />
+                    </RoleGuard>
+                } />
+                <Route path="/tenants" element={
+                    <RoleGuard allowed={["system_admin", "system_manager", "system_user"]}>
+                        <Tenants />
+                    </RoleGuard>
+                } />
+                <Route path="/ci-credentials" element={
+                    <RoleGuard allowed={ALL_ROLES}>
+                        <CiCredentials />
+                    </RoleGuard>
+                } />
+                <Route path="/roles" element={
+                    <RoleGuard allowed={ADMIN_MANAGER}>
+                        <Roles />
+                    </RoleGuard>
+                } />
+                <Route path="/user-role-mapping" element={
+                    <RoleGuard allowed={ADMIN_MANAGER}>
+                        <UserRoleMapping />
+                    </RoleGuard>
+                } />
+                <Route path="/groups" element={
+                    <RoleGuard allowed={ADMIN_MANAGER}>
+                        <Groups />
+                    </RoleGuard>
+                } />
+                <Route path="/user-group-mapping" element={
+                    <RoleGuard allowed={ADMIN_MANAGER}>
+                        <UserGroupMapping />
+                    </RoleGuard>
+                } />
+                <Route path="/group-role-mapping" element={
+                    <RoleGuard allowed={ADMIN_MANAGER}>
+                        <GroupRoleMapping />
+                    </RoleGuard>
+                } />
+                <Route path="/tenant-users" element={
+                    <RoleGuard allowed={ADMIN_MANAGER}>
+                        <TenantUsers />
+                    </RoleGuard>
+                } />
 
-                {/* Cloud Accounts (from developed — nested under tenants) */}
+                {/* ── Cloud Accounts (tenant-scoped) ── */}
                 <Route path="/tenants/:tenantId" element={<Navigate to="cloud-accounts" replace />} />
-                <Route path="/tenants/:tenantId/cloud-accounts" element={<CloudAccounts />} />
-                <Route path="/tenants/:tenantId/cloud-accounts/:accountId/components" element={<Components />} />
-                <Route path="/tenants/:tenantId/finops" element={<FinOpsDashboard />} />
-                <Route path="/tenants/:tenantId/users" element={<TenantUsers />} />
+                <Route path="/tenants/:tenantId/cloud-accounts" element={
+                    <RoleGuard allowed={ALL_ROLES}>
+                        <CloudAccounts />
+                    </RoleGuard>
+                } />
+                <Route path="/tenants/:tenantId/cloud-accounts/:accountId/components" element={
+                    <RoleGuard allowed={ALL_ROLES}>
+                        <Components />
+                    </RoleGuard>
+                } />
+                <Route path="/tenants/:tenantId/finops" element={
+                    <RoleGuard allowed={ALL_ROLES}>
+                        <FinOpsDashboard />
+                    </RoleGuard>
+                } />
+                <Route path="/tenants/:tenantId/users" element={
+                    <RoleGuard allowed={ALL_ROLES}>
+                        <TenantUsers />
+                    </RoleGuard>
+                } />
 
-                {/* Approvals (from developed) */}
+                {/* ── Approvals (all users can see their own) ── */}
                 <Route path="/approvals" element={<ApprovalsLayout />}>
                     <Route index element={<Navigate to="requests" replace />} />
-                    <Route path="approvalrequestcreate" element={<ApprovalRequestCreate />} />
-                    <Route path="requests" element={<ApprovalRequests />} />
-                    <Route path="pending" element={<PendingApprovals />} />
-                    <Route path="history" element={<DecisionHistory />} />
+                    <Route path="approvalrequestcreate" element={
+                        <RoleGuard allowed={ALL_ROLES}>
+                            <ApprovalRequestCreate />
+                        </RoleGuard>
+                    } />
+                    <Route path="requests" element={
+                        <RoleGuard allowed={ALL_ROLES}>
+                            <ApprovalRequests />
+                        </RoleGuard>
+                    } />
+                    <Route path="pending" element={
+                        <RoleGuard allowed={ALL_ROLES}>
+                            <PendingApprovals />
+                        </RoleGuard>
+                    } />
+                    <Route path="history" element={
+                        <RoleGuard allowed={ALL_ROLES}>
+                            <DecisionHistory />
+                        </RoleGuard>
+                    } />
                 </Route>
 
-                {/* Approval Management (from developed) */}
-                <Route path="/approvals-management" element={<ApprovalManagementLayout />}>
+                {/* ── Approval Management (admin + manager) ── */}
+                <Route path="/approvals-management" element={
+                    <RoleGuard allowed={ADMIN_MANAGER}>
+                        <ApprovalManagementLayout />
+                    </RoleGuard>
+                }>
                     <Route index element={<Navigate to="templates" replace />} />
                     <Route path="templates" element={<ApprovalTemplates />} />
                     <Route path="templates/new" element={<ApprovalTemplateEditor />} />
@@ -90,8 +177,12 @@ function App() {
                     <Route path="policy-mapping-create" element={<ApprovalMappingCreate />} />
                 </Route>
 
-                {/* Permissions (from developed) */}
-                <Route path="/permissions-management" element={<PermissionLayout />}>
+                {/* ── Permissions (admin + manager) ── */}
+                <Route path="/permissions-management" element={
+                    <RoleGuard allowed={ADMIN_MANAGER}>
+                        <PermissionLayout />
+                    </RoleGuard>
+                }>
                     <Route index element={<Navigate to="policy_list" replace />} />
                     <Route path="policy_list" element={<PermissionPolicyLists />} />
                     <Route path="policy_create" element={<PermissionPolicyCreate />} />
@@ -101,19 +192,38 @@ function App() {
                     <Route path="evaluate_access" element={<BuildInProgress />} />
                 </Route>
 
-                {/* Registry (from developed) */}
-                <Route path="/registry" element={<Registry />} />
+                {/* ── Registry (admin + manager) ── */}
+                <Route path="/registry" element={
+                    <RoleGuard allowed={ADMIN_MANAGER}>
+                        <Registry />
+                    </RoleGuard>
+                } />
 
-                {/* Resource Requests (New Module) */}
-                <Route path="/resource-request/new" element={<ResourceRequestWizard />} />
-                <Route path="/resource-request/list" element={<ResourceRequestsList />} />
+                {/* ── Resource Requests ── */}
+                <Route path="/resource-request/new" element={
+                    <RoleGuard allowed={TENANT_ROLES}>
+                        <ResourceRequestWizard />
+                    </RoleGuard>
+                } />
+                <Route path="/resource-request/list" element={
+                    <RoleGuard allowed={ALL_ROLES}>
+                        <ResourceRequestsList />
+                    </RoleGuard>
+                } />
 
-                {/* Analytics (MUI from promted) */}
-                <Route path="/statistics" element={<StatisticsPage />} />
-                <Route path="/costs" element={<CostAnalyticsPage />} />
+                {/* ── Analytics ── */}
+                <Route path="/statistics" element={
+                    <RoleGuard allowed={ALL_ROLES}>
+                        <StatisticsPage />
+                    </RoleGuard>
+                } />
+                <Route path="/costs" element={
+                    <RoleGuard allowed={ALL_ROLES}>
+                        <CostAnalyticsPage />
+                    </RoleGuard>
+                } />
             </Route>
         </Routes>
-
     );
 }
 

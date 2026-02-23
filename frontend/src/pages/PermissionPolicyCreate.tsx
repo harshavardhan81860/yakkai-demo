@@ -14,6 +14,7 @@ import { createPolicy } from "../services/governanceService";
 import { fetchRegistryCatalog } from "../services/registryService";
 import { fetchAllTenants } from "../services/tenantsService";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
+import GenericResultDialog from "../components/Common/GenericResultDialog";
 
 /* ---------- TYPES ---------- */
 type EffectType = "ALLOW" | "DENY";
@@ -226,34 +227,39 @@ const PermissionPolicyCreate = () => {
       )}
 
       {/* Result Dialog */}
-      <Dialog open={result.open} onClose={() => setResult({ ...result, open: false })} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700 }}>{result.success ? "Guardrail Established" : "Configuration Conflict"}</DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2, textAlign: 'center' }}>
-            <Avatar sx={{
-              bgcolor: result.success ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.05)',
-              color: result.success ? '#10B981' : '#F59E0B',
-              width: 56, height: 56, mb: 2
-            }}>
-              {result.success ? <CheckCircle fontSize="large" /> : <Info fontSize="large" />}
-            </Avatar>
-            <Typography variant="body1">{result.message}</Typography>
-            {result.policyId && (
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                Unique Identifier: {result.policyId}
-              </Typography>
+      <GenericResultDialog
+        isOpen={result.open}
+        success={result.success}
+        message={result.message}
+        onClose={() => setResult({ ...result, open: false })}
+        title={result.success ? "Guardrail Established" : "Configuration Conflict"}
+        actions={
+          <>
+            <Button onClick={() => setResult({ ...result, open: false })}>Stay Here</Button>
+            {result.success && (
+              <Button variant="contained" onClick={() => navigate("/permissions-management/policy_list")} sx={{ background: 'linear-gradient(135deg,#6C63FF,#4A42D4)' }}>
+                Return to Catalog
+              </Button>
             )}
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 2.5 }}>
-          <Button onClick={() => setResult({ ...result, open: false })}>Stay Here</Button>
-          {result.success && (
-            <Button variant="contained" onClick={() => navigate("/permissions-management/policy_list")} sx={{ background: 'linear-gradient(135deg,#6C63FF,#4A42D4)' }}>
-              Return to Catalog
-            </Button>
+          </>
+        }
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2, textAlign: 'center' }}>
+          <Avatar sx={{
+            bgcolor: result.success ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.05)',
+            color: result.success ? '#10B981' : '#F59E0B',
+            width: 56, height: 56, mb: 2
+          }}>
+            {result.success ? <CheckCircle fontSize="large" /> : <Info fontSize="large" />}
+          </Avatar>
+          <Typography variant="body1">{result.message}</Typography>
+          {result.policyId && (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+              Unique Identifier: {result.policyId}
+            </Typography>
           )}
-        </DialogActions>
-      </Dialog>
+        </Box>
+      </GenericResultDialog>
     </Box>
   );
 };

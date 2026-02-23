@@ -8,8 +8,8 @@ YakkAI is a comprehensive platform designed to provide a seamless self-service e
 
 The codebase is organized into three primary modules, each with its own specific focus and documentation:
 
-- **[`/backend`](./backend)**: A high-performance FastAPI server (Python) handling core logic, cloud integrations, and identity management.
-- **[`/frontend`](./frontend)**: A modern, responsive React interface built with Material UI and TypeScript for a premium user experience.
+- **[`/backend`](./backend)**: A high-performance FastAPI server (Python) handling core logic, cloud integrations, and identity management. Includes `/app/api/v1/routers/` for modular endpoints.
+- **[`/frontend`](./frontend)**: A modern, responsive React interface built with Material UI and TypeScript. Includes `/src/components/` for generic UI and `/src/pages/` for views.
 - **[`/helm`](./helm)**: Kubernetes deployment configurations (Helm charts) for production-ready container orchestration.
 
 ---
@@ -23,28 +23,34 @@ Follow these steps to get the platform up and running in your local environment.
 - **Node.js 18+** & **npm**
 - **Docker & Docker Compose** (Optional, for containerized setup)
 
-### 2. Setup Backend
+### 2. Services (Postgres & Keycloak)
+The fastest way to get the prerequisite database and auth server running locally is via Docker Compose:
+```bash
+docker-compose -f docker-compose.yml up -d postgres keycloak
+```
+
+### 3. Setup Backend
 ```bash
 cd backend
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate  # On Windows use: venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --port 8000
 ```
 *For detailed configuration (DB, Keycloak), see [backend/README.md](./backend).*
 
-### 3. Setup Frontend
+### 4. Setup Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-*Access the UI at `http://localhost:5173`. See [frontend/README.md](./frontend) for environment variables.*
+*Access the UI at `http://localhost:5173`.*
 
-### 4. Deployment (Docker)
-To run the entire stack using Docker Compose:
+### 5. Deployment (Full Docker Stack)
+To run the entire stack (Backend + Frontend + Services) using Docker Compose:
 ```bash
-docker-compose up -d
+docker-compose up -d --build
 ```
 
 ### 5. Kubernetes (Helm)

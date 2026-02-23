@@ -126,6 +126,31 @@ class UserService:
         user.is_active = True
         return await self.repo.update(session, user)
 
+    async def update_user(
+        self,
+        session: AsyncSession,
+        user_identifier: str,
+        first_name: str = None,
+        last_name: str = None,
+        mobile: str = None,
+        department: str = None,
+        gender: str = None,
+    ) -> Optional[User]:
+        user = await self.repo.get_by_id(session, user_identifier)
+        if not user:
+            return None
+        if first_name is not None:
+            user.first_name = first_name
+        if last_name is not None:
+            user.last_name = last_name
+        if mobile is not None:
+            user.mobile = mobile
+        if department is not None:
+            user.department = department
+        if gender is not None:
+            user.gender = gender
+        return await self.repo.update(session, user)
+
     async def trigger_reset_password(self, email: str) -> bool:
         try:
             token = self.kc._get_admin_token()
@@ -141,6 +166,60 @@ class UserService:
             return self.kc.send_reset_password_email(kc_id)
         except Exception:
             return True
+
+    async def get_user_role_context(self, session: AsyncSession, user_id: str):
+        """
+        Returns the user's role context for the frontend view system:
+        - system_role: str | None  (e.g. "system_admin")
+        - tenant_roles: [{ tenant_id, tenant_name, role }]
+        """
+        role_assignment_service = RoleAssignmentService()
+        role_service = RoleService()
+        tenant_repo = TenantRepository()
+
+        # Get all effective assignments (direct + inherited via groups)
+        effective = await role_assignment_service.list_effective_user_assignments(session, user_id)
+
+        system_role = None
+        tenant_roles = []
+        tenant_cache = {}
+
+        for assignment in effective:
+            role = await role_service.get_role(session, str(assignment["role_id"]))
+            if not role or not role.is_active:
+                continue
+
+            if role.is_system_role:
+                # System-level role (no tenant scope)
+                if system_role is None:
+                    system_role = role.name
+            else:
+                # Tenant-scoped role
+                tenant_id = assignment.get("tenant_id")
+                if not tenant_id:
+                    continue
+
+                tenant_id_str = str(tenant_id)
+
+                # Avoid duplicate tenant entries (first role wins — no duplicates per plan)
+                if tenant_id_str in tenant_cache:
+                    continue
+
+                tenant = await tenant_repo.get_by_id(session, tenant_id_str)
+                if not tenant:
+                    continue
+
+                tenant_cache[tenant_id_str] = True
+                tenant_roles.append({
+                    "tenant_id": tenant_id_str,
+                    "tenant_name": tenant.display_name or tenant.name,
+                    "role": role.name
+                })
+
+        return {
+            "system_role": system_role,
+            "tenant_roles": tenant_roles
+        }
 
     async def get_user_access_mappings(self, session: AsyncSession, user_id: str):
         # ─────────────────────────────────────────────

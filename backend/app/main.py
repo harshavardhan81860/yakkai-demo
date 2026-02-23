@@ -29,6 +29,9 @@ from api.v1.routers.user_setting_routes import router as user_setting_router
 
 from services.registry_validation_service import RegistryValidationService
 from db.engine import get_session
+from sqlalchemy import text
+import sys
+import os
 
 settings = load_config(os.getenv("APP_CONFIG"))
 
@@ -124,6 +127,29 @@ async def root():
 
 
 ### Routers
+import logging
+from fastapi import Request, HTTPException
+from core.response import ApiResponse
+
+logger = logging.getLogger(__name__)
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return ApiResponse.error(
+        message=str(exc.detail),
+        status_code=exc.status_code,
+        as_json_response=True
+    )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled Exception: {exc}", exc_info=True)
+    return ApiResponse.error(
+        message=str(exc),
+        status_code=400, # Defaulting to 400 for generic unhandled as per previous local route behaviors
+        as_json_response=True
+    )
+
 app.include_router(health_router, prefix=api_prefix)
 app.include_router(resource_registry_router, prefix=api_prefix)
 app.include_router(users_router, prefix=api_prefix)
@@ -150,6 +176,16 @@ app.include_router(user_setting_router, prefix=api_prefix)
 #commenting fo development 
 
 @app.on_event("startup")
-async def validate_registry_on_startup():
-    async for session in get_session():
-        await RegistryValidationService.validate_registry_map(session)
+async def startup_event():
+    try:
+        logger.info("Initializing application and verifying database connection...")
+        async for session in get_session():
+            # Explicitly test the database connection
+            await session.execute(text("SELECT 1"))
+            # Validate the endpoint registry map against the DB
+            await RegistryValidationService.validate_registry_map(session)
+        logger.info("Database connection and registry validation successful.")
+    except Exception as e:
+        logger.critical(f"FATAL ERROR during startup: {e}")
+        # Force the process to exit immediately so Kubernetes marks the pod as failed
+        os._exit(1)

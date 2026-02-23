@@ -27,13 +27,25 @@ async def list_accounts(
 ):
     # If id is passed, ignore other filters
     if id:
-        accounts = await service.get_account_by_id(session, id)
+        result = await service.get_account_by_id(session, id)
+        accounts = result if isinstance(result, list) else ([result] if result else [])
     else:
         accounts = await service.list_accounts(session, tenant_id, is_active)
 
+    total_count = len(accounts)
+    active_count = sum(1 for a in accounts if getattr(a, 'is_active', False))
+    inactive_count = total_count - active_count
+
     return ApiResponse.success(
         message="Cloud accounts fetched successfully",
-        data={"accounts": [orm_to_dict(a) for a in accounts]}
+        data={
+            "header": {
+                "total_accounts": total_count,
+                "active_accounts": active_count,
+                "inactive_accounts": inactive_count
+            },
+            "accounts": [orm_to_dict(a) for a in accounts]
+        }
     )
 
 
@@ -67,25 +79,21 @@ async def create_account(
     req: CloudAccountCreate,
     session: AsyncSession = Depends(get_session)
 ):
-    try:
-        account = await service.create_account(
-            session=session,
-            tenant_id=req.tenant_id,
-            parent_id=req.parent_id,
-            name=req.name,
-            cloud_provider=req.cloud_provider,
-            cred_metadata=req.cred_metadata,
-            ci_credentials_id=req.ci_credentials_id
-        )
+    account = await service.create_account(
+        session=session,
+        tenant_id=req.tenant_id,
+        parent_id=req.parent_id,
+        name=req.name,
+        cloud_provider=req.cloud_provider,
+        cred_metadata=req.cred_metadata,
+        ci_credentials_id=req.ci_credentials_id
+    )
 
-        return ApiResponse.success(
-            message="Cloud account created successfully",
-            status_code=201,
-            data={"account": orm_to_dict(account)}
-        )
-
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    return ApiResponse.success(
+        message="Cloud account created successfully",
+        status_code=201,
+        data={"account": orm_to_dict(account)}
+    )
 
 
 # ---------- ACTIVATE ----------
@@ -96,14 +104,11 @@ async def activate_account(
     record_id: str,
     session: AsyncSession = Depends(get_session)
 ):
-    try:
-        updated = await service.activate_account(session, record_id)
-        return ApiResponse.success(
-            message="Cloud account activated",
-            data={"account": orm_to_dict(updated)}
-        )
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    updated = await service.activate_account(session, record_id)
+    return ApiResponse.success(
+        message="Cloud account activated",
+        data={"account": orm_to_dict(updated)}
+    )
 
 
 # ---------- DEACTIVATE ----------
@@ -114,14 +119,11 @@ async def deactivate_account(
     record_id: str,
     session: AsyncSession = Depends(get_session)
 ):
-    try:
-        updated = await service.deactivate_account(session, record_id)
-        return ApiResponse.success(
-            message="Cloud account deactivated",
-            data={"account": orm_to_dict(updated)}
-        )
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    updated = await service.deactivate_account(session, record_id)
+    return ApiResponse.success(
+        message="Cloud account deactivated",
+        data={"account": orm_to_dict(updated)}
+    )
 
 
 
@@ -132,19 +134,15 @@ async def update_cloud_account(
     req: CloudAccountUpdate,
     session: AsyncSession = Depends(get_session),
 ):
-    try:
-        updated = await service.update_account(
-            session=session,
-            record_id=record_id,
-            name=req.name,
-            cred_metadata=req.cred_metadata,
-            ci_credentials_id=req.ci_credentials_id,
-        )
+    updated = await service.update_account(
+        session=session,
+        record_id=record_id,
+        name=req.name,
+        cred_metadata=req.cred_metadata,
+        ci_credentials_id=req.ci_credentials_id,
+    )
 
-        return ApiResponse.success(
-            message="Cloud account updated successfully",
-            data={"account": orm_to_dict(updated)}
-        )
-
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    return ApiResponse.success(
+        message="Cloud account updated successfully",
+        data={"account": orm_to_dict(updated)}
+    )

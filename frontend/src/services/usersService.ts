@@ -37,3 +37,24 @@ export const createUser = async (payload: {
   const res = await api.post("api/v1/users/create", payload);
   return res.data;
 };
+
+export const updateUser = async (
+  userId: string,
+  payload: {
+    first_name?: string;
+    last_name?: string;
+    mobile?: string;
+    department?: string;
+    gender?: string;
+  }
+) => {
+  const res = await api.put(`/api/v1/users/${userId}`, payload);
+  return res.data;
+};
+
+export const resetPassword = async (email: string) => {
+  const res = await api.post("/api/v1/users/auth/forgot-password", null, {
+    params: { email },
+  });
+  return res.data;
+};

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.engine import get_session
 from services.user_service import UserService
-from schemas.user_schema import CreateUserRequest
+from schemas.user_schema import CreateUserRequest, UpdateUserRequest
 from core.response import ApiResponse
 from utils.serializer import orm_to_dict
 from typing import Optional
@@ -46,25 +46,22 @@ async def list_users(
 @router.post("/create")
 @registry(resource=resource, action=ACTION.CREATE)
 async def create_user(req: CreateUserRequest, session: AsyncSession = Depends(get_session)):
-    try:
-        user = await service.create_user(
-            session=session,
-            email=req.email,
-            first_name=req.first_name,
-            last_name=req.last_name,
-            mobile=req.mobile,
-            department=req.department,
-            gender=req.gender,
-            password=req.password
-        )
+    user = await service.create_user(
+        session=session,
+        email=req.email,
+        first_name=req.first_name,
+        last_name=req.last_name,
+        mobile=req.mobile,
+        department=req.department,
+        gender=req.gender,
+        password=req.password
+    )
 
-        return ApiResponse.success(
-            message="User created successfully",
-            status_code=201,
-            data={"user": orm_to_dict(user)}
-        )
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    return ApiResponse.success(
+        message="User created successfully",
+        status_code=201,
+        data={"user": orm_to_dict(user)}
+    )
 
 
 @router.patch("/{user_id}/activate")
@@ -119,16 +116,34 @@ async def deactivate_user(user_id: str, session: AsyncSession = Depends(get_sess
     )
 
 
+@router.put("/{user_id}")
+@registry(resource=resource, action=ACTION.UPDATE)
+async def update_user(user_id: str, req: UpdateUserRequest, session: AsyncSession = Depends(get_session)):
+    updated = await service.update_user(
+        session=session,
+        user_identifier=user_id,
+        first_name=req.first_name,
+        last_name=req.last_name,
+        mobile=req.mobile,
+        department=req.department,
+        gender=req.gender,
+    )
+    if updated is None:
+        return ApiResponse.error(message="User not found", status_code=404)
+
+    return ApiResponse.success(
+        message="User updated successfully",
+        data={"user": orm_to_dict(updated)}
+    )
+
+
 @router.post("/auth/forgot-password")
 async def forgot_password(email: str):
-    try:
-        await service.trigger_reset_password(email)
-        return ApiResponse.success(
-            message="Password reset triggered",
-            data={"info": "Further implementation pending"}
-        )
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    await service.trigger_reset_password(email)
+    return ApiResponse.success(
+        message="Password reset triggered",
+        data={"info": "Further implementation pending"}
+    )
 
 @router.get("/users/me", tags=["Users"])
 @registry(resource=resource, action=ACTION.READ)
@@ -170,6 +185,51 @@ async def get_current_user(
     return ApiResponse.success(
         message="User fetched successfully",
         data=[orm_to_dict(u) for u in user]
+    )
+
+
+@router.get("/users/me/context", tags=["Users"])
+@registry(resource=resource, action=ACTION.READ)
+async def get_current_user_context(
+    request: Request,
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Returns the current user's role context for the frontend view system.
+    Response: { user: {...}, system_role: str|null, tenant_roles: [{tenant_id, tenant_name, role}] }
+    """
+    jwt_user = getattr(request.state, "user", None)
+
+    if not jwt_user:
+        return ApiResponse.error(
+            message="Authentication context missing",
+            status_code=401
+        )
+
+    username = jwt_user.get("preferred_username")
+    if not username:
+        return ApiResponse.error(
+            message="Username not found in token",
+            status_code=400
+        )
+
+    users = await service.list_users(session, user_name=username)
+    if not users:
+        return ApiResponse.error(
+            message="User not found in system",
+            status_code=404
+        )
+
+    user = users[0]
+    role_context = await service.get_user_role_context(session, str(user.id))
+
+    return ApiResponse.success(
+        message="User context fetched successfully",
+        data={
+            "user": orm_to_dict(user),
+            "system_role": role_context["system_role"],
+            "tenant_roles": role_context["tenant_roles"]
+        }
     )
 
 

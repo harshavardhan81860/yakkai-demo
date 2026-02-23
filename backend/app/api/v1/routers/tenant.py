@@ -53,43 +53,34 @@ async def create_tenant(
     req: CreateTenantRequest,
     session: AsyncSession = Depends(get_session)
 ):
-    try:
-        tenant = await service.create_tenant(
-            session=session,
-            name=req.name,
-            display_name=req.display_name
-        )
-        return ApiResponse.success(
-            message="Tenant created successfully",
-            status_code=201,
-            data={"tenant": orm_to_dict(tenant)}
-        )
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    tenant = await service.create_tenant(
+        session=session,
+        name=req.name,
+        display_name=req.display_name
+    )
+    return ApiResponse.success(
+        message="Tenant created successfully",
+        status_code=201,
+        data={"tenant": orm_to_dict(tenant)}
+    )
 
 
 @router.patch("/{tenant_id}/activate")
 async def activate_tenant(tenant_id: str, session: AsyncSession = Depends(get_session)):
-    try:
-        tenant = await service.activate_tenant(session, tenant_id)
-        return ApiResponse.success(
-            message="Tenant activated successfully",
-            data={"tenant": orm_to_dict(tenant)}
-        )
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    tenant = await service.activate_tenant(session, tenant_id)
+    return ApiResponse.success(
+        message="Tenant activated successfully",
+        data={"tenant": orm_to_dict(tenant)}
+    )
 
 
 @router.patch("/{tenant_id}/deactivate")
 async def deactivate_tenant(tenant_id: str, session: AsyncSession = Depends(get_session)):
-    try:
-        tenant = await service.deactivate_tenant(session, tenant_id)
-        return ApiResponse.success(
-            message="Tenant deactivated successfully",
-            data={"tenant": orm_to_dict(tenant)}
-        )
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    tenant = await service.deactivate_tenant(session, tenant_id)
+    return ApiResponse.success(
+        message="Tenant deactivated successfully",
+        data={"tenant": orm_to_dict(tenant)}
+    )
 
 @router.patch("/{tenant_id}")
 async def update_tenant(
@@ -97,39 +88,27 @@ async def update_tenant(
     req: CreateTenantRequest,
     session: AsyncSession = Depends(get_session)
 ):
-    try:
-        tenant = await service.update_tenant(
-            session=session,
-            tenant_id=tenant_id,
-            display_name=req.display_name
-        )
-        return ApiResponse.success(
-            message="Tenant updated successfully",
-            data={"tenant": orm_to_dict(tenant)}
-        )
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    tenant = await service.update_tenant(
+        session=session,
+        tenant_id=tenant_id,
+        display_name=req.display_name
+    )
+    return ApiResponse.success(
+        message="Tenant updated successfully",
+        data={"tenant": orm_to_dict(tenant)}
+    )
 
 @router.get("/{tenant_id}/users")
 async def get_tenant_users(tenant_id: str, session: AsyncSession = Depends(get_session)):
-    try:
-        users = await service.get_tenant_users(session, tenant_id)
-        return ApiResponse.success(data={"items": [orm_to_dict(u) for u in users]})
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    users = await service.get_tenant_users(session, tenant_id)
+    return ApiResponse.success(data={"items": [orm_to_dict(u) for u in users]})
 
 @router.post("/{tenant_id}/users")
 async def add_tenant_user(tenant_id: str, req: AddTenantUserRequest, session: AsyncSession = Depends(get_session)):
-    try:
-        tenant_user = await service.add_user_to_tenant(session, tenant_id, req.user_id)
-        return ApiResponse.success(data={"item": orm_to_dict(tenant_user)})
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    tenant_user = await service.add_user_to_tenant(session, tenant_id, req.user_id)
+    return ApiResponse.success(data={"item": orm_to_dict(tenant_user)})
 
 @router.delete("/{tenant_id}/users/{user_id}")
 async def remove_tenant_user(tenant_id: str, user_id: str, session: AsyncSession = Depends(get_session)):
-    try:
-        result = await service.remove_user_from_tenant(session, tenant_id, user_id)
-        return ApiResponse.success(data=result)
-    except Exception as e:
-        return ApiResponse.error(message=str(e), status_code=400)
+    result = await service.remove_user_from_tenant(session, tenant_id, user_id)
+    return ApiResponse.success(data=result)

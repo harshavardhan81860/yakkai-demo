@@ -14,6 +14,7 @@ import {
   fetchAllTenants, createTenant, activateTenant, deactivateTenant, updateTenant, type TenantRow,
 } from "../services/tenantsService";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
+import GenericResultDialog from "../components/Common/GenericResultDialog";
 
 const Tenants = () => {
   const navigate = useNavigate();
@@ -244,18 +245,12 @@ const Tenants = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Result Dialog */}
-      <Dialog
-        open={!!resultDialog}
+      <GenericResultDialog
+        isOpen={!!resultDialog}
+        success={resultDialog?.success}
+        message={resultDialog?.message}
         onClose={() => { setResultDialog(null); loadTenants(); }}
-        slotProps={{
-          backdrop: { sx: { backgroundColor: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)' } }
-        }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>{resultDialog?.success ? "Success" : "Error"}</DialogTitle>
-        <DialogContent><Typography variant="body2">{resultDialog?.message}</Typography></DialogContent>
-        <DialogActions><Button onClick={() => { setResultDialog(null); loadTenants(); }}>OK</Button></DialogActions>
-      </Dialog>
+      />
     </Box>
   );
 };
