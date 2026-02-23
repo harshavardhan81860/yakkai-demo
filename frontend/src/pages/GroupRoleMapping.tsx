@@ -20,7 +20,6 @@ import {
 } from "../services/groupRolesService";
 import { fetchAllTenants, type TenantRow } from "../services/tenantsService";
 import { fetchCloudAccounts, type CloudAccountRow } from "../services/cloudAccountsService";
-import { UserRow } from "../services/usersService";
 
 const GroupRoleMapping = () => {
   const navigate = useNavigate();
@@ -42,33 +41,17 @@ const GroupRoleMapping = () => {
   const [selectedCloud, setSelectedCloud] = useState<any>(null);
 
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<UserRow[]>([]);
-  const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
-  const [usersAssignedToRole, setUsersAssignedToRole] = useState<number[]>([]);
-  useEffect(() => {
-    if (!selectedRole) {
-      setUsersAssignedToRole([]);
-      return;
-    }
-    // Fetch assignments for ALL users, then filter by selectedRole
-    Promise.all(users.map(u => fetchGroupRoles(u.id))).then(allAssignments => {
-      const assigned = allAssignments
-        .flat()
-        .filter(a => String(a.role_id) === String(selectedRole.id))
-        .map(a => a.group_id);
-      setUsersAssignedToRole(assigned);
-    });
-  }, [selectedRole, users]);
   useEffect(() => {
     const groupId = params.get("groupId");
     const roleId = params.get("roleId");
     const autoAssign = params.get("autoAssign") === "true";
 
     (async () => {
-      const [g, r] = await Promise.all([fetchAllGroups(), fetchAllRoles()]);
+      const [g, r, t] = await Promise.all([fetchAllGroups(), fetchAllRoles(), fetchAllTenants()]);
 
       setGroups(g);
       setRoles(r);
+      setTenants(t);
 
       // If coming from Groups page
       if (groupId) {
@@ -100,9 +83,36 @@ const GroupRoleMapping = () => {
     );
   }, [selectedTenant]);
 
-  const assignedRoleIds = assignments.map((a) => a.role_id);
-  const systemRoles = roles.filter((r) => r.is_system_role && !assignedRoleIds.includes(Number(r.id)));
-  const tenantRoles = roles.filter((r) => !r.is_system_role && r.tenant_id === selectedTenant?.id && !assignedRoleIds.includes(Number(r.id)));
+  useEffect(() => {
+    if (showAssign && selectedGroup) {
+      if (selectedGroup.is_system_group) {
+        setAssignType("system");
+        setSelectedTenant(null);
+      } else {
+        setAssignType("tenant");
+        const tenant = tenants.find(t => String(t.id) === String(selectedGroup.tenant_id));
+        if (tenant) setSelectedTenant(tenant);
+      }
+    }
+  }, [showAssign, selectedGroup, tenants]);
+
+  const systemRoles = roles.filter((r) => {
+    if (!r.is_system_role) return false;
+    const isAssigned = assignments.some(a => !a.tenant_id && String(a.role_id) === String(r.id));
+    return !isAssigned;
+  });
+
+  const tenantRoles = roles.filter((r) => {
+    if (r.is_system_role) return false;
+    if (r.tenant_id && String(r.tenant_id) !== String(selectedTenant?.id)) return false;
+
+    // Logic: exclude if this generic/specific role is already assigned to THIS specific tenant
+    const isAssigned = assignments.some(a =>
+      String(a.tenant_id) === String(selectedTenant?.id) &&
+      String(a.role_id) === String(r.id)
+    );
+    return !isAssigned;
+  });
 
   const tenantAssignments = useMemo(() => {
     const map: Record<string, GroupRoleAssignment[]> = {};
@@ -119,8 +129,7 @@ const GroupRoleMapping = () => {
     if (!selectedGroup || !selectedRole) return;
     const payload: any = { group_id: selectedGroup.id, role_id: selectedRole.id };
     if (assignType === "tenant") {
-      if (selectedCloud) payload.cloud_account_id = selectedCloud.id;
-      else payload.tenant_id = selectedTenant?.id;
+      payload.tenant_id = selectedTenant?.id;
     }
     try {
       await assignGroupRole(payload);
@@ -129,8 +138,10 @@ const GroupRoleMapping = () => {
       setSelectedRole(null);
       setSelectedTenant(null);
       setSelectedCloud(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      const msg = err.response?.data?.message || err.response?.data?.detail || "Failed to assign role to group.";
+      alert(msg);
     }
   };
 
@@ -138,8 +149,9 @@ const GroupRoleMapping = () => {
     try {
       await revokeGroupRole(id);
       if (selectedGroup) setAssignments(await fetchGroupRoles(selectedGroup.id));
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert(err.response?.data?.message || "Failed to revoke group role.");
     }
   };
 
@@ -278,24 +290,10 @@ const GroupRoleMapping = () => {
         <DialogTitle sx={{ fontWeight: 700 }}>Assign Role</DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <Grid container spacing={2.5}>
-            {/* 1. Select User */}
-            <Grid size={12}>
-              <Autocomplete
-                options={users.filter(u => !usersAssignedToRole.includes(u.id))}
-                getOptionLabel={(u) => `${u.username} (${u.email})`}
-                value={selectedUser}
-                onChange={(_, user) => {
-                  setSelectedUser(user || null);
-                  if (user) fetchGroupRoles(user.id).then(setAssignments);
-                }}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                renderInput={(params) => <TextField {...params} label="Select User *" />}
-              />
-
-            </Grid>
+            {/* Group Role Mappings Dialog Form */}
 
             <Grid size={12}>
-              <FormControl fullWidth>
+              <FormControl fullWidth disabled={!!selectedGroup}>
                 <InputLabel>Assignment Logic</InputLabel>
                 <Select value={assignType} label="Assignment Logic" onChange={e => { setAssignType(e.target.value as any); setSelectedRole(null); }}>
                   <MenuItem value="system">Global Roles</MenuItem>
@@ -311,24 +309,14 @@ const GroupRoleMapping = () => {
                   value={selectedTenant}
                   onChange={(_, v) => setSelectedTenant(v)}
                   renderInput={(params) => <TextField {...params} label="Target Tenant *" />}
-                />
-              </Grid>
-            )}
-            {assignType === "tenant" && selectedTenant && (
-              <Grid size={12}>
-                <Autocomplete
-                  options={cloudAccounts}
-                  getOptionLabel={(c) => c.display_name || c.name}
-                  value={selectedCloud}
-                  onChange={(_, v) => setSelectedCloud(v)}
-                  renderInput={(params) => <TextField {...params} label="Restrict to Cloud Account (Optional)" />}
+                  disabled={!selectedGroup?.is_system_group && !!selectedGroup?.tenant_id}
                 />
               </Grid>
             )}
             <Grid size={12}>
               <Autocomplete
                 options={assignType === "system" ? systemRoles : tenantRoles}
-                getOptionLabel={(r) => r.name}
+                getOptionLabel={(r) => r.tenant_id ? `${r.name} (${tenants.find(t => String(t.id) === String(r.tenant_id))?.display_name || 'Legacy Tenant'})` : r.name}
                 value={selectedRole}
                 onChange={(_, v) => setSelectedRole(v)}
                 renderInput={(params) => <TextField {...params} label="Select Role *" />}
@@ -339,7 +327,14 @@ const GroupRoleMapping = () => {
         </DialogContent>
         <DialogActions sx={{ p: 2.5 }}>
           <Button onClick={() => setShowAssign(false)}>Cancel</Button>
-          <Button variant="contained" onClick={confirmAssign} sx={{ background: 'linear-gradient(135deg,#6C63FF,#4A42D4)' }}>Assign Role</Button>
+          <Button
+            variant="contained"
+            onClick={confirmAssign}
+            disabled={!selectedGroup || !selectedRole || (assignType === 'tenant' && !selectedTenant)}
+            sx={{ background: 'linear-gradient(135deg,#6C63FF,#4A42D4)' }}
+          >
+            Assign Role
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

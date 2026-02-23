@@ -45,8 +45,9 @@ const Tenants = () => {
     try {
       tenant.is_active ? await deactivateTenant(tenant.id) : await activateTenant(tenant.id);
       await loadTenants();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to toggle tenant status", err);
+      alert(err.response?.data?.message || "Failed to toggle tenant status.");
     }
   };
 
@@ -150,16 +151,29 @@ const Tenants = () => {
 
                 {/* Actions - Always Visible */}
                 <Stack spacing={1} sx={{ width: '100%' }}>
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    size="small"
-                    startIcon={<Visibility sx={{ fontSize: 16 }} />}
-                    onClick={() => navigate(`/tenants/${t.id}/cloud-accounts`)}
-                    sx={{ borderRadius: 1.5, fontWeight: 700, fontSize: '0.7rem', py: 0.5 }}
-                  >
-                    Workplace
-                  </Button>
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      size="small"
+                      startIcon={<Visibility sx={{ fontSize: 16 }} />}
+                      onClick={() => navigate(`/tenants/${t.id}/cloud-accounts`)}
+                      sx={{ borderRadius: 1.5, fontWeight: 700, fontSize: '0.7rem', py: 0.5 }}
+                    >
+                      Workplace
+                    </Button>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      color="warning"
+                      size="small"
+                      startIcon={<AccountBalance sx={{ fontSize: 16 }} />}
+                      onClick={() => navigate(`/tenants/${t.id}/finops`)}
+                      sx={{ borderRadius: 1.5, fontWeight: 700, fontSize: '0.7rem', py: 0.5 }}
+                    >
+                      FinOps
+                    </Button>
+                  </Stack>
                   <Stack direction="row" spacing={1}>
                     <Button
                       variant="outlined"

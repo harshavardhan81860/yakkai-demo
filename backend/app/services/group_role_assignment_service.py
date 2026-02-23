@@ -41,10 +41,31 @@ class GroupRoleAssignmentService:
         if not role:
             raise HTTPException(status_code=404, detail="Role not found")
 
-        existing = await self.repo.get_existing(
+        # Enforcement of strict cross-mapping rules
+        if group.is_system_group:
+            if not role.is_system_role:
+                raise HTTPException(status_code=400, detail="System groups can only be mapped to System roles")
+            if tenant_id or cloud_account_id or component_id:
+                raise HTTPException(status_code=400, detail="System groups cannot have tenant/cloud/component specific assignments")
+        else:
+            # Tenant Group
+            if role.is_system_role:
+                raise HTTPException(status_code=400, detail="Tenant groups cannot be mapped to System roles")
+            if str(role.tenant_id) != str(group.tenant_id):
+                raise HTTPException(status_code=400, detail="Tenant groups can only be mapped to roles within the same tenant")
+            
+            # If tenant_id is provided in scope, it must match
+            if tenant_id and str(tenant_id) != str(group.tenant_id):
+                raise HTTPException(status_code=400, detail="Assignment scope must match the group's tenant")
+            
+            # If no specific scope is provided for a tenant group assignment, we default it to the group's tenant
+            if not tenant_id and not cloud_account_id and not component_id:
+                tenant_id = group.tenant_id
+
+        # Find any existing assignment at this exact scope for this group
+        existing = await self.repo.get_by_scope(
             session,
             group_id,
-            role_id,
             tenant_id,
             cloud_account_id,
             component_id
@@ -52,7 +73,7 @@ class GroupRoleAssignmentService:
         if existing:
             raise HTTPException(
                 status_code=400,
-                detail="Role already assigned to group for this scope"
+                detail="Group cannot have duplicate roles assigned at this level. Please remove the existing role before assigning a new one."
             )
 
         now = datetime.utcnow()
@@ -67,10 +88,14 @@ class GroupRoleAssignmentService:
             updated_at=now
         )
 
-        await self.repo.create(session, obj)
-        await session.commit()
-        await session.refresh(obj)
-        return obj
+        try:
+            await self.repo.create(session, obj)
+            await session.commit()
+            await session.refresh(obj)
+            return obj
+        except Exception as exc:
+            await session.rollback()
+            raise HTTPException(status_code=400, detail=str(exc))
 
     async def revoke_group_role(self, session: AsyncSession, assignment_id: str):
         assignment = await self.repo.get_by_id(session, assignment_id)

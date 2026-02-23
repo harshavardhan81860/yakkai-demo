@@ -36,6 +36,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (result.status === "ACTIVE") {
           setUser({
+            id: result.user.id,
             username: result.user.username,
             email: result.user.email,
             first_name: result.user.first_name,
@@ -48,6 +49,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } else {
           if (result.user) {
             setUser({
+              id: result.user.id,
               username: result.user.username,
               email: result.user.email,
               first_name: result.user.first_name,

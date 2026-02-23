@@ -10,8 +10,8 @@ class RoleService:
     def __init__(self):
         self.repo = RoleRepository()
 
-    async def list_roles(self, session: AsyncSession, tenant_id: Optional[str] = None) -> List[Role]:
-        return await self.repo.list_roles(session, tenant_id)
+    async def list_roles(self, session: AsyncSession, is_system: Optional[bool] = None) -> List[Role]:
+        return await self.repo.list_roles(session, is_system)
 
     async def create_role(self, session: AsyncSession, tenant_id: Optional[str], name: str, description: Optional[str], email: Optional[str], is_system_role: bool = False) -> Role:
         existing = await self.repo.get_by_name(session, name)

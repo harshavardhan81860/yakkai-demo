@@ -92,19 +92,31 @@ class CloudAccountRepository:
         AWS  → cred_metadata->>'account_id'
         Azure → cred_metadata->>'subscription_id' OR cred_metadata->>'tenant_id'
         """
+        return await self.get_by_cloud_identifier_global(session, cloud_provider, identifier, tenant_id)
+
+    async def get_by_cloud_identifier_global(
+        self,
+        session: AsyncSession,
+        cloud_provider: str,
+        identifier: str,
+        tenant_id: Optional[str] = None
+    ) -> Optional[CloudAccount]:
+        """
+        Find account by cloud-side identifier globally (across all tenants) or scoped to a tenant.
+        Used for preventing duplicate onboarding of the same AWS Account / Azure Subscription.
+        """
         provider = cloud_provider.lower()
         if provider == "aws":
             json_key = "account_id"
         elif provider == "azure":
-            # Try subscription_id first, fall back to tenant_id
-            stmt = (
-                select(CloudAccount)
-                .where(
-                    CloudAccount.tenant_id == tenant_id,
-                    CloudAccount.cloud_provider == cloud_provider,
-                    CloudAccount.cred_metadata["subscription_id"].astext == identifier,
-                )
+            # Check subscription_id first
+            stmt = select(CloudAccount).where(
+                CloudAccount.cloud_provider == cloud_provider,
+                CloudAccount.cred_metadata["subscription_id"].astext == identifier,
             )
+            if tenant_id:
+                stmt = stmt.where(CloudAccount.tenant_id == tenant_id)
+            
             result = await session.execute(stmt)
             found = result.scalar_one_or_none()
             if found:
@@ -113,14 +125,13 @@ class CloudAccountRepository:
         else:
             return None
 
-        stmt = (
-            select(CloudAccount)
-            .where(
-                CloudAccount.tenant_id == tenant_id,
-                CloudAccount.cloud_provider == cloud_provider,
-                CloudAccount.cred_metadata[json_key].astext == identifier,
-            )
+        stmt = select(CloudAccount).where(
+            CloudAccount.cloud_provider == cloud_provider,
+            CloudAccount.cred_metadata[json_key].astext == identifier,
         )
+        if tenant_id:
+            stmt = stmt.where(CloudAccount.tenant_id == tenant_id)
+
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
 

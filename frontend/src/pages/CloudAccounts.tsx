@@ -4,11 +4,11 @@ import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Chip, IconButton, Dialog,
   DialogTitle, DialogContent, DialogActions, LinearProgress, Tooltip,
-  Avatar, Paper, Stack, Snackbar, Alert
+  Avatar, Paper, Stack, Snackbar, Alert, CircularProgress
 } from "@mui/material";
 import {
   Add, Cloud, CheckCircle, Block, Refresh, ArrowBack,
-  Edit, Hub, ArrowForward, Search, Folder
+  Edit, Hub, ArrowForward, Search, Folder, Science, Payments
 } from "@mui/icons-material";
 import {
   fetchCloudAccounts, activateCloudAccount,
@@ -22,9 +22,10 @@ import Breadcrumbs from "../components/Common/Breadcrumbs";
 import AccountOnboardingDialog from "../components/CloudAccounts/AccountOnboardingDialog";
 import AccountEditDialog from "../components/CloudAccounts/AccountEditDialog";
 import { testConnection } from "../services/cloudDiscoveryService";
+import DriftDashboardDialog from "./DriftDashboard";
 
 const getTimeAgo = (dateStr?: string | null) => {
-  if (!dateStr) return "Never tested";
+  if (!dateStr) return "Never";
   const date = new Date(dateStr);
   const now = new Date();
   const diffInSecs = Math.floor((now.getTime() - date.getTime()) / 1000);
@@ -35,13 +36,12 @@ const getTimeAgo = (dateStr?: string | null) => {
   const diffInHours = Math.floor(diffInMins / 60);
   if (diffInHours < 24) return `${diffInHours}h ago`;
   const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays < 30) return `${diffInDays}d ago`;
-  return date.toLocaleDateString();
+  return `${diffInDays}d ago`;
 };
 
 const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoot, handlers }: {
-  row: CloudAccountRow,
-  allAccounts: CloudAccountRow[],
+  row: ExtendedCloudAccountRow,
+  allAccounts: ExtendedCloudAccountRow[],
   level: number,
   expandedRoots: Record<string, boolean>,
   toggleRoot: (id: string) => void,
@@ -114,10 +114,39 @@ const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoo
             size="small" variant="outlined" sx={{ fontSize: '0.7rem' }}
           />
         </TableCell>
+        <TableCell>
+          {!isContainer ? (
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>$0.00</Typography>
+          ) : <Typography variant="caption" color="text.secondary">-</Typography>}
+        </TableCell>
+        <TableCell>
+          {!isContainer ? (
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>$0.00</Typography>
+          ) : <Typography variant="caption" color="text.secondary">-</Typography>}
+        </TableCell>
+        <TableCell>
+          {!isContainer ? (
+            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>$0.00</Typography>
+          ) : <Typography variant="caption" color="text.secondary">-</Typography>}
+        </TableCell>
+        <TableCell>
+          {!isContainer ? (
+            <Tooltip title="View Drift Dashboard & History">
+              <Button
+                size="small"
+                variant="outlined"
+                color="warning"
+                onClick={() => handlers.handleOpenDriftDashboard(row.id, row.name)}
+                sx={{ fontSize: '0.65rem', py: 0.5, minWidth: 0 }}
+              >
+                Detect Drift
+              </Button>
+            </Tooltip>
+          ) : <Typography variant="caption" color="text.secondary">-</Typography>}
+        </TableCell>
         <TableCell align="center">
-          {/* Read Status */}
           <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
-            <Tooltip title={`Read: ${row.read_connection_status} (${getTimeAgo(row.read_last_validated_at)})`}>
+            <Tooltip title={`Read Connection: ${row.read_connection_status || 'Unknown'} (Last verified: ${getTimeAgo(row.read_last_validated_at)})`}>
               <Box sx={{
                 width: 10, height: 10, borderRadius: '50%',
                 bgcolor: row.read_connection_status === 'success' ? '#10B981' : (row.read_connection_status === 'error' ? '#EF4444' : '#6B7280'),
@@ -128,10 +157,15 @@ const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoo
                 <Refresh sx={{ fontSize: 13 }} />
               </IconButton>
             ) : (
-              <IconButton size="small" onClick={() => handlers.handleTestConnection(row.id, row.cloud_provider, 'read')} sx={{ p: 0.2 }}>
-                <Refresh sx={{ fontSize: 13 }} />
-              </IconButton>
+              <Tooltip title="Verify Read Access">
+                <IconButton size="small" onClick={() => handlers.handleTestConnection(row.id, row.cloud_provider, 'read')} sx={{ p: 0.2 }}>
+                  <Refresh sx={{ fontSize: 13 }} />
+                </IconButton>
+              </Tooltip>
             )}
+            <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary', minWidth: 45 }}>
+              {getTimeAgo(row.read_last_validated_at)}
+            </Typography>
           </Stack>
         </TableCell>
         <TableCell align="right">
@@ -178,31 +212,40 @@ const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoo
   );
 };
 
+interface ExtendedCloudAccountRow extends CloudAccountRow {
+  drift_status?: 'synced' | 'drifted' | 'checking';
+  drift_last_checked?: string;
+  cost_estimate?: string;
+}
+
 const CloudAccounts = () => {
   const { tenantId } = useParams();
   const navigate = useNavigate();
 
   const [tenantName, setTenantName] = useState<string>("");
-  const [accounts, setAccounts] = useState<CloudAccountRow[]>([]);
+  const [accounts, setAccounts] = useState<ExtendedCloudAccountRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // New Unified Dialog State
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [discoveryAccountId, setDiscoveryAccountId] = useState<string | undefined>();
   const [discoveryProvider, setDiscoveryProvider] = useState<"aws" | "azure" | undefined>();
 
-  // Edit State
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editAccount, setEditAccount] = useState<CloudAccountRow | null>(null);
 
   const [expandedRoots, setExpandedRoots] = useState<Record<string, boolean>>({});
   const [msg, setMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
+  // Drift Dashboard Popup State
+  const [driftPopupOpen, setDriftPopupOpen] = useState(false);
+  const [selectedAccountId, setSelectedAccountId] = useState("");
+  const [selectedAccountName, setSelectedAccountName] = useState("");
+
   const loadAccounts = async () => {
     setLoading(true);
     try {
       const data = await fetchCloudAccounts(tenantId as string);
-      setAccounts(data);
+      setAccounts(data.map(a => ({ ...a, drift_status: 'synced' })));
       if (data.length > 0) {
         setTenantName(data[0].tenant_id || "Tenant");
       }
@@ -247,13 +290,10 @@ const CloudAccounts = () => {
   const handleTestConnection = async (accId: string, provider: string, type: 'read' | 'write' = 'read') => {
     try {
       setLoading(true);
-      const res = await testConnection(accId, provider, false, type); // Provider specific
-
-      // Check for logical failure despite HTTP 200
+      const res = await testConnection(accId, provider, false, type);
       if (res?.data?.status === 'failure' || res?.data?.status === 'error') {
         throw new Error(res.data.message || 'Connection test failed');
       }
-
       setMsg({ type: 'success', text: `${type.toUpperCase()} connection verified` });
       loadAccounts();
     } catch (err: any) {
@@ -275,15 +315,19 @@ const CloudAccounts = () => {
     setShowOnboarding(true);
   };
 
-  const getSubAccounts = (pid: string) => accounts.filter(a => a.parent_id === pid);
-
   const handleEditAccount = (acc: CloudAccountRow) => {
     setEditAccount(acc);
     setShowEditDialog(true);
   };
 
+  const handleOpenDriftDashboard = (accId: string, name: string) => {
+    setSelectedAccountId(accId);
+    setSelectedAccountName(name);
+    setDriftPopupOpen(true);
+  };
+
   return (
-    <Box sx={{ maxWidth: 1000, mx: 'auto', px: 2 }}>
+    <Box sx={{ maxWidth: 'xl', mx: 'auto', px: 3, pb: 4 }}>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 800 }}>Cloud Accounts</Typography>
@@ -291,8 +335,8 @@ const CloudAccounts = () => {
         </Box>
         <Stack direction="row" spacing={1.5}>
           <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate("/tenants")}>Back</Button>
+          <Button variant="outlined" color="warning" startIcon={<Payments />} onClick={() => navigate(`/tenants/${tenantId}/finops`)}>FinOps Dashboard</Button>
           <Button variant="outlined" onClick={loadAccounts}><Refresh /></Button>
-
           <Button
             variant="contained"
             startIcon={<Add />}
@@ -311,19 +355,6 @@ const CloudAccounts = () => {
         ]} />
       </Box>
 
-      {/* Unified Onboarding & Discovery Dialog */}
-      <AccountOnboardingDialog
-        open={showOnboarding}
-        onClose={() => setShowOnboarding(false)}
-        tenantId={tenantId as string}
-        initialAccountId={discoveryAccountId}
-        initialProvider={discoveryProvider}
-        onImportComplete={() => {
-          loadAccounts();
-          setMsg({ type: 'success', text: 'Operation completed' });
-        }}
-      />
-
       {msg && <Snackbar open autoHideDuration={4000} onClose={() => setMsg(null)}>
         <Alert severity={msg.type}>{msg.text}</Alert>
       </Snackbar>}
@@ -335,12 +366,16 @@ const CloudAccounts = () => {
           <Table>
             <TableHead>
               <TableRow sx={{ background: 'rgba(255,255,255,0.02)' }}>
-                <TableCell padding="checkbox"></TableCell>
-                <TableCell>Name / ID</TableCell>
-                <TableCell>Provider</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell align="center">Connection</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell padding="checkbox" sx={{ width: 40 }}></TableCell>
+                <TableCell sx={{ minWidth: 200 }}>Name / ID</TableCell>
+                <TableCell sx={{ width: 80 }}>Provider</TableCell>
+                <TableCell sx={{ width: 100 }}>Type</TableCell>
+                <TableCell sx={{ minWidth: 100 }}>Last Billing Amount</TableCell>
+                <TableCell sx={{ minWidth: 100 }}>Unbilled Usage Cost</TableCell>
+                <TableCell sx={{ minWidth: 80 }}>Projected Cost</TableCell>
+                <TableCell sx={{ width: 100 }}>Drift Check</TableCell>
+                <TableCell align="center" sx={{ width: 120 }}>Health Checks</TableCell>
+                <TableCell align="right" sx={{ width: 140 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -357,13 +392,14 @@ const CloudAccounts = () => {
                     handleEditAccount,
                     openDiscoveryForAccount,
                     goToComponents,
-                    handleToggleActive
+                    handleToggleActive,
+                    handleOpenDriftDashboard
                   }}
                 />
               ))}
               {accounts.length === 0 && !loading && (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={10} align="center" sx={{ py: 6 }}>
                     <Cloud sx={{ fontSize: 48, color: 'text.secondary', mb: 1, opacity: 0.5 }} />
                     <Typography color="text.secondary">No cloud accounts connected yet.</Typography>
                     <Button variant="outlined" sx={{ mt: 2 }} onClick={openOnboarding}>
@@ -377,6 +413,18 @@ const CloudAccounts = () => {
         </TableContainer>
       </Paper>
 
+      <AccountOnboardingDialog
+        open={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        tenantId={tenantId as string}
+        initialAccountId={discoveryAccountId}
+        initialProvider={discoveryProvider}
+        onImportComplete={() => {
+          loadAccounts();
+          setMsg({ type: 'success', text: 'Operation completed' });
+        }}
+      />
+
       <AccountEditDialog
         open={showEditDialog}
         onClose={() => setShowEditDialog(false)}
@@ -385,6 +433,13 @@ const CloudAccounts = () => {
           loadAccounts();
           setMsg({ type: 'success', text: 'Account updated successfully' });
         }}
+      />
+
+      <DriftDashboardDialog
+        open={driftPopupOpen}
+        onClose={() => setDriftPopupOpen(false)}
+        accountId={selectedAccountId}
+        accountName={selectedAccountName}
       />
     </Box>
   );

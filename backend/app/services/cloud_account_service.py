@@ -51,6 +51,21 @@ class CloudAccountService:
         if existing:
             raise HTTPException(status_code=400, detail="Cloud account name already exists")
 
+        # enforce global uniqueness for cloud ID (prevent duplicate onboarding)
+        from utils.cloud_helpers import extract_cloud_identifier
+        cloud_id = extract_cloud_identifier(cred_metadata, cloud_provider)
+        
+        if cloud_id:
+            # Check if this cloud ID exists in ANY tenant
+            existing_global = await self.repo.get_by_cloud_identifier_global(
+                session, cloud_provider, cloud_id
+            )
+            if existing_global:
+                 raise HTTPException(
+                     status_code=400, 
+                     detail=f"This cloud account ({cloud_id}) is already onboarded in tenant '{existing_global.tenant_id}'."
+                 )
+
         # validate provider-specific metadata
         self._validate_cred_metadata(cloud_provider, cred_metadata)
 
@@ -165,6 +180,12 @@ class CloudAccountService:
             else:
                  if not has_val("tenant_id", ["auth", "tenant_id"]): missing.append("tenant_id")
                  if not has_val("client_id", ["auth", "client_id"]): missing.append("client_id")
+                 # client_secret is now optional
+                 
+                 # Sanitize secret if present but empty strings
+                 if "client_secret" in metadata and not metadata["client_secret"]:
+                     metadata["client_secret"] = None
+                 
                  # Subscription ID is optional for tenant root, but if provided, check logic is handled by frontend/discovery usually
                  # validation here focuses on connectivity basics.
 

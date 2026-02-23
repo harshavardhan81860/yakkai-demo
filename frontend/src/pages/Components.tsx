@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import {
   Add, Cloud, Layers, CheckCircle, Refresh, Visibility, Storage,
-  Computer, ViewInAr, Hub, Language, Info
+  Computer, ViewInAr, Hub, Language, Info, Science, Warning
 } from "@mui/icons-material";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
 import {
@@ -17,6 +17,7 @@ import {
   fetchAzureRegions, fetchAzureSubscriptions, fetchAzureInstances,
   fetchAzureImages, fetchAzureClusters, testAwsConnection, testAzureConnection
 } from "../services/cloudResourcesService";
+import DriftDashboardDialog from "./DriftDashboard";
 
 const Components = () => {
   const { tenantId } = useParams();
@@ -35,6 +36,9 @@ const Components = () => {
   const [selectedTile, setSelectedTile] = useState<string | null>(null);
   const [resources, setResources] = useState<any[]>([]);
   const [resourceLoading, setResourceLoading] = useState(false);
+
+  // Drift Dashboard State
+  const [driftPopupOpen, setDriftPopupOpen] = useState(false);
 
   const awsTiles = [
     { name: "EC2 Instances", icon: <Computer /> },
@@ -94,30 +98,31 @@ const Components = () => {
     }
   };
 
-  const handleTestConnection = async () => {
-    try {
-      if (cloudAccountType === "AWS") await testAwsConnection(cloudAccountId);
-      else if (cloudAccountType === "AZURE") await testAzureConnection(cloudAccountId);
-      loadRegions();
-    } catch {
-      setRegionError("Validation failed. Check account integration.");
-    }
-  };
-
   if (!cloudAccountType) return <Box p={3}><Typography color="error">Inventory Access Denied: Missing Cloud Context</Typography></Box>;
 
   return (
-    <Box>
+    <Box sx={{ px: 3, pb: 4 }}>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 800 }}>Resource Explorer</Typography>
           <Typography variant="body2" color="text.secondary">Inventory optimization for <strong>{accountName}</strong></Typography>
         </Box>
-        <Paper variant="outlined" sx={{ p: 1.5, px: 2, display: 'flex', gap: 3, bgcolor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-          <Box><Typography variant="caption" display="block" color="text.secondary">Tenant</Typography><Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{tenantName}</Typography></Box>
-          <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
-          <Box><Typography variant="caption" display="block" color="text.secondary">Provider</Typography><Chip label={cloudAccountType} size="small" color={cloudAccountType === 'AWS' ? 'warning' : 'info'} sx={{ fontWeight: 800, height: 20, fontSize: '0.65rem' }} /></Box>
-        </Paper>
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Paper variant="outlined" sx={{ p: 1.5, px: 2, display: 'flex', gap: 3, bgcolor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+            <Box><Typography variant="caption" display="block" color="text.secondary">Tenant</Typography><Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{tenantName}</Typography></Box>
+            <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
+            <Box><Typography variant="caption" display="block" color="text.secondary">Provider</Typography><Chip label={cloudAccountType} size="small" color={cloudAccountType === 'AWS' ? 'warning' : 'info'} sx={{ fontWeight: 800, height: 20, fontSize: '0.65rem' }} /></Box>
+          </Paper>
+          <Button
+            variant="outlined"
+            color="warning"
+            startIcon={<Warning />}
+            onClick={() => setDriftPopupOpen(true)}
+            sx={{ height: 48, fontWeight: 700 }}
+          >
+            Detect Drift
+          </Button>
+        </Stack>
       </Box>
 
       <Box sx={{ mb: 3 }}>
@@ -272,6 +277,13 @@ const Components = () => {
           </Card>
         </Grid>
       </Grid>
+
+      <DriftDashboardDialog
+        open={driftPopupOpen}
+        onClose={() => setDriftPopupOpen(false)}
+        accountId={cloudAccountId}
+        accountName={accountName}
+      />
     </Box>
   );
 };

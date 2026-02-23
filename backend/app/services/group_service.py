@@ -67,6 +67,17 @@ class GroupService:
 
     # Group Assignments
     async def assign_group(self, session: AsyncSession, user_id: str, group_id: str, tenant_id: Optional[str] = None, cloud_account_id: Optional[str] = None, component_id: Optional[str] = None, assigned_by: Optional[str] = None):
+        group = await self.repo.get_by_id(session, group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Group not found")
+            
+        target_tenant_id = tenant_id or group.tenant_id
+        if target_tenant_id and not group.is_system_group:
+            from repositories.tenant_repository import TenantRepository
+            tenant_repo = TenantRepository()
+            tenant_user = await tenant_repo.get_tenant_user(session, target_tenant_id, user_id)
+            if not tenant_user:
+                raise HTTPException(status_code=403, detail="User is not a member of this tenant")
         now = datetime.utcnow()
         assignment = GroupAssignment(
             user_id=user_id,

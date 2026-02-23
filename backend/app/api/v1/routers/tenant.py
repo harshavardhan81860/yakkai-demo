@@ -6,7 +6,7 @@ from db.engine import get_session
 from services.tenant_service import TenantService
 from core.response import ApiResponse
 from utils.serializer import orm_to_dict
-from schemas.tenant_schema import CreateTenantRequest
+from schemas.tenant_schema import CreateTenantRequest, AddTenantUserRequest
 
 from core.enums.registry_enum import RESOURCE, ACTION
 from services.registry_validation_service import registry
@@ -41,6 +41,11 @@ async def list_tenants(
             "tenants": tenants_list
         }
     )
+
+@router.get("/user/{user_id}")
+async def list_user_tenants(user_id: str, session: AsyncSession = Depends(get_session)):
+    tenants = await service.list_tenants_by_user(session, user_id)
+    return ApiResponse.success(data={"tenants": [orm_to_dict(t) for t in tenants]})
 
 
 @router.post("/create")
@@ -102,5 +107,29 @@ async def update_tenant(
             message="Tenant updated successfully",
             data={"tenant": orm_to_dict(tenant)}
         )
+    except Exception as e:
+        return ApiResponse.error(message=str(e), status_code=400)
+
+@router.get("/{tenant_id}/users")
+async def get_tenant_users(tenant_id: str, session: AsyncSession = Depends(get_session)):
+    try:
+        users = await service.get_tenant_users(session, tenant_id)
+        return ApiResponse.success(data={"items": [orm_to_dict(u) for u in users]})
+    except Exception as e:
+        return ApiResponse.error(message=str(e), status_code=400)
+
+@router.post("/{tenant_id}/users")
+async def add_tenant_user(tenant_id: str, req: AddTenantUserRequest, session: AsyncSession = Depends(get_session)):
+    try:
+        tenant_user = await service.add_user_to_tenant(session, tenant_id, req.user_id)
+        return ApiResponse.success(data={"item": orm_to_dict(tenant_user)})
+    except Exception as e:
+        return ApiResponse.error(message=str(e), status_code=400)
+
+@router.delete("/{tenant_id}/users/{user_id}")
+async def remove_tenant_user(tenant_id: str, user_id: str, session: AsyncSession = Depends(get_session)):
+    try:
+        result = await service.remove_user_from_tenant(session, tenant_id, user_id)
+        return ApiResponse.success(data=result)
     except Exception as e:
         return ApiResponse.error(message=str(e), status_code=400)

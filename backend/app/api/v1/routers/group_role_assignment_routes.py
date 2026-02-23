@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.engine import get_session
 from core.response import ApiResponse
@@ -24,17 +24,22 @@ async def assign_role_to_group(
     req: GroupRoleAssignmentCreateRequest,
     session: AsyncSession = Depends(get_session)
 ):
-    assignment = await service.assign_role_to_group(
-        session,
-        group_id=req.group_id,
-        role_id=req.role_id,
-        assigned_by=req.assigned_by
-    )
-    return ApiResponse.success(
-        message="Role assigned to group",
-        status_code=201,
-        data={"assignment": orm_to_dict(assignment)}
-    )
+    try:
+        assignment = await service.assign_role_to_group(
+            session,
+            group_id=req.group_id,
+            role_id=req.role_id,
+            assigned_by=req.assigned_by
+        )
+        return ApiResponse.success(
+            message="Role assigned to group",
+            status_code=201,
+            data={"assignment": orm_to_dict(assignment)}
+        )
+    except HTTPException as e:
+        return ApiResponse.error(message=e.detail, status_code=e.status_code)
+    except Exception as e:
+        return ApiResponse.error(message=str(e), status_code=400)
 
 @router.post("/revoke/{assignment_id}")
 @registry(resource=resource, action=ACTION.REVOKE)
@@ -42,11 +47,16 @@ async def revoke_group_role(
     assignment_id: str,
     session: AsyncSession = Depends(get_session)
 ):
-    res = await service.revoke_group_role(session, assignment_id)
-    return ApiResponse.success(
-        message="Group role revoked",
-        data=res
-    )
+    try:
+        res = await service.revoke_group_role(session, assignment_id)
+        return ApiResponse.success(
+            message="Group role revoked",
+            data=res
+        )
+    except HTTPException as e:
+        return ApiResponse.error(message=e.detail, status_code=e.status_code)
+    except Exception as e:
+        return ApiResponse.error(message=str(e), status_code=400)
 
 @router.get("/group/{group_id}")
 @registry(resource=resource, action=ACTION.READ)

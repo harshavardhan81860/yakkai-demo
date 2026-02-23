@@ -12,6 +12,9 @@ import {
 import { useAuth } from '../../auth/AuthProvider';
 
 import UnauthorizedView from '../Error/UnauthorizedView';
+import GlobalHeader from './GlobalHeader';
+import SettingsDialog from '../Settings/SettingsDialog';
+import { Settings as SettingsIcon } from '@mui/icons-material';
 
 const DRAWER_WIDTH = 280;
 
@@ -20,6 +23,7 @@ const AppLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [collapsed, setCollapsed] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
     const width = !isActive ? 0 : (collapsed ? 72 : DRAWER_WIDTH);
 
     interface MenuItemType {
@@ -47,6 +51,7 @@ const AppLayout = () => {
         // ── Identity ──
         { header: 'Identity' },
         { text: 'Users', icon: <People />, path: '/users' },
+        { text: 'Tenant Users', icon: <Business />, path: '/tenant-users' },
         { text: 'Groups', icon: <GroupWork />, path: '/groups' },
         { text: 'Roles', icon: <Security />, path: '/roles' },
         { divider: true },
@@ -74,14 +79,14 @@ const AppLayout = () => {
     /* If the user is authenticated but not active (e.g. INACTIVE or NOT_FOUND), show the Unauthorized view */
     if (!isActive || !user) {
         return (
-            <Box sx={{ minHeight: '100vh', bgcolor: '#0A0E1A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <UnauthorizedView />
             </Box>
         );
     }
 
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#0A0E1A' }}>
+        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
             <Drawer
                 variant="permanent"
                 sx={{
@@ -91,8 +96,8 @@ const AppLayout = () => {
                         width,
                         transition: 'width 0.3s ease',
                         overflowX: 'hidden',
-                        bgcolor: '#0D1117',
-                        borderRight: '1px solid rgba(255,255,255,0.05)'
+                        bgcolor: 'background.paper',
+                        borderRight: '1px solid rgba(128,128,128,0.1)'
                     },
                 }}
             >
@@ -113,12 +118,12 @@ const AppLayout = () => {
                     {!collapsed && (
                         <Box sx={{ minWidth: 0 }}>
                             <Typography variant="h6" sx={{
-                                fontWeight: 900, fontSize: '1.2rem', color: '#fff', letterSpacing: -0.5, lineHeight: 1.2
+                                fontWeight: 900, fontSize: '1.2rem', color: 'text.primary', letterSpacing: -0.5, lineHeight: 1.2
                             }}>
                                 YakkAI
                             </Typography>
                             <Typography variant="caption" sx={{
-                                color: '#6B7280', display: 'block', fontSize: '0.65rem', fontWeight: 600,
+                                color: 'text.secondary', display: 'block', fontSize: '0.65rem', fontWeight: 600,
                                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                             }}>
                                 Multi-Cloud Infrastructure Platform
@@ -127,16 +132,16 @@ const AppLayout = () => {
                     )}
                 </Box>
 
-                <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)' }} />
+                <Divider sx={{ borderColor: 'rgba(128,128,128,0.1)' }} />
 
                 {/* Navigation Menu */}
                 <List sx={{ px: 1.5, flex: 1, pt: 2, overflowY: 'auto' }}>
                     {menuItems.map((item, i) => {
-                        if (item.divider) return <Divider key={`d-${i}`} sx={{ my: 1.5, mx: 1, borderColor: 'rgba(255,255,255,0.05)' }} />;
+                        if (item.divider) return <Divider key={`d-${i}`} sx={{ my: 1.5, mx: 1, borderColor: 'rgba(128,128,128,0.1)' }} />;
                         if (item.header) {
                             if (collapsed) return null;
                             return (
-                                <Typography key={`h-${i}`} variant="overline" sx={{ pl: 2, py: 1, display: 'block', color: '#4B5563', fontSize: '0.65rem', letterSpacing: 2, fontWeight: 700 }}>
+                                <Typography key={`h-${i}`} variant="overline" sx={{ pl: 2, py: 1, display: 'block', color: 'text.secondary', fontSize: '0.65rem', letterSpacing: 2, fontWeight: 700 }}>
                                     {item.header}
                                 </Typography>
                             );
@@ -154,12 +159,12 @@ const AppLayout = () => {
                                             '&.Mui-selected': {
                                                 bgcolor: 'rgba(108,99,255,0.12)',
                                                 '& .MuiListItemIcon-root': { color: '#6C63FF' },
-                                                '& .MuiListItemText-primary': { color: '#fff', fontWeight: 700 },
+                                                '& .MuiListItemText-primary': { color: 'text.primary', fontWeight: 700 },
                                             },
-                                            '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' },
+                                            '&:hover': { bgcolor: 'rgba(128,128,128,0.05)' },
                                             '&.Mui-disabled': { opacity: 0.3 }
                                         }}>
-                                        <ListItemIcon sx={{ minWidth: collapsed ? 0 : 36, color: selected ? '#6C63FF' : '#6B7280' }}>
+                                        <ListItemIcon sx={{ minWidth: collapsed ? 0 : 36, color: selected ? '#6C63FF' : 'text.secondary' }}>
                                             {item.icon}
                                         </ListItemIcon>
                                         {!collapsed && (
@@ -176,31 +181,45 @@ const AppLayout = () => {
                 </List>
 
                 {/* User Profile */}
-                <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                <Box sx={{ p: 2, borderTop: '1px solid rgba(128,128,128,0.1)' }}>
                     <Tooltip title={user?.email || user?.username || 'User Profile'} placement="right" arrow>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1, cursor: 'default' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1, cursor: 'default', mb: collapsed ? 0 : 1 }}>
                             <Avatar sx={{ width: 32, height: 32, bgcolor: '#6C63FF', fontSize: '0.8rem' }}>
                                 {user?.username?.charAt(0)?.toUpperCase()}
                             </Avatar>
                             {!collapsed && (
                                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography variant="body2" noWrap sx={{ fontWeight: 600, color: '#fff' }}>
+                                    <Typography variant="body2" noWrap sx={{ fontWeight: 600, color: 'text.primary' }}>
                                         {user?.username || 'User'}
                                     </Typography>
                                 </Box>
                             )}
                             {!collapsed && (
-                                <IconButton size="small" onClick={logout} sx={{ color: '#6B7280' }}>
+                                <IconButton size="small" onClick={logout} sx={{ color: 'text.secondary' }}>
                                     <Logout fontSize="small" />
                                 </IconButton>
                             )}
                         </Box>
                     </Tooltip>
+
+                    {!collapsed && (
+                        <ListItemButton onClick={() => setSettingsOpen(true)} sx={{ borderRadius: '12px', minHeight: 40, px: 2, color: 'text.secondary', '&:hover': { bgcolor: 'rgba(128,128,128,0.05)' } }}>
+                            <ListItemIcon sx={{ minWidth: 36, color: 'inherit' }}><SettingsIcon fontSize="small" /></ListItemIcon>
+                            <ListItemText primary="Settings" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }} />
+                        </ListItemButton>
+                    )}
+                    {collapsed && (
+                        <Box sx={{ mt: 1, textAlign: 'center' }}>
+                            <IconButton size="small" onClick={() => setSettingsOpen(true)} sx={{ color: 'text.secondary' }}>
+                                <SettingsIcon fontSize="small" />
+                            </IconButton>
+                        </Box>
+                    )}
                 </Box>
 
                 {/* Sidebar Toggle */}
-                <Box sx={{ p: 1, textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                    <IconButton size="small" onClick={() => setCollapsed(!collapsed)} sx={{ color: '#6B7280' }}>
+                <Box sx={{ p: 1, textAlign: 'center', borderTop: '1px solid rgba(128,128,128,0.1)' }}>
+                    <IconButton size="small" onClick={() => setCollapsed(!collapsed)} sx={{ color: 'text.secondary' }}>
                         <MenuIcon fontSize="small" />
                     </IconButton>
                 </Box>
@@ -208,15 +227,17 @@ const AppLayout = () => {
 
             {/* Main Content */}
             <Box component="main" sx={{
-                flexGrow: 1, p: 4,
+                flexGrow: 1, p: 4, pt: 2,
                 width: `calc(100vw - ${width}px)`,
                 height: '100vh',
                 overflow: 'hidden',
                 transition: 'width 0.3s ease',
             }}>
                 <Box sx={{ height: '100%', overflowY: 'auto' }}>
+                    <GlobalHeader />
                     <Outlet />
                 </Box>
+                <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
             </Box>
         </Box>
     );

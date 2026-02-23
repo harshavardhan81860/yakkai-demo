@@ -125,15 +125,25 @@ class CloudAccountImportService:
                     id=mgmt_id, name=existing.name, cloud_provider="aws", account_type="management"
                 ))
             else:
-                mgmt_name = req.organization_details.management_account_id if req.organization_details else f"AWS Org ({creds.account_id})"
-                # Try to find name in discovered list?
-                # Usually the management account itself is in the list of accounts? No, usually separate.
-                # Use generic name or from creds
+                # Resolve name: 
+                # 1. Organization Details (if mgmt name provided)
+                # 2. Look in discovered_accounts for the management account
+                # 3. Fallback to AWS Org (...)
+                mgmt_name = f"AWS Org ({creds.account_id})"
+                
+                if org and org.management_account_name:
+                     mgmt_name = org.management_account_name
+                
+                # Check discovered accounts for override
+                for a in req.discovered_accounts:
+                    if a.account_id == creds.account_id and a.name:
+                        mgmt_name = a.name
+                        break
                 
                 mgmt_account = CloudAccount(
                     tenant_id=req.tenant_id,
                     parent_id=None,
-                    name=req.aws_credentials.account_id, # Fallback, likely user might want to naming convention
+                    name=mgmt_name,
                     cloud_provider="aws",
                     cred_metadata=mgmt_meta,
                     is_active=True,
@@ -324,6 +334,12 @@ class CloudAccountImportService:
                 skipped += 1
             else:
                 standalone_name = f"AWS Account ({creds.account_id})"
+                # Check discovered accounts for override
+                for a in req.discovered_accounts:
+                    if a.account_id == creds.account_id and a.name:
+                        standalone_name = a.name
+                        break
+                        
                 standalone = CloudAccount(
                     tenant_id=req.tenant_id,
                     parent_id=None,
@@ -376,6 +392,19 @@ class CloudAccountImportService:
             ))
         else:
             tenant_name = f"Azure Tenant ({creds.tenant_id[:8]}...)"
+            
+            # Check for name override in discovered accounts (looking for tenant entry)
+            # OR Check if any discovered account has account_id/subscription_id matching tenant_id (unlikely for Azure)
+            # OR Check organization_details if provided
+            if req.organization_details and req.organization_details.management_account_name:
+                 tenant_name = req.organization_details.management_account_name
+            
+            # Also check discovered_accounts for a specialized "tenant" entry if we decide to pass one
+            for a in req.discovered_accounts:
+                if (a.account_id == creds.tenant_id or a.management_group_id == creds.tenant_id) and a.name:
+                    tenant_name = a.name
+                    break
+
             tenant_record = CloudAccount(
                 tenant_id=req.tenant_id, parent_id=None, name=tenant_name,
                 cloud_provider="azure", cred_metadata=tenant_meta, is_active=True

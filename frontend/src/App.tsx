@@ -11,8 +11,8 @@ import Users from "./pages/Users";
 import Tenants from "./pages/Tenants";
 import CloudAccounts from "./pages/CloudAccounts";
 import Components from "./pages/Components";
-import TenantWorkspace from "./pages/TenantWorkspace";
-import Settings from "./pages/Settings";
+import FinOpsDashboard from "./pages/FinOpsDashboard";
+import TenantUsers from "./pages/TenantUsers";
 import CiCredentials from "./pages/CiCredentials";
 import Roles from "./pages/Roles";
 import UserRoleMapping from "./pages/UserRoleMapping";
@@ -62,11 +62,14 @@ function App() {
                 <Route path="/groups" element={<Groups />} />
                 <Route path="/user-group-mapping" element={<UserGroupMapping />} />
                 <Route path="/group-role-mapping" element={<GroupRoleMapping />} />
+                <Route path="/tenant-users" element={<TenantUsers />} />
 
                 {/* Cloud Accounts (from developed — nested under tenants) */}
-                <Route path="/tenants/:tenantId" element={<TenantWorkspace />} />
+                <Route path="/tenants/:tenantId" element={<Navigate to="cloud-accounts" replace />} />
                 <Route path="/tenants/:tenantId/cloud-accounts" element={<CloudAccounts />} />
                 <Route path="/tenants/:tenantId/cloud-accounts/:accountId/components" element={<Components />} />
+                <Route path="/tenants/:tenantId/finops" element={<FinOpsDashboard />} />
+                <Route path="/tenants/:tenantId/users" element={<TenantUsers />} />
 
                 {/* Approvals (from developed) */}
                 <Route path="/approvals" element={<ApprovalsLayout />}>
@@ -108,11 +111,9 @@ function App() {
                 {/* Analytics (MUI from promted) */}
                 <Route path="/statistics" element={<StatisticsPage />} />
                 <Route path="/costs" element={<CostAnalyticsPage />} />
-
-                {/* Settings */}
-                <Route path="/settings" element={<Settings />} />
             </Route>
         </Routes>
+
     );
 }
 

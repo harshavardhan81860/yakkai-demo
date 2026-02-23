@@ -133,7 +133,8 @@ export const getRoleGroups = async (roleId: string) => {
       return {
         id: group.id,
         name: group.name,
-        email : group.email?? "-",
+        tenant_id: group.tenant_id,
+        email: group.email ?? "-",
       };
     })
     .filter(Boolean);
