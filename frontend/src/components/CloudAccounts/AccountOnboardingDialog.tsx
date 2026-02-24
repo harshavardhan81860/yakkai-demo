@@ -270,7 +270,7 @@ const AccountOnboardingDialog = ({
 
             // If it's a standalone account, jump straight to finalize (or simple selection)
             // If it's an organization, stay in Analyze step so user can review the "ask"
-            if (!result.is_organization) {
+            if (!result.organization_detected) {
                 setStep(3);
             }
         } catch (err: any) {
@@ -379,11 +379,13 @@ const AccountOnboardingDialog = ({
             if (testMode) return true;
             if (onboardingType === "member") return !!selectedParentId;
             if (provider === "aws") return !!(awsCreds.account_id && awsCreds.role_name);
-            return !!(azureCreds.tenant_id && azureCreds.client_id && azureCreds.client_secret);
+            return !!(azureCreds.tenant_id && azureCreds.client_id);
         }
         if (step === 3) {
             // Can proceed if it's a standalone result or if we selected at least one
-            return (discoveryResult && !discoveryResult.is_organization) || selectedIds.size > 0;
+            if (testMode || discoveryResult?.organization_detected) return selectedIds.size > 0;
+            // If not an organization, it's a standalone account, so always proceed
+            return true;
         }
         return false;
     };
@@ -617,7 +619,7 @@ const AccountOnboardingDialog = ({
                 </>
             ) : (
                 <>
-                    {discoveryResult?.is_organization ? (
+                    {discoveryResult?.organization_detected ? (
                         <Box sx={{ ...glassCard, border: `1px solid ${providerColors[provider]}44` }}>
                             <Hub sx={{ fontSize: 64, color: providerColors[provider], mb: 2 }} />
                             <Typography variant="h6" sx={{ mb: 1 }}>
@@ -675,7 +677,7 @@ const AccountOnboardingDialog = ({
                                 : `linear-gradient(135deg, ${providerColors[provider]}, ${providerColors[provider]}dd)`,
                         }}
                     >
-                        {discoveryResult ? (discoveryResult.is_organization ? "Continue to Selection" : "Proceed") : "Start Analysis"}
+                        {discoveryResult ? (discoveryResult.organization_detected ? "Continue to Selection" : "Proceed") : "Start Analysis"}
                     </Button>
                 </>
             )}
@@ -686,7 +688,7 @@ const AccountOnboardingDialog = ({
         if (!discoveryResult) return null;
 
         // If not an organization, show a simple confirmation
-        if (!discoveryResult.is_organization) {
+        if (!discoveryResult.organization_detected) {
             return (
                 <Box sx={{ textAlign: "center", py: 4 }}>
                     <CheckCircle sx={{ fontSize: 64, color: "#10B981", mb: 2 }} />

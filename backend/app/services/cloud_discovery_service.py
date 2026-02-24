@@ -296,7 +296,7 @@ class CloudDiscoveryService:
         self,
         az_tenant_id: str,
         client_id: str,
-        client_secret: str,
+        client_secret: Optional[str],
         tenant_id: str,
         db: AsyncSession,
     ) -> DiscoveryResult:
@@ -306,16 +306,27 @@ class CloudDiscoveryService:
         3. Check management groups (if accessible)
         4. Build discovery result
         """
-        from azure.identity import ClientSecretCredential
         from azure.mgmt.resource import SubscriptionClient
 
         # Step 1: Validate credentials
         try:
-            credential = ClientSecretCredential(
-                tenant_id=az_tenant_id,
-                client_id=client_id,
-                client_secret=client_secret,
-            )
+            if client_secret:
+                from azure.identity import ClientSecretCredential
+                credential = ClientSecretCredential(
+                    tenant_id=az_tenant_id,
+                    client_id=client_id,
+                    client_secret=client_secret,
+                )
+            else:
+                from azure.identity import ClientAssertionCredential
+                from core.cloud_auth.azure_auth import get_azure_token_with_oidc
+                oidc_token = self._get_oidc_token()
+                credential = ClientAssertionCredential(
+                    tenant_id=az_tenant_id,
+                    client_id=client_id,
+                    func=lambda: oidc_token
+                )
+                
             sub_client = SubscriptionClient(credential)
             # Lightweight call to verify
             subs = list(sub_client.subscriptions.list())
@@ -526,14 +537,24 @@ class CloudDiscoveryService:
         elif provider == "azure" and account_type == "tenant":
             # Re-discover subscriptions
             try:
-                from azure.identity import ClientSecretCredential
                 from azure.mgmt.resource import SubscriptionClient
 
-                credential = ClientSecretCredential(
-                    tenant_id=meta["tenant_id"],
-                    client_id=meta["client_id"],
-                    client_secret=meta["client_secret"],
-                )
+                if meta.get("client_secret"):
+                    from azure.identity import ClientSecretCredential
+                    credential = ClientSecretCredential(
+                        tenant_id=meta["tenant_id"],
+                        client_id=meta["client_id"],
+                        client_secret=meta["client_secret"],
+                    )
+                else:
+                    from azure.identity import ClientAssertionCredential
+                    oidc_token = self._get_oidc_token()
+                    credential = ClientAssertionCredential(
+                        tenant_id=meta["tenant_id"],
+                        client_id=meta["client_id"],
+                        func=lambda: oidc_token
+                    )
+                    
                 sub_client = SubscriptionClient(credential)
                 for sub in sub_client.subscriptions.list():
                     if sub.subscription_id not in existing_ids:
@@ -634,7 +655,6 @@ class CloudDiscoveryService:
 
         provider = account.cloud_provider.lower()
         meta = account.cred_metadata
-        
         # Support both legacy and new schema during migration
         auth = meta.get("auth", {})
         identity = meta.get("identity", {})
@@ -667,29 +687,12 @@ class CloudDiscoveryService:
                     pass
 
             elif provider == "azure":
-                client_id = auth.get("client_id") or meta.get("client_id")
-                az_tenant_id = auth.get("tenant_id") or meta.get("tenant_id")
-                client_secret = auth.get("client_secret") or meta.get("client_secret")
-                
-                if not client_id or not az_tenant_id:
-                    raise ValueError("Missing Azure client_id or tenant_id in metadata")
-
-                # Decryption logic
-                if client_secret and client_secret.startswith("ENCRYPTED:"):
-                    import base64
-                    try:
-                        client_secret = base64.b64decode(client_secret.replace("ENCRYPTED:", "")).decode()
-                    except Exception:
-                        pass
-
-                from azure.identity import ClientSecretCredential
+                from core.cloud_auth.auth_provider import cloud_auth_provider
+                creds = await cloud_auth_provider.get_credentials(account_id)
                 from azure.mgmt.resource import SubscriptionClient
+                from services.cloud_services.azure import TokenCredentialAdapter
 
-                credential = ClientSecretCredential(
-                    tenant_id=az_tenant_id,
-                    client_id=client_id,
-                    client_secret=client_secret,
-                )
+                credential = TokenCredentialAdapter(creds["access_token"])
                 
                 if test_type == "read":
                     sub_client = SubscriptionClient(credential)
@@ -698,7 +701,8 @@ class CloudDiscoveryService:
                 else:
                     # Write test placeholder
                     pass
-
+            else:
+                raise ValueError(f"Unknown provider {provider}")
             setattr(account, status_field, "success")
             setattr(account, time_field, func.now())
             await self.repo.update(db, account)

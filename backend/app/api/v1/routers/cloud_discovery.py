@@ -366,30 +366,6 @@ async def check_duplicate_account(
     )
 
 
-# ═══════════════════════════════════════════════════════════════
-# 8. BULK SYNC (admin/cron)
-# ═══════════════════════════════════════════════════════════════
-
-@router.post("/sync-all-hierarchies")
-@registry(resource=RESOURCE.CLOUD_ACCOUNT, action=ACTION.UPDATE)
-async def sync_all_hierarchies(
-    tenant_id: str,
-    cloud_provider: Optional[str] = None,
-    db: AsyncSession = Depends(get_session),
-):
-    """Bulk hierarchy sync for all accounts in a tenant. Used by admin or cron job."""
-    result = await sync_service.sync_all_accounts_for_tenant(
-        tenant_id=tenant_id,
-        db=db,
-        cloud_provider=cloud_provider,
-    )
-
-    return ApiResponse.success(
-        message=f"Checked {result.total_accounts_checked} accounts, {result.changes_detected} changes",
-        data=result.model_dump(),
-    )
-
-
 @router.post("/{account_id}/test-connection")
 @registry(resource=RESOURCE.CLOUD_ACCOUNT, action=ACTION.READ)
 async def test_connection(
