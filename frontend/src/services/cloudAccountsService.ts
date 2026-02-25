@@ -25,6 +25,9 @@ export interface CloudAccountRow {
   updated_at: string;
   read_last_validated_at?: string | null;
   write_last_validated_at?: string | null;
+
+  mtd_cost?: number;
+  last_month_cost?: number;
 }
 
 

@@ -37,3 +37,6 @@ database:
 logging:
   level: "INFO"
   file_path: "logs/app.log"
+
+azure:
+  cost_api_version: "2023-11-01"

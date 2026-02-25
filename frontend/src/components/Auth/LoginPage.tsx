@@ -44,12 +44,12 @@ const LoginPage = () => {
 
             <Card sx={{ p: 5, width: 440, position: 'relative', zIndex: 1, background: 'linear-gradient(145deg, rgba(17,24,39,0.95) 0%, rgba(15,22,41,0.9) 100%)', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <Box sx={{ textAlign: 'center', mb: 4 }}>
-                    <Box sx={{ display: 'inline-flex', p: 2, borderRadius: '16px', background: 'linear-gradient(135deg, rgba(108,99,255,0.2) 0%, rgba(0,217,255,0.2) 100%)', mb: 2 }}>
-                        <Cloud sx={{ fontSize: 40, color: '#6C63FF' }} />
-                    </Box>
-                    <Typography variant="h4" sx={{ background: 'linear-gradient(135deg, #6C63FF, #00D9FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', mb: 0.5 }}>
-                        YakkAI
-                    </Typography>
+                    <Box
+                        component="img"
+                        src="/logo.png"
+                        alt="Portal Logo"
+                        sx={{ maxHeight: 120, maxWidth: '100%', mb: 2, objectFit: 'contain' }}
+                    />
                     <Typography variant="body2" color="text.secondary">Multi-Cloud Infrastructure Platform</Typography>
                 </Box>
 
