@@ -39,7 +39,7 @@ export interface DiscoveryResult {
     status: string;
     message: string;
     cloud_provider: string;
-    is_organization: boolean;
+    organization_detected: boolean;
     organization_id?: string;
     management_account_id?: string;
     management_account_name?: string;

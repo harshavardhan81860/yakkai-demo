@@ -213,7 +213,11 @@ const GlobalHeader = () => {
                     }}
                 >
                     <MenuItem value="USD"><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><AttachMoney fontSize="small" /> USD</Box></MenuItem>
-                    <MenuItem value="INR"><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><CurrencyRupee fontSize="small" /> INR</Box></MenuItem>
+                    <Tooltip title="Real-time currency conversion yet to be implemented" placement="left">
+                        <span>
+                            <MenuItem value="INR" disabled><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><CurrencyRupee fontSize="small" /> INR</Box></MenuItem>
+                        </span>
+                    </Tooltip>
                 </Select>
 
                 <IconButton onClick={() => updateSetting('theme', settings?.theme === 'dark' ? 'light' : 'dark')} sx={{ color: 'text.secondary' }}>

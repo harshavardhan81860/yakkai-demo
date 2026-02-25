@@ -26,6 +26,7 @@ from api.v1.routers.cloud_routes.azure import router as azure_router
 from api.v1.routers.cloud_discovery import router as cloud_discovery_router
 from api.v1.routers.notification_routes import router as notification_router
 from api.v1.routers.user_setting_routes import router as user_setting_router
+from api.v1.routers.finops_routes import router as finops_router
 
 from services.registry_validation_service import RegistryValidationService
 from db.engine import get_session
@@ -170,6 +171,7 @@ app.include_router(aws_router, prefix=api_prefix)
 app.include_router(azure_router, prefix=api_prefix)
 app.include_router(notification_router, prefix=api_prefix)
 app.include_router(user_setting_router, prefix=api_prefix)
+app.include_router(finops_router, prefix=api_prefix)
 
 
 #this is to validate all regitry is been created while application startup.

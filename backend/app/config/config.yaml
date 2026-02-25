@@ -15,16 +15,14 @@ keycloak:
   cloud_client_secret: "CloudSecret@123"
 
 # keycloak:
-#   realm: "suyasevai-dev"
-#   auth_server_url: "https://suyasevai.guhatek.org/keycloak"
-#   client_id: "backend-dev"
-#   client_secret: "syTw9tOkK0W2NXBG5k4PZgYSdxpbfhQ2"
-#   temp_password: "Welcome@123"
-
-#   cloud_client_id: "portal-cloud"   
-#   cloud_client_secret: "QGcFgRm1PZDCpycpyzG5939hm394wsM4"
+#   realm: yakkai-dev
+#   auth_server_url: https://yakkai.guhatek.org/keycloak
+#   client_id: backend-dev
+#   client_secret: lOZxgqKynryn8CTT2YLiDus66V6sP7LZ
+#   temp_password: Welcome@123
+#   cloud_client_id: portal-cloud 
+#   cloud_client_secret: jlAH4l1bP6O829KQAcI9Xn2Zcn2psZ89
   
-
 
 database:
   type: "postgres"
@@ -39,3 +37,6 @@ database:
 logging:
   level: "INFO"
   file_path: "logs/app.log"
+
+azure:
+  cost_api_version: "2023-11-01"

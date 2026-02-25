@@ -26,10 +26,9 @@ const Layout = () => {
         <div
           className="sidebar-header clickable"
           onClick={() => navigate("/")}
+          style={{ padding: '24px 16px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
         >
-          {/* <div className="sidebar-title-main">TanichAI</div> */}
-          <div className="sidebar-title-main">SuyaSevAI</div>
-          <div className="sidebar-title-sub">Cloud Self Service Portal</div>
+          <img src="/logo.png" alt="Portal Logo" style={{ maxHeight: '50px', maxWidth: '100%', objectFit: 'contain' }} />
         </div>
 
         {isActive && (

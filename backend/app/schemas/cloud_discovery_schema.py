@@ -60,7 +60,7 @@ class AWSCredentialsInput(BaseModel):
 class AzureCredentialsInput(BaseModel):
     tenant_id: str
     client_id: str
-    client_secret: str
+    client_secret: Optional[str] = None
 
     @field_validator("tenant_id", "client_id")
     @classmethod

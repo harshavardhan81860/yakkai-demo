@@ -83,55 +83,6 @@ class HierarchySyncService:
             changes=changes,
         )
 
-    # ═══════════════════════════════════════════════
-    #  Bulk sync for tenant
-    # ═══════════════════════════════════════════════
-
-    async def sync_all_accounts_for_tenant(
-        self,
-        tenant_id: str,
-        db: AsyncSession,
-        cloud_provider: Optional[str] = None,
-    ) -> BulkSyncResult:
-        """Sync all accounts in a tenant (for daily cron job)."""
-        accounts = await self.repo.list_accounts(db, tenant_id=tenant_id)
-        if cloud_provider:
-            accounts = [a for a in accounts if a.cloud_provider.lower() == cloud_provider.lower()]
-
-        all_changes: List[HierarchyChange] = []
-
-        for account in accounts:
-            provider = account.cloud_provider.lower()
-            change = None
-
-            try:
-                if provider == "aws":
-                    change = await self._detect_aws_changes(account, db)
-                elif provider == "azure":
-                    change = await self._detect_azure_changes(account, db)
-
-                # Update sync timestamp
-                meta = dict(account.cred_metadata)
-                meta["last_hierarchy_sync"] = datetime.now(timezone.utc).isoformat()
-                account.cred_metadata = meta
-                await self.repo.update(db, account)
-
-            except Exception as e:
-                logger.error(
-                    "Sync failed for account %s: %s", account.id, e
-                )
-
-            if change:
-                all_changes.append(change)
-
-        await db.commit()
-
-        return BulkSyncResult(
-            status="success",
-            total_accounts_checked=len(accounts),
-            changes_detected=len(all_changes),
-            changes=all_changes,
-        )
 
     # ═══════════════════════════════════════════════
     #  AWS change detection
@@ -297,18 +248,28 @@ class HierarchySyncService:
         client_id = parent_meta.get("client_id")
         client_secret = parent_meta.get("client_secret")
 
-        if not all([tenant_id, client_id, client_secret]):
+        if not all([tenant_id, client_id]):
             return None
 
         try:
-            from azure.identity import ClientSecretCredential
             from azure.mgmt.resource import SubscriptionClient
 
-            credential = ClientSecretCredential(
-                tenant_id=tenant_id,
-                client_id=client_id,
-                client_secret=client_secret,
-            )
+            if client_secret:
+                from azure.identity import ClientSecretCredential
+                credential = ClientSecretCredential(
+                    tenant_id=tenant_id,
+                    client_id=client_id,
+                    client_secret=client_secret,
+                )
+            else:
+                from azure.identity import ClientAssertionCredential
+                oidc_token = self._get_oidc_token()
+                credential = ClientAssertionCredential(
+                    tenant_id=tenant_id,
+                    client_id=client_id,
+                    func=lambda: oidc_token
+                )
+                
             sub_client = SubscriptionClient(credential)
 
             sub_id = meta.get("subscription_id")

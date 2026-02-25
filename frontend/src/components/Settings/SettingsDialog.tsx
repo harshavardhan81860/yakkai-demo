@@ -1,4 +1,4 @@
-import { Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography, IconButton, Divider, Switch, FormControlLabel, Select, MenuItem, Button } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography, IconButton, Divider, Switch, FormControlLabel, Select, MenuItem, Button, Tooltip } from '@mui/material';
 import { Close as CloseIcon, Brightness4, Brightness7, AttachMoney, CurrencyRupee } from '@mui/icons-material';
 import { useSettings } from '../../contexts/SettingsContext';
 
@@ -28,7 +28,11 @@ const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
                     <Typography variant="body1" fontWeight={600} color="text.primary">Currency</Typography>
                     <Select size="small" value={settings?.currency || 'USD'} onChange={(e) => updateSetting('currency', e.target.value)} sx={{ minWidth: 120 }}>
                         <MenuItem value="USD"><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><AttachMoney fontSize="small" /> USD</Box></MenuItem>
-                        <MenuItem value="INR"><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><CurrencyRupee fontSize="small" /> INR</Box></MenuItem>
+                        <Tooltip title="Real-time currency conversion yet to be implemented" placement="left">
+                            <span>
+                                <MenuItem value="INR" disabled><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><CurrencyRupee fontSize="small" /> INR</Box></MenuItem>
+                            </span>
+                        </Tooltip>
                     </Select>
                 </Box>
 

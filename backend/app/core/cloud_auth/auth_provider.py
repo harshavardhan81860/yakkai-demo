@@ -65,6 +65,7 @@ class CloudAuthProvider:
 
         # ── Inherited credential resolution ──
         # If this account inherits creds from its parent, walk up the chain.
+        original_account = account
         if meta.get("credential_source") == "inherited" and account.parent_id:
             account = await self._resolve_inherited_account(account)
             if not account:
@@ -78,7 +79,7 @@ class CloudAuthProvider:
             return await self._get_aws_credentials(account)
 
         if provider == "azure":
-            return await self._get_azure_token(account)
+            return await self._get_azure_token(account, original_account=original_account)
 
         raise ValueError(f"Unsupported cloud provider: {provider}")
 
@@ -186,11 +187,12 @@ class CloudAuthProvider:
     # -----------------------------
     # Azure handling
     # -----------------------------
-    async def _get_azure_token(self, account) -> Dict[str, Any]:
+    async def _get_azure_token(self, account, original_account=None) -> Dict[str, Any]:
         
         azure_cache = self._cache.setdefault("azure", {})
         
-        cache_key = account.id
+        # Cache per actual target subscription if applicable
+        cache_key = original_account.id if original_account else account.id
         now = time.time()
 
         cached = azure_cache.get(cache_key)
@@ -201,11 +203,14 @@ class CloudAuthProvider:
         oidc_token = self._get_oidc_token()
 
         meta = account.cred_metadata
+        orig_meta = original_account.cred_metadata if original_account else meta
         
         # Robust extraction
         tenant_id = self._extract_field(meta, [("auth", "tenant_id"), "tenant_id"])
         client_id = self._extract_field(meta, [("auth", "client_id"), "client_id"])
-        subscription_id = self._extract_field(meta, [("identity", "cloud_id"), "subscription_id"])
+        
+        # subscription_id should be extracted from the literal subscription account, not the inherited tenant
+        subscription_id = self._extract_field(orig_meta, [("identity", "cloud_id"), "subscription_id"])
 
         if not tenant_id or not client_id:
              raise ValueError(f"Missing Azure credentials in metadata for account {account.id}")

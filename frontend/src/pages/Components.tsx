@@ -18,6 +18,7 @@ import {
   fetchAzureImages, fetchAzureClusters, testAwsConnection, testAzureConnection
 } from "../services/cloudResourcesService";
 import DriftDashboardDialog from "./DriftDashboard";
+import FinOpsSyncButton from "../components/finops/FinOpsSyncButton";
 
 const Components = () => {
   const { tenantId } = useParams();
@@ -113,6 +114,7 @@ const Components = () => {
             <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
             <Box><Typography variant="caption" display="block" color="text.secondary">Provider</Typography><Chip label={cloudAccountType} size="small" color={cloudAccountType === 'AWS' ? 'warning' : 'info'} sx={{ fontWeight: 800, height: 20, fontSize: '0.65rem' }} /></Box>
           </Paper>
+          <FinOpsSyncButton type="account" entityId={cloudAccountId} entityName={accountName} />
           <Button
             variant="outlined"
             color="warning"

@@ -4,12 +4,13 @@ import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Chip, IconButton, Dialog,
   DialogTitle, DialogContent, DialogActions, LinearProgress, Tooltip,
-  Avatar, Paper, Stack, Snackbar, Alert, CircularProgress
+  Avatar, Paper, Stack, Snackbar, Alert, CircularProgress, Divider
 } from "@mui/material";
 import {
   Add, Cloud, CheckCircle, Block, Refresh, ArrowBack,
-  Edit, Hub, ArrowForward, Search, Folder, Science, Payments
+  Edit, Hub, ArrowForward, Search, Folder, Science, Payments, MoreVert
 } from "@mui/icons-material";
+import { Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
 import {
   fetchCloudAccounts, activateCloudAccount,
   deactivateCloudAccount, fetchActiveCiCredentials,
@@ -23,6 +24,8 @@ import AccountOnboardingDialog from "../components/CloudAccounts/AccountOnboardi
 import AccountEditDialog from "../components/CloudAccounts/AccountEditDialog";
 import { testConnection } from "../services/cloudDiscoveryService";
 import DriftDashboardDialog from "./DriftDashboard";
+import FinOpsSyncButton from "../components/finops/FinOpsSyncButton";
+import { useSettings } from "../contexts/SettingsContext";
 
 const getTimeAgo = (dateStr?: string | null) => {
   if (!dateStr) return "Never";
@@ -39,19 +42,25 @@ const getTimeAgo = (dateStr?: string | null) => {
   return `${diffInDays}d ago`;
 };
 
-const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoot, handlers }: {
+const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoot, handlers, currency }: {
   row: ExtendedCloudAccountRow,
   allAccounts: ExtendedCloudAccountRow[],
   level: number,
   expandedRoots: Record<string, boolean>,
   toggleRoot: (id: string) => void,
-  handlers: any
+  handlers: any,
+  currency: string
 }) => {
   const subs = allAccounts.filter(a => a.parent_id === row.id);
   const isExpanded = expandedRoots[row.id];
   const type = row.cred_metadata?.account_type || '';
   const isContainer = ['management', 'tenant', 'management_group', 'organizational_unit', 'root'].includes(type);
   const isRoot = level === 0;
+
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const openMenu = Boolean(anchorEl);
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
+  const handleMenuClose = () => setAnchorEl(null);
 
   // Type Label Logic
   let typeLabel = "Standalone";
@@ -66,6 +75,13 @@ const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoo
     else if (type === 'root') typeLabel = "Root Container";
     else if (type === 'member') typeLabel = "Account";
   }
+
+  // Format helper
+  const fmt = (num: number) => new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', {
+    style: 'currency',
+    currency: currency,
+    maximumFractionDigits: 2
+  }).format(num);
 
   return (
     <Fragment>
@@ -116,32 +132,12 @@ const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoo
         </TableCell>
         <TableCell>
           {!isContainer ? (
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>$0.00</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>{fmt(row.last_month_cost || 0)}</Typography>
           ) : <Typography variant="caption" color="text.secondary">-</Typography>}
         </TableCell>
         <TableCell>
           {!isContainer ? (
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>$0.00</Typography>
-          ) : <Typography variant="caption" color="text.secondary">-</Typography>}
-        </TableCell>
-        <TableCell>
-          {!isContainer ? (
-            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>$0.00</Typography>
-          ) : <Typography variant="caption" color="text.secondary">-</Typography>}
-        </TableCell>
-        <TableCell>
-          {!isContainer ? (
-            <Tooltip title="View Drift Dashboard & History">
-              <Button
-                size="small"
-                variant="outlined"
-                color="warning"
-                onClick={() => handlers.handleOpenDriftDashboard(row.id, row.name)}
-                sx={{ fontSize: '0.65rem', py: 0.5, minWidth: 0 }}
-              >
-                Detect Drift
-              </Button>
-            </Tooltip>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>{fmt(row.mtd_cost || 0)}</Typography>
           ) : <Typography variant="caption" color="text.secondary">-</Typography>}
         </TableCell>
         <TableCell align="center">
@@ -169,31 +165,49 @@ const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoo
           </Stack>
         </TableCell>
         <TableCell align="right">
-          <Stack direction="row" spacing={1} justifyContent="flex-end">
-            <Tooltip title="Edit Account">
-              <IconButton size="small" onClick={() => handlers.handleEditAccount(row)}>
-                <Edit fontSize="small" />
-              </IconButton>
-            </Tooltip>
+          <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
             {isRoot && (
-              <Tooltip title="Cloud Discovery / Sync">
-                <IconButton size="small" onClick={() => handlers.openDiscoveryForAccount(row)} sx={{ color: '#FF9900' }}>
-                  <Search fontSize="small" />
-                </IconButton>
-              </Tooltip>
+              <Button size="small" variant="contained" color="warning" onClick={() => handlers.openDiscoveryForAccount(row)} startIcon={<Search fontSize="small" />} sx={{ textTransform: 'none', py: 0.2 }}>
+                Discovery
+              </Button>
             )}
             {!isContainer && (
-              <Tooltip title="View Components">
-                <IconButton size="small" onClick={() => handlers.goToComponents(row)} color="primary">
-                  <Hub fontSize="small" />
-                </IconButton>
-              </Tooltip>
+              <Button size="small" variant="contained" color="primary" onClick={() => handlers.goToComponents(row)} startIcon={<Hub fontSize="small" />} sx={{ textTransform: 'none', py: 0.2 }}>
+                Resources
+              </Button>
             )}
-            <Tooltip title={row.is_active ? "Deactivate" : "Activate"}>
-              <IconButton size="small" color={row.is_active ? "success" : "default"} onClick={() => handlers.handleToggleActive(row)}>
-                {row.is_active ? <CheckCircle fontSize="small" /> : <Block fontSize="small" />}
+
+            <Tooltip title="Actions">
+              <IconButton size="small" onClick={handleMenuClick} sx={{ ml: 1, bgcolor: 'rgba(255,255,255,0.05)' }}>
+                <MoreVert fontSize="small" />
               </IconButton>
             </Tooltip>
+
+            <Menu anchorEl={anchorEl} open={openMenu} onClose={handleMenuClose} PaperProps={{ sx: { bgcolor: '#1e1e1e', backgroundImage: 'none', border: '1px solid rgba(255,255,255,0.1)' } }}>
+              <MenuItem onClick={() => { handleMenuClose(); handlers.handleEditAccount(row); }}>
+                <ListItemIcon><Edit fontSize="small" /></ListItemIcon>
+                <ListItemText>Edit Account Details</ListItemText>
+              </MenuItem>
+              <MenuItem onClick={() => { handleMenuClose(); handlers.handleToggleActive(row); }}>
+                <ListItemIcon>{row.is_active ? <Block fontSize="small" color="error" /> : <CheckCircle fontSize="small" color="success" />}</ListItemIcon>
+                <ListItemText>{row.is_active ? "Deactivate Account" : "Activate Account"}</ListItemText>
+              </MenuItem>
+
+              {!isContainer && <Divider sx={{ my: 1, borderColor: 'rgba(255,255,255,0.05)' }} />}
+
+              {!isContainer && (
+                <MenuItem onClick={() => { handleMenuClose(); handlers.handleOpenDriftDashboard(row.id, row.name); }}>
+                  <ListItemIcon><Science fontSize="small" color="warning" /></ListItemIcon>
+                  <ListItemText>Drift Detection</ListItemText>
+                </MenuItem>
+              )}
+
+              {!isContainer && (
+                <Box sx={{ px: 2, py: 1 }}>
+                  <FinOpsSyncButton type="account" entityId={row.id.toString()} entityName={row.name} iconOnly={false} />
+                </Box>
+              )}
+            </Menu>
           </Stack>
         </TableCell>
       </TableRow>
@@ -206,6 +220,7 @@ const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoo
           expandedRoots={expandedRoots}
           toggleRoot={toggleRoot}
           handlers={handlers}
+          currency={currency}
         />
       ))}
     </Fragment>
@@ -235,6 +250,9 @@ const CloudAccounts = () => {
 
   const [expandedRoots, setExpandedRoots] = useState<Record<string, boolean>>({});
   const [msg, setMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  const { settings } = useSettings();
+  const currency = settings?.currency || 'USD';
 
   // Drift Dashboard Popup State
   const [driftPopupOpen, setDriftPopupOpen] = useState(false);
@@ -370,12 +388,10 @@ const CloudAccounts = () => {
                 <TableCell sx={{ minWidth: 200 }}>Name / ID</TableCell>
                 <TableCell sx={{ width: 80 }}>Provider</TableCell>
                 <TableCell sx={{ width: 100 }}>Type</TableCell>
-                <TableCell sx={{ minWidth: 100 }}>Last Billing Amount</TableCell>
-                <TableCell sx={{ minWidth: 100 }}>Unbilled Usage Cost</TableCell>
-                <TableCell sx={{ minWidth: 80 }}>Projected Cost</TableCell>
-                <TableCell sx={{ width: 100 }}>Drift Check</TableCell>
+                <TableCell sx={{ minWidth: 100 }}>Last Month Cost</TableCell>
+                <TableCell sx={{ minWidth: 100 }}>MTD Cost</TableCell>
                 <TableCell align="center" sx={{ width: 120 }}>Health Checks</TableCell>
-                <TableCell align="right" sx={{ width: 140 }}>Actions</TableCell>
+                <TableCell align="right" sx={{ width: 180 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -395,6 +411,7 @@ const CloudAccounts = () => {
                     handleToggleActive,
                     handleOpenDriftDashboard
                   }}
+                  currency={currency}
                 />
               ))}
               {accounts.length === 0 && !loading && (

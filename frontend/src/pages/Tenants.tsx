@@ -15,6 +15,7 @@ import {
 } from "../services/tenantsService";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
 import GenericResultDialog from "../components/Common/GenericResultDialog";
+import FinOpsSyncButton from "../components/finops/FinOpsSyncButton";
 
 const Tenants = () => {
   const navigate = useNavigate();
@@ -174,6 +175,9 @@ const Tenants = () => {
                     >
                       FinOps
                     </Button>
+                  </Stack>
+                  <Stack direction="row" spacing={1}>
+                    <FinOpsSyncButton type="tenant" entityId={t.id.toString()} entityName={t.display_name} />
                   </Stack>
                   <Stack direction="row" spacing={1}>
                     <Button

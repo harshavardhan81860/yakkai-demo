@@ -29,6 +29,8 @@ class Settings(BaseModel):
     DB_USER: str
     DB_PASSWORD: str
 
+    AZURE_COST_API_VERSION: str
+
 
 def load_config(path: Optional[str] = None) -> Settings:
     config_path = path or "config/config.yaml"
@@ -40,11 +42,12 @@ def load_config(path: Optional[str] = None) -> Settings:
         data = yaml.safe_load(f)
 
     app_data = data["app"]
-    keycloak = data["keycloak"]
-    database = data["database"]
+    keycloak = data.get("keycloak", {})
+    database = data.get("database", {})
+    azure_cfg = data.get("azure", {})
 
-    realm = keycloak["realm"]
-    auth_server_url = keycloak["auth_server_url"]
+    realm = keycloak.get("realm", "yakkai")
+    auth_server_url = keycloak.get("auth_server_url", "")
 
     return Settings(
         app=AppSettings(
@@ -63,8 +66,9 @@ def load_config(path: Optional[str] = None) -> Settings:
         KEYCLOAK_ISSUER=f"{auth_server_url}/realms/{realm}",
         DB_TYPE=database["type"],
         DB_HOST=database["host"],
-        DB_PORT=database["port"],
-        DB_NAME=database["name"],
-        DB_USER=database["username"],
-        DB_PASSWORD=database["password"],
+        DB_PORT=database.get("port", 5432),
+        DB_NAME=database.get("name", "postgres"),
+        DB_USER=database.get("username", "postgres"),
+        DB_PASSWORD=database.get("password", "postgres"),
+        AZURE_COST_API_VERSION=azure_cfg.get("cost_api_version", "2023-11-01")
     )
