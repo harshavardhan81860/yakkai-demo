@@ -149,6 +149,7 @@ async def get_instances(account_id: str, region: str) -> List[Dict]:
                         "public_ip": inst.get("PublicIpAddress"),
                         "launch_time": inst["LaunchTime"].isoformat(),
                         "image_id": inst["ImageId"],
+                        "_raw": inst
                     })
 
     except ClientError as e:
@@ -165,10 +166,9 @@ async def get_images(account_id: str, region: str) -> List[Dict]:
     ec2 = await _get_ec2_client(account_id, region)
 
     try:
-        # Only images owned by self or shared with me
+        # Only images owned by self
         response = ec2.describe_images(
-            Owners=["self"],
-            ExecutableUsers=["self"]  # include images shared with this account
+            Owners=["self"]
         )
 
         images = []
@@ -181,6 +181,7 @@ async def get_images(account_id: str, region: str) -> List[Dict]:
                 "creation_date": img.get("CreationDate"),
                 "architecture": img.get("Architecture"),
                 "platform": img.get("PlatformDetails"),
+                "_raw": img
             })
 
         # Sort by creation date (newest first) optionally
@@ -215,6 +216,7 @@ async def get_clusters(account_id: str, region: str) -> List[Dict]:
                 "version": detail["version"],
                 "endpoint": detail["endpoint"],
                 "created_at": detail["createdAt"].isoformat(),
+                "_raw": detail
             })
 
         return clusters

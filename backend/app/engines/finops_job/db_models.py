@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Date, Numeric, DateTime, Enum, JSON
+from sqlalchemy import Column, String, Date, Numeric, DateTime, JSON
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.schema import MetaData
 from sqlalchemy.ext.declarative import declarative_base
@@ -49,7 +49,7 @@ class FetchJob(FinopsBase):
     start_date = Column(Date, nullable=False, index=True)
     end_date = Column(Date, nullable=False, index=True)
     
-    status = Column(Enum(JobStatus), default=JobStatus.PENDING, index=True)
+    status = Column(String, default="PENDING", index=True)
     
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     started_at = Column(DateTime(timezone=True), nullable=True)

@@ -26,7 +26,7 @@ from sqlalchemy import text, delete
 from sqlalchemy.future import select
 
 from db.engine import engine, async_session
-from engines.finops_job.db_models import FetchJob, JobStatus, DailyCost
+from engines.finops_job.db_models import FetchJob, DailyCost
 from models.cloud_account import CloudAccount
 from services.finops.aws_cost_service import aws_cost_service
 from services.finops.azure_cost_service import azure_cost_service
@@ -98,14 +98,14 @@ async def execute_job(session: AsyncSession, job: FetchJob):
             session.add_all(db_costs)
             
         # 4. Success Completion
-        job.status = JobStatus.COMPLETED
+        job.status = "COMPLETED"
         job.completed_at = datetime.now(timezone.utc)
         job.error_log = f"Successfully fetched and inserted {len(costs)} records."
         logger.info(f"Job {job.id} completed. Inserted {len(costs)} records.")
         
     except Exception as e:
         logger.error(f"Job {job.id} failed: {e}\n{traceback.format_exc()}")
-        job.status = JobStatus.FAILED
+        job.status = "FAILED"
         job.completed_at = datetime.now(timezone.utc)
         job.error_log = str(e)
 

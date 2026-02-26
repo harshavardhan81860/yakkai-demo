@@ -15,7 +15,6 @@ import {
 } from "../services/tenantsService";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
 import GenericResultDialog from "../components/Common/GenericResultDialog";
-import FinOpsSyncButton from "../components/finops/FinOpsSyncButton";
 
 const Tenants = () => {
   const navigate = useNavigate();
@@ -159,25 +158,11 @@ const Tenants = () => {
                       fullWidth
                       size="small"
                       startIcon={<Visibility sx={{ fontSize: 16 }} />}
-                      onClick={() => navigate(`/tenants/${t.id}/cloud-accounts`)}
+                      onClick={() => navigate(`/tenants/${t.id}/dashboard`, { state: { tenantName: t.display_name || t.name } })}
                       sx={{ borderRadius: 1.5, fontWeight: 700, fontSize: '0.7rem', py: 0.5 }}
                     >
-                      Workplace
+                      Workspace
                     </Button>
-                    <Button
-                      variant="contained"
-                      fullWidth
-                      color="warning"
-                      size="small"
-                      startIcon={<AccountBalance sx={{ fontSize: 16 }} />}
-                      onClick={() => navigate(`/tenants/${t.id}/finops`)}
-                      sx={{ borderRadius: 1.5, fontWeight: 700, fontSize: '0.7rem', py: 0.5 }}
-                    >
-                      FinOps
-                    </Button>
-                  </Stack>
-                  <Stack direction="row" spacing={1}>
-                    <FinOpsSyncButton type="tenant" entityId={t.id.toString()} entityName={t.display_name} />
                   </Stack>
                   <Stack direction="row" spacing={1}>
                     <Button

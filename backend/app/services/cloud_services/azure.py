@@ -115,6 +115,7 @@ async def get_instances(account_id: str, region: str) -> List[Dict]:
             "location": vm.location,
             "size": vm.hardware_profile.vm_size if vm.hardware_profile else None,
             "provisioning_state": vm.provisioning_state,
+            "_raw": vm.as_dict() if hasattr(vm, 'as_dict') else {"id": vm.id, "name": vm.name}
         })
     return results
 
@@ -136,6 +137,7 @@ async def get_images(account_id: str, region: str) -> List[Dict]:
                     "offer": offer.name,
                     "sku": sku.name,
                     "region": region,
+                    "_raw": sku.as_dict() if hasattr(sku, 'as_dict') else {"name": sku.name}
                 })
     return images
 
@@ -154,8 +156,10 @@ async def get_clusters(account_id: str, region: str) -> List[Dict]:
             "name": cluster.name,
             "location": cluster.location,
             "kubernetes_version": cluster.kubernetes_version,
-            "dns_prefix": cluster.dns_prefix,
+            "kube_version": cluster.kubernetes_version,
             "provisioning_state": cluster.provisioning_state,
+            "fqdn": cluster.fqdn,
+            "_raw": cluster.as_dict() if hasattr(cluster, 'as_dict') else {"id": cluster.id, "name": cluster.name}
         })
     return clusters
 

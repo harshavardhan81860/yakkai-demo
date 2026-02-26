@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
     Box, Typography, Grid, Card, Button, Stack, Paper, Select,
     MenuItem, FormControl, InputLabel, CircularProgress, Tooltip,
@@ -8,7 +8,7 @@ import {
 } from "@mui/material";
 import {
     ArrowBack, Refresh, Payments, TrendingUp,
-    DonutLarge, InsertChartOutlined, Receipt, CloudOff
+    DonutLarge, InsertChartOutlined, Receipt, CloudOff, Storage as StorageIcon
 } from "@mui/icons-material";
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -16,14 +16,19 @@ import {
 } from "recharts";
 import { fetchCloudAccounts, CloudAccountRow } from "../services/cloudAccountsService";
 import { finopsApi } from "../api/finops";
+import api from '../services/api';
 import Breadcrumbs from "../components/Common/Breadcrumbs";
 import { useSettings } from "../contexts/SettingsContext";
+import { useRole } from "../contexts/RoleContext";
 
 const FinOpsDashboard = () => {
     const { tenantId } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
+    const { activeTenant } = useRole();
     const { settings } = useSettings();
 
+    const tenantName = activeTenant?.tenant_name || (location.state as any)?.tenantName || "Tenant";
     const [accounts, setAccounts] = useState<CloudAccountRow[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -154,9 +159,18 @@ const FinOpsDashboard = () => {
                     <Typography variant="h4" sx={{ fontWeight: 800 }}>Cost Analytics</Typography>
                     <Typography variant="body2" color="text.secondary">Unified financial visibility across cloud environments</Typography>
                 </Box>
-                <Stack direction="row" spacing={1.5}>
-                    <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate(`/tenants/${tenantId}/cloud-accounts`)}>Back</Button>
-                    <Button variant="contained" onClick={loadData} startIcon={<Refresh />} disabled={loading}>Refresh</Button>
+                <Stack direction="row" spacing={2} alignItems="center">
+                    <Paper variant="outlined" sx={{ p: 1.5, px: 2, display: 'flex', gap: 3, bgcolor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                        <Box>
+                            <Typography variant="caption" display="block" color="text.secondary">Tenant Name</Typography>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#F59E0B' }}>{tenantName}</Typography>
+                        </Box>
+                    </Paper>
+                    <Stack direction="row" spacing={1.5}>
+                        <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate(`/tenants/${tenantId}/dashboard`)}>Workspace</Button>
+                        <Button variant="outlined" startIcon={<StorageIcon />} color="info" onClick={() => navigate(`/tenants/${tenantId}/resources`)}>Resource Explorer</Button>
+                        <Button variant="contained" onClick={loadData} startIcon={<Refresh />} disabled={loading}>Refresh</Button>
+                    </Stack>
                 </Stack>
             </Box>
 
