@@ -13,6 +13,8 @@ import Tenants from "./pages/Tenants";
 import CloudAccounts from "./pages/CloudAccounts";
 import Components from "./pages/Components";
 import FinOpsDashboard from "./pages/FinOpsDashboard";
+import TenantResourceExplorer from "./pages/TenantResourceExplorer";
+import TenantDashboard from "./pages/TenantDashboard";
 import TenantUsers from "./pages/TenantUsers";
 import CiCredentials from "./pages/CiCredentials";
 import Roles from "./pages/Roles";
@@ -115,8 +117,13 @@ function App() {
                     </RoleGuard>
                 } />
 
-                {/* ── Cloud Accounts (tenant-scoped) ── */}
-                <Route path="/tenants/:tenantId" element={<Navigate to="cloud-accounts" replace />} />
+                {/* ── Workspace (tenant-scoped) ── */}
+                <Route path="/tenants/:tenantId" element={<Navigate to="dashboard" replace />} />
+                <Route path="/tenants/:tenantId/dashboard" element={
+                    <RoleGuard allowed={ALL_ROLES}>
+                        <TenantDashboard />
+                    </RoleGuard>
+                } />
                 <Route path="/tenants/:tenantId/cloud-accounts" element={
                     <RoleGuard allowed={ALL_ROLES}>
                         <CloudAccounts />
@@ -125,6 +132,12 @@ function App() {
                 <Route path="/tenants/:tenantId/cloud-accounts/:accountId/components" element={
                     <RoleGuard allowed={ALL_ROLES}>
                         <Components />
+                    </RoleGuard>
+                } />
+
+                <Route path="/tenants/:tenantId/resources" element={
+                    <RoleGuard allowed={ALL_ROLES}>
+                        <TenantResourceExplorer />
                     </RoleGuard>
                 } />
                 <Route path="/tenants/:tenantId/finops" element={

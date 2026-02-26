@@ -1,5 +1,5 @@
 import React, { useEffect, useState, Fragment } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   Box, Typography, Button, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Chip, IconButton, Dialog,
@@ -26,6 +26,8 @@ import { testConnection } from "../services/cloudDiscoveryService";
 import DriftDashboardDialog from "./DriftDashboard";
 import FinOpsSyncButton from "../components/finops/FinOpsSyncButton";
 import { useSettings } from "../contexts/SettingsContext";
+import { useRole } from "../contexts/RoleContext";
+import api from "../services/api";
 
 const getTimeAgo = (dateStr?: string | null) => {
   if (!dateStr) return "Never";
@@ -236,8 +238,10 @@ interface ExtendedCloudAccountRow extends CloudAccountRow {
 const CloudAccounts = () => {
   const { tenantId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { activeTenant } = useRole();
+  const tenantName = activeTenant?.tenant_name || (location.state as any)?.tenantName || "Tenant";
 
-  const [tenantName, setTenantName] = useState<string>("");
   const [accounts, setAccounts] = useState<ExtendedCloudAccountRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -264,9 +268,6 @@ const CloudAccounts = () => {
     try {
       const data = await fetchCloudAccounts(tenantId as string);
       setAccounts(data.map(a => ({ ...a, drift_status: 'synced' })));
-      if (data.length > 0) {
-        setTenantName(data[0].tenant_id || "Tenant");
-      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -291,6 +292,7 @@ const CloudAccounts = () => {
         cloudAccountId: account.id,
         tenantName: tenantName,
         accountName: account.name,
+        nativeAccountId: account.cred_metadata?.account_id || account.cred_metadata?.subscription_id || account.cred_metadata?.management_group_id || account.cred_metadata?.organizational_unit_id
       },
     });
   };
@@ -351,18 +353,26 @@ const CloudAccounts = () => {
           <Typography variant="h4" sx={{ fontWeight: 800 }}>Cloud Accounts</Typography>
           <Typography variant="body2" color="text.secondary">Hierarchical environments for your tenant clusters</Typography>
         </Box>
-        <Stack direction="row" spacing={1.5}>
-          <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate("/tenants")}>Back</Button>
-          <Button variant="outlined" color="warning" startIcon={<Payments />} onClick={() => navigate(`/tenants/${tenantId}/finops`)}>FinOps Dashboard</Button>
-          <Button variant="outlined" onClick={loadAccounts}><Refresh /></Button>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={openOnboarding}
-            sx={{ background: 'linear-gradient(135deg,#6C63FF,#4A42D4)' }}
-          >
-            Add Account
-          </Button>
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Paper variant="outlined" sx={{ p: 1.5, px: 2, display: 'flex', gap: 3, bgcolor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+            <Box>
+              <Typography variant="caption" display="block" color="text.secondary">Tenant Name</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#F59E0B' }}>{tenantName}</Typography>
+            </Box>
+          </Paper>
+          <Stack direction="row" spacing={1.5}>
+            <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate(`/tenants/${tenantId}/dashboard`)}>Workspace</Button>
+            <FinOpsSyncButton type="tenant" entityId={tenantId as string} entityName={tenantName} />
+            <Button variant="outlined" onClick={loadAccounts}><Refresh /></Button>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={openOnboarding}
+              sx={{ background: 'linear-gradient(135deg,#6C63FF,#4A42D4)' }}
+            >
+              Add Account
+            </Button>
+          </Stack>
         </Stack>
       </Box>
 

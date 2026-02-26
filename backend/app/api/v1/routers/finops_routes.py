@@ -122,7 +122,7 @@ async def trigger_tenant_sync(
     """
     Bulk inserts PENDING jobs for ALL active cloud accounts belonging to a Tenant.
     """
-    from engines.finops_job.db_models import FetchJob, JobStatus
+    from engines.finops_job.db_models import FetchJob
     from models.cloud_account import CloudAccount
     from sqlalchemy import select
     
@@ -155,7 +155,7 @@ async def trigger_tenant_sync(
             account_id=acc_id,
             start_date=parsed_start,
             end_date=parsed_end,
-            status=JobStatus.PENDING
+            status="PENDING"
         ))
             
     db.add_all(new_jobs)
@@ -176,7 +176,7 @@ async def trigger_account_sync(
     The Standalone Engine will wake up and execute these from the DB.
     Ideal for Delta Syncs (yesterday only) OR Historic Backfills (last 365 days).
     """
-    from engines.finops_job.db_models import FetchJob, JobStatus
+    from engines.finops_job.db_models import FetchJob
     
     parsed_start = date.fromisoformat(start_date)
     parsed_end = date.fromisoformat(end_date)
@@ -193,7 +193,7 @@ async def trigger_account_sync(
         account_id=account_id,
         start_date=parsed_start,
         end_date=parsed_end,
-        status=JobStatus.PENDING
+        status="PENDING"
     )]
         
     db.add_all(new_jobs)

@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 from db.engine import engine, async_session
 from sqlalchemy.future import select
 from models.cloud_account import CloudAccount
-from engines.finops_job.db_models import FetchJob, JobStatus
+from engines.finops_job.db_models import FetchJob
 from core.config import load_config
 import logging
 
@@ -35,7 +35,7 @@ async def inject_test_jobs():
         new_job = FetchJob(
             account_id=account.id,
             target_date=target_date,
-            status=JobStatus.PENDING
+            status="PENDING"
         )
         session.add(new_job)
         await session.commit()

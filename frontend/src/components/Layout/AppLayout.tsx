@@ -7,7 +7,7 @@ import {
 import {
     Assignment, CheckCircle, People, BarChart, Logout, Cloud,
     Menu as MenuIcon, Category, Policy, Inventory,
-    Business, GroupWork, Security, Lan, Terminal, RocketLaunch
+    Business, GroupWork, Security, Lan, Terminal, RocketLaunch, Storage
 } from '@mui/icons-material';
 import { useAuth } from '../../auth/AuthProvider';
 import { useRole } from '../../contexts/RoleContext';
@@ -100,8 +100,9 @@ const getTenantMenuItems = (tenantId: string, roleName: string | null): MenuItem
     const items: MenuItemType[] = [
         // ── Workspace ──
         { header: 'Workspace' },
-        { text: 'Cloud Accounts', icon: <Cloud />, path: `${base}/cloud-accounts` },
+        { text: 'Resource Explorer', icon: <Storage />, path: `${base}/resources` },
         { text: 'Cost Analytics', icon: <BarChart />, path: `${base}/finops` },
+        { text: 'Cloud Accounts', icon: <Cloud />, path: `${base}/cloud-accounts` },
         { divider: true },
     ];
 

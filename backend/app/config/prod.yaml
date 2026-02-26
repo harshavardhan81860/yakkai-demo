@@ -1,0 +1,34 @@
+
+app:
+  name: "cloud-selfservice-backend"
+  environment: "dev"
+  version: "v1"
+
+keycloak:
+  realm: yakkai-dev
+  auth_server_url: https://yakkai.guhatek.org/keycloak
+  client_id: backend-dev
+  client_secret: lOZxgqKynryn8CTT2YLiDus66V6sP7LZ
+  temp_password: Welcome@123
+  cloud_client_id: portal-cloud 
+  cloud_client_secret: jlAH4l1bP6O829KQAcI9Xn2Zcn2psZ89
+  
+
+database:
+  type: "postgres"
+  host: "127.0.0.1"
+  port: 54333
+  name: "suyasevai_dev"
+  username: "suyasevai_user"
+  password: "LocalDB"
+  max_connections: 10
+  min_connections: 2
+
+
+
+logging:
+  level: "INFO"
+  file_path: "logs/app.log"
+
+azure:
+  cost_api_version: "2023-11-01"

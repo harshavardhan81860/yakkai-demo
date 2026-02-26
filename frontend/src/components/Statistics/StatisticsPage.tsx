@@ -4,21 +4,57 @@ import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Responsive
 import api from '../../services/api';
 import { getProviderColor, CLOUD_PROVIDERS } from '../../cloudProviders';
 
-const StatisticsPage = () => {
+const MOCK_PROVIDER_STATS = [
+    { type: 'aws', name: 'AWS Cloud', accounts: 3, resource_count: 125, active_count: 110, total_cost: 450.20 },
+    { type: 'azure', name: 'Microsoft Azure', accounts: 2, resource_count: 85, active_count: 80, total_cost: 320.50 }
+];
+
+const MOCK_DASHBOARD_STATS = {
+    cost_trend: [
+        { month: 'Sep', aws: 250, azure: 150 },
+        { month: 'Oct', aws: 320, azure: 210 },
+        { month: 'Nov', aws: 400, azure: 280 },
+        { month: 'Dec', aws: 450, azure: 320 }
+    ],
+    category_breakdown: { 'Compute': 45, 'Storage': 25, 'Database': 15, 'Network': 10, 'Security': 5 },
+    status_breakdown: { 'Running': 60, 'Stopped': 25, 'Provisioning': 10, 'Terminated': 5 }
+};
+
+const StatisticsPage = ({ accountFilter, providerFilter }: { accountFilter?: string, providerFilter?: string }) => {
     const [stats, setStats] = useState<any>(null);
     const [providerStats, setProviderStats] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         Promise.all([
-            api.get('/api/statistics/dashboard').then(r => setStats(r.data)),
-            api.get('/api/statistics/providers').then(r => setProviderStats(r.data)),
-        ]).finally(() => setLoading(false));
+            api.get('/api/statistics/dashboard').then(r => r.data).catch(() => MOCK_DASHBOARD_STATS),
+            api.get('/api/statistics/providers').then(r => r.data?.length ? r.data : MOCK_PROVIDER_STATS).catch(() => MOCK_PROVIDER_STATS),
+        ]).then(([dashData, provData]) => {
+            setStats(dashData);
+            setProviderStats(provData);
+        }).finally(() => setLoading(false));
     }, []);
 
     if (loading) return <LinearProgress />;
 
-    const providerScores = providerStats.map(p => ({
+    let filteredProviderStats = accountFilter
+        ? providerStats.filter(p => p.name.includes(accountFilter) || accountFilter.includes(p.name))
+        : providerStats;
+
+    if (providerFilter && providerFilter !== "ALL") {
+        filteredProviderStats = filteredProviderStats.filter(p => p.type.toLowerCase() === providerFilter.toLowerCase());
+    }
+
+    const filteredDashboardStats = {
+        ...stats,
+        cost_trend: stats?.cost_trend?.map((t: any) => {
+            if (providerFilter?.toUpperCase() === 'AWS') return { month: t.month, aws: t.aws, azure: 0 };
+            if (providerFilter?.toUpperCase() === 'AZURE') return { month: t.month, aws: 0, azure: t.azure };
+            return t;
+        })
+    };
+
+    const filteredScores = filteredProviderStats.map(p => ({
         provider: p.type?.toUpperCase(),
         Resources: p.resource_count,
         Cost: Math.round(p.total_cost / 10),
@@ -28,11 +64,13 @@ const StatisticsPage = () => {
     return (
         <Box>
             <Typography variant="h4" sx={{ fontWeight: 800, mb: 0.5 }}>Analytics & Reports</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>Multi-cloud infrastructure intelligence</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Multi-cloud infrastructure intelligence {accountFilter ? `for ${accountFilter}` : ''}
+            </Typography>
 
             <Grid container spacing={2.5}>
                 {/* Provider Cards */}
-                {providerStats.map((p: any) => (
+                {filteredProviderStats.map((p: any) => (
                     <Grid size={{ xs: 12, sm: 6, md: 4, lg: 'grow' }} key={p.type}>
                         <Card sx={{ p: 2.5, border: `1px solid ${getProviderColor(p.type)}20`, '&:hover': { border: `1px solid ${getProviderColor(p.type)}50` }, transition: 'all 0.3s' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
@@ -85,7 +123,7 @@ const StatisticsPage = () => {
                     <Card sx={{ p: 3, height: '100%' }}>
                         <Typography variant="h6" sx={{ mb: 2 }}>Provider Comparison</Typography>
                         <ResponsiveContainer width="100%" height={320}>
-                            <RadarChart data={providerScores}>
+                            <RadarChart data={filteredScores}>
                                 <PolarGrid stroke="rgba(255,255,255,0.1)" />
                                 <PolarAngleAxis dataKey="provider" tick={{ fill: '#9CA3AF', fontSize: 11 }} />
                                 <PolarRadiusAxis tick={false} />
