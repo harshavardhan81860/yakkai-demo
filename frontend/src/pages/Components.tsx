@@ -29,7 +29,7 @@ import {
   fetchAzureImages, fetchAzureClusters, testAwsConnection, testAzureConnection
 } from "../services/cloudResourcesService";
 import DriftDashboardDialog from "./DriftDashboard";
-import FinOpsSyncButton from "../components/finops/FinOpsSyncButton";
+import UnifiedSyncButton from "../components/common/UnifiedSyncButton";
 import CachedInventory from "./CachedInventory";
 
 const Components = () => {
@@ -209,7 +209,16 @@ const Components = () => {
     <Box sx={{ px: 3, pb: 4 }}>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800 }}>Resource Explorer</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="h4" sx={{ fontWeight: 800 }}>Resource Explorer</Typography>
+            <Chip
+              label="Cloud Account View"
+              size="small"
+              color="info"
+              variant="outlined"
+              sx={{ fontWeight: 700, fontSize: '0.7rem', height: 24 }}
+            />
+          </Box>
           <Typography variant="body2" color="text.secondary">Inventory optimization and drift detection</Typography>
         </Box>
         <Stack direction="row" spacing={2} alignItems="center">
@@ -227,7 +236,7 @@ const Components = () => {
               </Typography>
             </Box>
           </Paper>
-          <FinOpsSyncButton type="account" entityId={cloudAccountId} entityName={accountName} />
+          <UnifiedSyncButton type="account" entityId={cloudAccountId} entityName={accountName} />
           <Button
             variant="outlined"
             color="warning"
@@ -256,18 +265,11 @@ const Components = () => {
       </Box>
 
       {tabIndex === 0 && (
-        <>
-          <Paper sx={{ mb: 4, p: 2, display: 'flex', alignItems: 'center', gap: 2, bgcolor: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: 2 }}>
-            <Warning sx={{ color: '#F59E0B', fontSize: 32 }} />
-            <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#F59E0B' }}>Simulation / Building Phase</Typography>
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                This section will not have any data right now as it is still in the building phase. Please select the <strong>Live Cloud Explorer</strong> tab above for real-time cloud data.
-              </Typography>
-            </Box>
-          </Paper>
-          <CachedInventory accountName={accountName} />
-        </>
+        <CachedInventory
+          accountName={accountName}
+          tenantId={tenantId}
+          cloudAccountId={cloudAccountId}
+        />
       )}
 
       {tabIndex === 1 && (

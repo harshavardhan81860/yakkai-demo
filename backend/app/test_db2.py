@@ -1,10 +1,10 @@
 import asyncio
-from db.engine import async_session_maker
+from db.engine import async_session
 from models.user_setting import UserSetting
 import uuid
 
 async def test():
-    async with async_session_maker() as session:
+    async with async_session() as session:
         setting = UserSetting(user_id=uuid.UUID("bf095bdd-9540-4574-9085-93973ce0fd5e"))
         session.add(setting)
         try:

@@ -8,9 +8,9 @@ import {
 } from "@mui/material";
 import {
   Add, Cloud, CheckCircle, Block, Refresh, ArrowBack,
-  Edit, Hub, ArrowForward, Search, Folder, Science, Payments, MoreVert
+  Edit, Hub, Search, Folder, Science, MoreVert, AccountTree
 } from "@mui/icons-material";
-import { Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
+import { Menu, MenuItem, ListItemIcon, ListItemText, Collapse } from "@mui/material";
 import {
   fetchCloudAccounts, activateCloudAccount,
   deactivateCloudAccount, fetchActiveCiCredentials,
@@ -24,14 +24,16 @@ import AccountOnboardingDialog from "../components/CloudAccounts/AccountOnboardi
 import AccountEditDialog from "../components/CloudAccounts/AccountEditDialog";
 import { testConnection } from "../services/cloudDiscoveryService";
 import DriftDashboardDialog from "./DriftDashboard";
-import FinOpsSyncButton from "../components/finops/FinOpsSyncButton";
+import UnifiedSyncButton from "../components/common/UnifiedSyncButton";
 import { useSettings } from "../contexts/SettingsContext";
 import { useRole } from "../contexts/RoleContext";
 import api from "../services/api";
 
 const getTimeAgo = (dateStr?: string | null) => {
   if (!dateStr) return "Never";
-  const date = new Date(dateStr);
+  // Force UTC parsing by appending Z if missing, so browser Date() interprets it correctly against local time
+  const utcDateStr = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
+  const date = new Date(utcDateStr);
   const now = new Date();
   const diffInSecs = Math.floor((now.getTime() - date.getTime()) / 1000);
 
@@ -85,20 +87,22 @@ const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoo
     maximumFractionDigits: 2
   }).format(num);
 
+  // Format IST explicit date
+  const getISTTime = (dateStr?: string | null) => {
+    if (!dateStr) return 'Unknown';
+    // Ensure we parse it as UTC explicitly since it comes from postgres without timezone often
+    const d = new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z');
+    return d.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+  };
+
   return (
     <Fragment>
       <TableRow hover sx={{ '& > *': { borderBottom: 'unset' }, bgcolor: level > 0 ? `rgba(255,255,255,${0.02 * level})` : 'transparent' }}>
-        <TableCell padding="checkbox">
-          <Box sx={{ pl: level * 3, display: 'flex', alignItems: 'center' }}>
-            {subs.length > 0 ? (
-              <IconButton size="small" onClick={() => toggleRoot(row.id)}>
-                {isExpanded ? <ArrowForward sx={{ transform: 'rotate(90deg)', fontSize: 16 }} /> : <ArrowForward sx={{ fontSize: 16 }} />}
-              </IconButton>
-            ) : <Box sx={{ width: 34 }} />}
-          </Box>
+        <TableCell padding="checkbox" sx={{ width: level > 0 ? 20 + (level * 20) : 40, pl: level > 0 ? (level * 2) + 'px' : '0' }}>
+          {/* Removed expander from here */}
         </TableCell>
         <TableCell>
-          <Stack direction="row" spacing={1.5} alignItems="center">
+          <Stack direction="row" spacing={1.5} alignItems="center" sx={{ pl: level * 3 }}>
             {isContainer ? (
               <Avatar sx={{ width: 28, height: 28, bgcolor: 'rgba(255,255,255,0.1)', color: 'text.secondary' }}>
                 <Folder sx={{ fontSize: 16 }} />
@@ -112,13 +116,23 @@ const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoo
                 {row.cloud_provider === 'aws' ? 'AWS' : 'AZ'}
               </Avatar>
             )}
-            <Box>
+            <Box sx={{ pl: isContainer && level === 0 ? 0 : 0 }}>
               <Typography variant="body2" fontWeight={isRoot || isContainer ? "bold" : "normal"}>
                 {row.name}
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                 {row.cred_metadata?.account_id || row.cred_metadata?.subscription_id || row.cred_metadata?.management_group_id || row.cred_metadata?.organizational_unit_id || row.tenant_id}
               </Typography>
+              {subs.length > 0 && (
+                <Button
+                  size="small"
+                  onClick={() => toggleRoot(row.id)}
+                  startIcon={<AccountTree fontSize="small" />}
+                  sx={{ mt: 0.5, py: 0, px: 1, fontSize: '0.65rem', textTransform: 'none', bgcolor: 'rgba(255,255,255,0.05)' }}
+                >
+                  {isExpanded ? "Hide" : "Show"} {subs.length} Sub-Account{subs.length > 1 ? 's' : ''}
+                </Button>
+              )}
             </Box>
           </Stack>
         </TableCell>
@@ -143,8 +157,8 @@ const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoo
           ) : <Typography variant="caption" color="text.secondary">-</Typography>}
         </TableCell>
         <TableCell align="center">
-          <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
-            <Tooltip title={`Read Connection: ${row.read_connection_status || 'Unknown'} (Last verified: ${getTimeAgo(row.read_last_validated_at)})`}>
+          <Stack direction="row" spacing={1} alignItems="center" justifyItems="center" sx={{ display: 'inline-flex' }}>
+            <Tooltip title={`Read Connection: ${row.read_connection_status || 'Unknown'} (Last verified: ${getISTTime(row.read_last_validated_at)} IST)`}>
               <Box sx={{
                 width: 10, height: 10, borderRadius: '50%',
                 bgcolor: row.read_connection_status === 'success' ? '#10B981' : (row.read_connection_status === 'error' ? '#EF4444' : '#6B7280'),
@@ -168,6 +182,18 @@ const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoo
         </TableCell>
         <TableCell align="right">
           <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
+            {subs.length > 0 && (
+              <Button
+                size="small"
+                variant="outlined"
+                color="inherit"
+                onClick={() => toggleRoot(row.id)}
+                startIcon={<AccountTree fontSize="small" />}
+                sx={{ textTransform: 'none', py: 0.2, borderColor: 'rgba(255,255,255,0.2)' }}
+              >
+                {isExpanded ? "Hide" : "Show"} Sub-Accounts ({subs.length})
+              </Button>
+            )}
             {isRoot && (
               <Button size="small" variant="contained" color="warning" onClick={() => handlers.openDiscoveryForAccount(row)} startIcon={<Search fontSize="small" />} sx={{ textTransform: 'none', py: 0.2 }}>
                 Discovery
@@ -206,25 +232,37 @@ const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoo
 
               {!isContainer && (
                 <Box sx={{ px: 2, py: 1 }}>
-                  <FinOpsSyncButton type="account" entityId={row.id.toString()} entityName={row.name} iconOnly={false} />
+                  <UnifiedSyncButton type="account" entityId={row.id.toString()} entityName={row.name} />
                 </Box>
               )}
             </Menu>
           </Stack>
         </TableCell>
       </TableRow>
-      {isExpanded && subs.map(sub => (
-        <RecursiveAccountRow
-          key={sub.id}
-          row={sub}
-          allAccounts={allAccounts}
-          level={level + 1}
-          expandedRoots={expandedRoots}
-          toggleRoot={toggleRoot}
-          handlers={handlers}
-          currency={currency}
-        />
-      ))}
+      <TableRow /> {/* Empty row for exact Collapse mounting */}
+      <TableCell style={{ paddingBottom: 0, paddingTop: 0, border: 0 }} colSpan={8}>
+        <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+          <Table size="small" sx={{
+            "& .MuiTableCell-root": { borderBottom: '1px solid rgba(255,255,255,0.02)' },
+            mb: 1
+          }}>
+            <TableBody>
+              {subs.map(sub => (
+                <RecursiveAccountRow
+                  key={sub.id}
+                  row={sub}
+                  allAccounts={allAccounts}
+                  level={level + 1}
+                  expandedRoots={expandedRoots}
+                  toggleRoot={toggleRoot}
+                  handlers={handlers}
+                  currency={currency}
+                />
+              ))}
+            </TableBody>
+          </Table>
+        </Collapse>
+      </TableCell>
     </Fragment>
   );
 };
@@ -244,6 +282,10 @@ const CloudAccounts = () => {
 
   const [accounts, setAccounts] = useState<ExtendedCloudAccountRow[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Rollups
+  const [totalLastMonth, setTotalLastMonth] = useState(0);
+  const [totalMtd, setTotalMtd] = useState(0);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [discoveryAccountId, setDiscoveryAccountId] = useState<string | undefined>();
@@ -268,6 +310,22 @@ const CloudAccounts = () => {
     try {
       const data = await fetchCloudAccounts(tenantId as string);
       setAccounts(data.map(a => ({ ...a, drift_status: 'synced' })));
+
+      // Calculate rollups based on roots to avoid double counting if a root already aggregates its children
+      // For now, assuming we sum up all accounts that are NOT containers
+      let mtdSum = 0;
+      let lmSum = 0;
+      data.forEach(a => {
+        const type = a.cred_metadata?.account_type || '';
+        const isContainer = ['management', 'tenant', 'management_group', 'organizational_unit', 'root'].includes(type);
+        if (!isContainer) {
+          mtdSum += (a.mtd_cost || 0);
+          lmSum += (a.last_month_cost || 0);
+        }
+      });
+      setTotalMtd(mtdSum);
+      setTotalLastMonth(lmSum);
+
     } catch (err) {
       console.error(err);
     } finally {
@@ -359,10 +417,24 @@ const CloudAccounts = () => {
               <Typography variant="caption" display="block" color="text.secondary">Tenant Name</Typography>
               <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#F59E0B' }}>{tenantName}</Typography>
             </Box>
+            <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
+            <Box>
+              <Typography variant="caption" display="block" color="text.secondary">Overall Last Month</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                {new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', { style: 'currency', currency: currency }).format(totalLastMonth)}
+              </Typography>
+            </Box>
+            <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
+            <Box>
+              <Typography variant="caption" display="block" color="text.secondary">Overall MTD</Typography>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                {new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', { style: 'currency', currency: currency }).format(totalMtd)}
+              </Typography>
+            </Box>
           </Paper>
           <Stack direction="row" spacing={1.5}>
             <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate(`/tenants/${tenantId}/dashboard`)}>Workspace</Button>
-            <FinOpsSyncButton type="tenant" entityId={tenantId as string} entityName={tenantName} />
+            <UnifiedSyncButton type="tenant" entityId={tenantId as string} entityName={tenantName} />
             <Button variant="outlined" onClick={loadAccounts}><Refresh /></Button>
             <Button
               variant="contained"
