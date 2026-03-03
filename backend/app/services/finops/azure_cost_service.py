@@ -81,6 +81,20 @@ class AzureCostService:
                 if response.status_code == 200:
                     data = response.json()
                     results.extend(self._parse_az_response(data, account, target_sub_id))
+                    
+                    # Handle pagination
+                    next_link = data.get("properties", {}).get("nextLink")
+                    while next_link:
+                        logger.info(f"Fetching next page of Azure Cost data...")
+                        # Cost Management pagination requires POST with original payload to the nextLink url
+                        next_response = await client.post(next_link, headers=headers, json=payload, timeout=60.0)
+                        if next_response.status_code == 200:
+                            next_data = next_response.json()
+                            results.extend(self._parse_az_response(next_data, account, target_sub_id))
+                            next_link = next_data.get("properties", {}).get("nextLink")
+                        else:
+                            logger.error(f"Failed to fetch next page Azure costs: {next_response.status_code} - {next_response.text}")
+                            break
                 else:
                     logger.error(f"Failed to fetch Azure costs: {response.status_code} - {response.text}")
                     raise Exception(f"Azure Cost API Error: {response.text}")
@@ -123,6 +137,10 @@ class AzureCostService:
                 parts = resource_id.lower().split("resourcegroups/")
                 if len(parts) > 1:
                     rg = parts[1].split("/")[0]
+
+            # Aggregate AKS Node Pool underlying costs to AKS Service
+            if rg and rg.lower().startswith("mc_"):
+                service_name = "Azure Kubernetes Service"
 
             portal_cat = "Other" # Deferred until custom resource group assignment
             origin = "cloud" # MVP default

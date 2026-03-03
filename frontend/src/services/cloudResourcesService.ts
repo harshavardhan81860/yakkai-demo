@@ -100,3 +100,43 @@ export const fetchAzureClusters = async (
   );
   return res.data?.data ?? [];
 };
+
+/* ================= INVENTORY ================= */
+
+export const fetchCloudInventory = async (
+  tenantId: string,
+  cloudAccountId?: string
+) => {
+  const params = new URLSearchParams();
+  params.append("tenant_id", tenantId);
+  if (cloudAccountId) {
+    params.append("cloud_account_id", cloudAccountId);
+  }
+  const res = await api.get(`/api/v1/resources/inventory?${params.toString()}`);
+  return res.data;
+};
+
+/* ================= RESOURCE SYNC JOBS ================= */
+
+export const triggerResourceSync = async (cloudAccountId: string) => {
+  const res = await api.post(`/api/v1/cloud-accounts/${cloudAccountId}/sync-resources`);
+  return res.data;
+};
+
+export const fetchResourceSyncHistory = async (cloudAccountId: string) => {
+  const res = await api.get(`/api/v1/cloud-accounts/${cloudAccountId}/sync-history`);
+  return res.data?.data?.history ?? [];
+};
+
+/* ================= TENANT-LEVEL RESOURCE SYNC ================= */
+
+export const triggerTenantResourceSync = async (tenantId: string) => {
+  const res = await api.post(`/api/v1/cloud-accounts/tenant/${tenantId}/sync-resources`);
+  return res.data;
+};
+
+export const fetchTenantResourceSyncHistory = async (tenantId: string) => {
+  const res = await api.get(`/api/v1/cloud-accounts/tenant/${tenantId}/sync-history`);
+  return res.data?.data?.history ?? [];
+};
+

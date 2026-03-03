@@ -20,6 +20,7 @@ import api from '../services/api';
 import Breadcrumbs from "../components/Common/Breadcrumbs";
 import { useSettings } from "../contexts/SettingsContext";
 import { useRole } from "../contexts/RoleContext";
+import UnifiedSyncButton from "../components/common/UnifiedSyncButton";
 
 const FinOpsDashboard = () => {
     const { tenantId } = useParams();
@@ -33,7 +34,7 @@ const FinOpsDashboard = () => {
     const [loading, setLoading] = useState(true);
 
     // Filters
-    const [dateRange, setDateRange] = useState("last_30_days");
+    const [dateRange, setDateRange] = useState("mtd");
     const [selectedProvider, setSelectedProvider] = useState("all");
     const [selectedAccountId, setSelectedAccountId] = useState("all");
 
@@ -65,8 +66,16 @@ const FinOpsDashboard = () => {
         } else if (dateRange === "yesterday") {
             start.setDate(start.getDate() - 1);
             end.setDate(end.getDate() - 1);
+        } else if (dateRange === "last_7_days") {
+            start.setDate(start.getDate() - 7);
         } else if (dateRange === "last_30_days") {
             start.setDate(start.getDate() - 30);
+        } else if (dateRange === "last_90_days") {
+            start.setDate(start.getDate() - 90);
+        } else if (dateRange === "last_6_months") {
+            start.setMonth(start.getMonth() - 6);
+        } else if (dateRange === "last_1_year") {
+            start.setFullYear(start.getFullYear() - 1);
         } else if (dateRange === "ytd") {
             start.setMonth(0, 1);
         } else if (dateRange === "custom") {
@@ -139,6 +148,9 @@ const FinOpsDashboard = () => {
         'yesterday': 'Yesterday Trend',
         'last_7_days': '7-Day Trend',
         'last_30_days': '30-Day Trend',
+        'last_90_days': '90-Day Trend',
+        'last_6_months': '6-Month Trend',
+        'last_1_year': '1-Year Trend',
         'mtd': 'MTD Trend',
         'last_month': 'Last Month Trend',
         'ytd': 'YTD Trend',
@@ -169,6 +181,7 @@ const FinOpsDashboard = () => {
                     <Stack direction="row" spacing={1.5}>
                         <Button variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate(`/tenants/${tenantId}/dashboard`)}>Workspace</Button>
                         <Button variant="outlined" startIcon={<StorageIcon />} color="info" onClick={() => navigate(`/tenants/${tenantId}/resources`)}>Resource Explorer</Button>
+                        <UnifiedSyncButton type="tenant" entityId={tenantId as string} entityName={tenantName} />
                         <Button variant="contained" onClick={loadData} startIcon={<Refresh />} disabled={loading}>Refresh</Button>
                     </Stack>
                 </Stack>
@@ -190,6 +203,9 @@ const FinOpsDashboard = () => {
                                 <MenuItem value="yesterday">Yesterday</MenuItem>
                                 <MenuItem value="last_7_days">Last 7 Days</MenuItem>
                                 <MenuItem value="last_30_days">Last 30 Days</MenuItem>
+                                <MenuItem value="last_90_days">Last 90 Days</MenuItem>
+                                <MenuItem value="last_6_months">Last 6 Months</MenuItem>
+                                <MenuItem value="last_1_year">Last 1 Year</MenuItem>
                                 <MenuItem value="mtd">Month to Date (MTD)</MenuItem>
                                 <MenuItem value="last_month">Last Month</MenuItem>
                                 <MenuItem value="ytd">Year to Date (YTD)</MenuItem>
@@ -211,7 +227,7 @@ const FinOpsDashboard = () => {
                         </FormControl>
                     </Grid>
                     <Grid size={{ xs: 12, sm: dateRange === 'custom' ? 2 : 4 }}>
-                        <Button fullWidth variant="outlined" color="inherit" onClick={() => { setDateRange("last_30_days"); setSelectedAccountId("all"); }}>
+                        <Button fullWidth variant="outlined" color="inherit" onClick={() => { setDateRange("mtd"); setSelectedAccountId("all"); }}>
                             Reset Filters
                         </Button>
                     </Grid>

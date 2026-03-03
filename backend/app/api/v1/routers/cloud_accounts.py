@@ -11,9 +11,11 @@ from sqlalchemy import select, func
 
 from core.enums.registry_enum import RESOURCE, ACTION
 from services.registry_validation_service import registry
+from services.resource_sync_manager import ResourceSyncManager
 
 router = APIRouter(prefix="/cloud-accounts", tags=["Cloud Accounts"])
 service = CloudAccountService()
+sync_manager = ResourceSyncManager()
 resource = RESOURCE.CLOUD_ACCOUNT
 
 
@@ -186,3 +188,60 @@ async def update_cloud_account(
         message="Cloud account updated successfully",
         data={"account": orm_to_dict(updated)}
     )
+
+# ---------- RESOURCE SYNC JOBS ----------
+
+@router.post("/{record_id}/sync-resources")
+@registry(resource=resource, action=ACTION.VIEW) # Default matching finops trigger read
+async def sync_account_resources(
+    record_id: str,
+    session: AsyncSession = Depends(get_session)
+):
+    """Trigger a background resource fetch job for AWS or Azure."""
+    job = await sync_manager.trigger_sync(session, cloud_account_id=record_id)
+    return ApiResponse.success(
+        message="Resource sync initiated",
+        status_code=202,
+        data={"job": job}
+    )
+
+@router.get("/{record_id}/sync-history")
+@registry(resource=resource, action=ACTION.READ)
+async def get_sync_history(
+    record_id: str,
+    session: AsyncSession = Depends(get_session)
+):
+    """Retrieve the last 10 execution history logs for this specific cloud accounts sync actions"""
+    history = await sync_manager.get_sync_history(session, cloud_account_id=record_id)
+    return ApiResponse.success(
+        message="History loaded successfully",
+        data={"history": history}
+    )
+
+@router.post("/tenant/{tenant_id}/sync-resources")
+@registry(resource=resource, action=ACTION.VIEW)
+async def sync_tenant_resources(
+    tenant_id: str,
+    session: AsyncSession = Depends(get_session)
+):
+    """Schedule resource sync jobs for ALL eligible cloud accounts in a tenant."""
+    result = await sync_manager.trigger_sync_tenant(session, tenant_id=tenant_id)
+    return ApiResponse.success(
+        message=f"Scheduled {result['scheduled_count']} sync jobs, skipped {result['skipped_count']}",
+        status_code=202,
+        data=result
+    )
+
+@router.get("/tenant/{tenant_id}/sync-history")
+@registry(resource=resource, action=ACTION.READ)
+async def get_tenant_sync_history(
+    tenant_id: str,
+    session: AsyncSession = Depends(get_session)
+):
+    """Retrieve the last 10 resource sync jobs across all accounts in this tenant."""
+    history = await sync_manager.get_sync_history_tenant(session, tenant_id=tenant_id)
+    return ApiResponse.success(
+        message="Tenant sync history loaded",
+        data={"history": history}
+    )
+
