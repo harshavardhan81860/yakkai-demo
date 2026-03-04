@@ -116,6 +116,11 @@ export const fetchCloudInventory = async (
   return res.data;
 };
 
+export const fetchCloudResourcePayload = async (resourceId: string) => {
+  const res = await api.get(`/api/v1/resources/${resourceId}/payload`);
+  return res.data;
+};
+
 /* ================= RESOURCE SYNC JOBS ================= */
 
 export const triggerResourceSync = async (cloudAccountId: string) => {

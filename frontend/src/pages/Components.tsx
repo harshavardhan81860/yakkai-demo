@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import {
   Box, Typography, Button, Card, IconButton, TextField, Dialog,
   DialogTitle, DialogContent, DialogActions, LinearProgress, Tooltip, Grid,
@@ -9,7 +9,7 @@ import {
 import {
   Add, Cloud, Layers, CheckCircle, Refresh, Visibility, Storage,
   Computer, ViewInAr, Hub, Language, Info, Science, Warning, Sync,
-  MoreVert, Code, PlayArrow, Stop, RestartAlt, AccountBalanceWallet, History, Close
+  MoreVert, Code, PlayArrow, Stop, RestartAlt, AccountBalanceWallet, History, Close, ArrowBack
 } from "@mui/icons-material";
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import Breadcrumbs from "../components/Common/Breadcrumbs";
@@ -35,6 +35,7 @@ import CachedInventory from "./CachedInventory";
 const Components = () => {
   const { tenantId } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const cloudAccountType = (location.state as any)?.cloudAccountType as "AWS" | "AZURE";
   const cloudAccountId = (location.state as any)?.cloudAccountId as string;
@@ -222,6 +223,14 @@ const Components = () => {
           <Typography variant="body2" color="text.secondary">Inventory optimization and drift detection</Typography>
         </Box>
         <Stack direction="row" spacing={2} alignItems="center">
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBack />}
+            onClick={() => navigate(`/tenants/${tenantId}/cloud-accounts`, { state: { tenantName } })}
+            sx={{ height: 48, fontWeight: 700, px: 3 }}
+          >
+            Cloud Accounts
+          </Button>
           <Paper variant="outlined" sx={{ p: 1.5, px: 2, display: 'flex', gap: 3, bgcolor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
             <Box><Typography variant="caption" display="block" color="text.secondary">Tenant</Typography><Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#F59E0B' }}>{tenantName}</Typography></Box>
             <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />

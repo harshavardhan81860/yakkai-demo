@@ -48,6 +48,7 @@ Once running, you can access the interactive Swagger documentation at:
 
 ## 📁 Folder Structure
 - `app/api/`: API route definitions (v1).
+- `app/engines/`: Asynchronous background synchronization scripts (`resource_sync` and `finops_job`).
 - `app/services/`: Business logic and cloud provider integrations.
 - `app/models/`: SQLAlchemy database models.
 - `app/core/`: Security, authentication, and core application settings.

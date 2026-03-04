@@ -8,9 +8,10 @@ YakkAI is a comprehensive platform designed to provide a seamless self-service e
 
 The codebase is organized into three primary modules, each with its own specific focus and documentation:
 
-- **[`/backend`](./backend)**: A high-performance FastAPI server (Python) handling core logic, cloud integrations, and identity management. Includes `/app/api/v1/routers/` for modular endpoints.
+- **[`/backend`](./backend)**: A high-performance FastAPI server (Python) handling core logic, cloud integrations, and identity management. Includes `/app/api/v1/routers/` for modular endpoints and `/app/engines/` for hybrid background synchronization pipelines.
 - **[`/frontend`](./frontend)**: A modern, responsive React interface built with Material UI and TypeScript. Includes `/src/components/` for generic UI and `/src/pages/` for views.
 - **[`/helm`](./helm)**: Kubernetes deployment configurations (Helm charts) for production-ready container orchestration.
+- **[`/docs`](./docs)**: Architectural overviews, including the core [Cloud Strategies Overview](./docs/Cloud_Strategies_Overview.md).
 
 ---
 

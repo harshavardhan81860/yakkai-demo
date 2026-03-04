@@ -1,10 +1,11 @@
+from typing import List, Optional
+
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
 
 from db.engine import get_session
 from services.cloud_resource_service import CloudResourceService
-from schemas.cloud_resource_schema import CloudResourceResponse
+from schemas.cloud_resource_schema import CloudResourceResponse, CloudResourcePayloadResponse
 
 router = APIRouter(
     prefix="/resources",
@@ -26,4 +27,21 @@ async def get_inventory(
         session=session,
         tenant_id=tenant_id,
         cloud_account_id=cloud_account_id
+    )
+
+@router.get("/{resource_id}/payload", response_model=CloudResourcePayloadResponse)
+async def get_raw_payload(
+    resource_id: str,
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Get the raw cloud provider JSON payload for a specific resource.
+    """
+    payload_data = await cloud_resource_service.get_raw_payload(
+        session=session,
+        resource_id=resource_id
+    )
+    return CloudResourcePayloadResponse(
+        resource_id=resource_id,
+        raw_payload=payload_data
     )

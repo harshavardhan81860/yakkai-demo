@@ -1,16 +1,14 @@
-from azure.mgmt.resourcegraph import ResourceGraphClient
 from azure.mgmt.resourcegraph.models import QueryRequest, QueryRequestOptions
-from core.cloud_auth.auth_provider import get_azure_credential
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 class AzureResourceFetcher:
     """
     Fetches resources from Azure using the Azure Resource Graph API.
     This guarantees a $0 cost and extremely fast retrieval across all subscriptions.
     """
-    def __init__(self, tenant_id: str):
-        self.credential = get_azure_credential()
-        self.rg_client = ResourceGraphClient(credential=self.credential)
+    def __init__(self, tenant_id: Optional[str] = None):
+        self.tenant_id = tenant_id
+        self.rg_client = None
 
     def fetch_resources(self, subscription_id: str) -> List[Dict[str, Any]]:
         """Executes a KQL query to fetch all normalized resources."""
