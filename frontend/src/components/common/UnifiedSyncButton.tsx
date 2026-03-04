@@ -64,6 +64,11 @@ const UnifiedSyncButton: React.FC<UnifiedSyncButtonProps> = ({ type, entityId, e
     const [successOpen, setSuccessOpen] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
 
+    // Message Viewer (For full error/log)
+    const [messageDialogOpen, setMessageDialogOpen] = useState(false);
+    const [selectedMessage, setSelectedMessage] = useState('');
+    const [selectedMessageTitle, setSelectedMessageTitle] = useState('');
+
     const isTenant = type === 'tenant';
 
     // --- Data Fetchers ---
@@ -314,9 +319,25 @@ const UnifiedSyncButton: React.FC<UnifiedSyncButtonProps> = ({ type, entityId, e
                                                     <TableCell>{job.start_date} → {job.end_date}</TableCell>
                                                     <TableCell>{job.completed_at ? new Date(job.completed_at).toLocaleString() : '-'}</TableCell>
                                                     <TableCell>
-                                                        <Typography variant="caption" color={job.status === 'FAILED' ? 'error' : 'text.secondary'} sx={{ maxWidth: 200, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                            {job.error_log || '-'}
-                                                        </Typography>
+                                                        <Box display="flex" alignItems="center" gap={1}>
+                                                            <Typography variant="caption" color={job.status === 'FAILED' ? 'error' : 'text.secondary'} sx={{ maxWidth: 150, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                                {job.error_log || '-'}
+                                                            </Typography>
+                                                            {job.error_log && (
+                                                                <Button
+                                                                    size="small"
+                                                                    variant="text"
+                                                                    sx={{ minWidth: 'auto', p: 0.5, fontSize: '0.7rem', textTransform: 'none' }}
+                                                                    onClick={() => {
+                                                                        setSelectedMessage(job.error_log!);
+                                                                        setSelectedMessageTitle(`Cost Sync Details (${job.status})`);
+                                                                        setMessageDialogOpen(true);
+                                                                    }}
+                                                                >
+                                                                    View
+                                                                </Button>
+                                                            )}
+                                                        </Box>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
@@ -349,9 +370,25 @@ const UnifiedSyncButton: React.FC<UnifiedSyncButtonProps> = ({ type, entityId, e
                                                     <TableCell>{job.started_at ? new Date(job.started_at).toLocaleString() : '-'}</TableCell>
                                                     <TableCell>{job.completed_at ? new Date(job.completed_at).toLocaleString() : '-'}</TableCell>
                                                     <TableCell>
-                                                        <Typography variant="caption" color={job.status === 'FAILED' ? 'error' : 'text.secondary'} sx={{ maxWidth: 200, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                            {job.error_log || '-'}
-                                                        </Typography>
+                                                        <Box display="flex" alignItems="center" gap={1}>
+                                                            <Typography variant="caption" color={job.status === 'FAILED' ? 'error' : 'text.secondary'} sx={{ maxWidth: 150, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                                {job.error_log || '-'}
+                                                            </Typography>
+                                                            {job.error_log && (
+                                                                <Button
+                                                                    size="small"
+                                                                    variant="text"
+                                                                    sx={{ minWidth: 'auto', p: 0.5, fontSize: '0.7rem', textTransform: 'none' }}
+                                                                    onClick={() => {
+                                                                        setSelectedMessage(job.error_log!);
+                                                                        setSelectedMessageTitle(`Resource Sync Details (${job.status})`);
+                                                                        setMessageDialogOpen(true);
+                                                                    }}
+                                                                >
+                                                                    View
+                                                                </Button>
+                                                            )}
+                                                        </Box>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
@@ -378,6 +415,21 @@ const UnifiedSyncButton: React.FC<UnifiedSyncButtonProps> = ({ type, entityId, e
                     <Button onClick={() => { setSuccessOpen(false); setHistoryOpen(true); fetchAllJobs(); }} variant="contained" autoFocus>
                         Track in History
                     </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* ---- Full Message / Log Dialog ---- */}
+            <Dialog open={messageDialogOpen} onClose={() => setMessageDialogOpen(false)} maxWidth="md" fullWidth>
+                <DialogTitle>{selectedMessageTitle}</DialogTitle>
+                <DialogContent dividers>
+                    <Paper variant="outlined" sx={{ p: 2, bgcolor: '#0d1117', color: '#c9d1d9', overflowX: 'auto', fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                            {selectedMessage}
+                        </pre>
+                    </Paper>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setMessageDialogOpen(false)} color="inherit" variant="outlined">Close</Button>
                 </DialogActions>
             </Dialog>
         </>

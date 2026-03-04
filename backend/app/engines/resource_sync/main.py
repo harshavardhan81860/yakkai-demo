@@ -14,19 +14,19 @@ elif not os.getenv("APP_CONFIG"):
     os.environ["APP_CONFIG"] = "config/config.yaml"
 
 import logging
-from datetime import datetime, timezone
 import traceback
+from datetime import datetime, timezone
+
+from sqlalchemy import text
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 # Ensure backend/app is in PYTHONPATH
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
-from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.future import select
-
 from db.engine import engine, async_session
-from models.cloud_resource import ResourceSyncJob, CloudResource
+from models.cloud_resource import ResourceSyncJob, CloudResource, CloudResourcePayload
 from models.cloud_account import CloudAccount
 from core.cloud_auth.auth_provider import cloud_auth_provider
 from services.resource_fetch.azure_fetcher import AzureResourceFetcher
@@ -64,6 +64,8 @@ async def get_next_job(session: AsyncSession) -> ResourceSyncJob:
 
 async def execute_job(session: AsyncSession, job: ResourceSyncJob):
     """Executes the resource fetching for a locked job."""
+    import time
+    start_time = time.time()
     try:
         # 1. Fetch Cloud Account
         account = await session.get(CloudAccount, job.cloud_account_id)
@@ -77,24 +79,13 @@ async def execute_job(session: AsyncSession, job: ResourceSyncJob):
         creds = await cloud_auth_provider.get_credentials(str(account.id))
 
         # 3. Fetch resources based on provider
-        resources = []
         if provider == "aws":
-            fetcher = AWSResourceFetcher(region=creds.get("region", "us-east-1"))
-            # Pass AWS credentials to the boto3 client
-            fetcher.client = __import__('boto3').client(
-                'resource-explorer-2',
-                region_name=creds.get("region", "us-east-1"),
-                aws_access_key_id=creds.get("AccessKeyId"),
-                aws_secret_access_key=creds.get("SecretAccessKey"),
-                aws_session_token=creds.get("SessionToken"),
-            )
-            resources = await asyncio.to_thread(fetcher.fetch_resources)
+            fetcher = AWSResourceFetcher()
+            resources = await fetcher.fetch_resources(str(account.id))
 
         elif provider == "azure":
             fetcher = AzureResourceFetcher(tenant_id=creds.get("tenant_id", ""))
-            # For Azure Resource Graph, override with token-based credential
-            from azure.identity import AccessToken
-            from azure.core.credentials import TokenCredential
+            from azure.core.credentials import AccessToken, TokenCredential
 
             class StaticTokenCredential(TokenCredential):
                 def __init__(self, token: str):
@@ -129,7 +120,7 @@ async def execute_job(session: AsyncSession, job: ResourceSyncJob):
                     resource_group=res.get("resource_group"),
                     status=res.get("status", "running"),
                     tags=res.get("tags", {}),
-                    last_synced_at=datetime.now(timezone.utc),
+                    last_synced_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 )
                 stmt = stmt.on_conflict_do_update(
                     index_elements=["provider_resource_id"],
@@ -139,23 +130,50 @@ async def execute_job(session: AsyncSession, job: ResourceSyncJob):
                         name=stmt.excluded.name,
                         region=stmt.excluded.region,
                         resource_group=stmt.excluded.resource_group,
-                        last_synced_at=stmt.excluded.last_synced_at,
+                    last_synced_at=stmt.excluded.last_synced_at,
                     ),
-                )
-                await session.execute(stmt)
+                ).returning(CloudResource.id)
+                
+                result = await session.execute(stmt)
+                resource_id = result.scalar()
+
+                # 4b. Upsert raw payload
+                if "payload" in res and res["payload"]:
+                    import json
+                    from models.cloud_resource import CloudResourcePayload
+                    
+                    # Convert objects like datetime to strings so Postgres JSONB can serialize them
+                    safe_payload = json.loads(json.dumps(res["payload"], default=str))
+                    
+                    payload_stmt = insert(CloudResourcePayload).values(
+                        resource_id=resource_id,
+                        raw_payload=safe_payload
+                    )
+                    payload_stmt = payload_stmt.on_conflict_do_update(
+                        index_elements=["resource_id"],
+                        set_=dict(raw_payload=payload_stmt.excluded.raw_payload)
+                    )
+                    await session.execute(payload_stmt)
 
         # 5. Mark job as completed
         job.resources_found = len(resources)
         job.status = "COMPLETED"
-        job.completed_at = datetime.now(timezone.utc)
-        job.error_log = f"Successfully fetched and upserted {len(resources)} resources."
-        logger.info(f"Job {job.id} completed. Upserted {len(resources)} resources.")
+        job.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        
+        elapsed = time.time() - start_time
+        elapsed_str = f"{elapsed:.2f} seconds" if elapsed < 60 else f"{elapsed/60:.2f} minutes"
+        
+        job.error_log = f"Successfully fetched and upserted {len(resources)} resources. Time taken: {elapsed_str}."
+        logger.info(f"Job {job.id} completed. Upserted {len(resources)} resources in {elapsed_str}.")
 
     except Exception as e:
-        logger.error(f"Job {job.id} failed: {e}\n{traceback.format_exc()}")
+        elapsed = time.time() - start_time
+        elapsed_str = f"{elapsed:.2f} seconds" if elapsed < 60 else f"{elapsed/60:.2f} minutes"
+        
+        logger.error(f"Job {job.id} failed after {elapsed_str}: {e}\n{traceback.format_exc()}")
         job.status = "FAILED"
-        job.completed_at = datetime.now(timezone.utc)
-        job.error_log = str(e)
+        job.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        job.error_log = f"{str(e)} \n(Time taken: {elapsed_str})"
 
 
 async def run_resource_sync_engine():

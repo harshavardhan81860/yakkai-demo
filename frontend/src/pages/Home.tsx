@@ -163,19 +163,6 @@ const Home = () => {
             requests: { total: allRequests.length, open: openRequests, closed: closedRequests },
             pending: { total: allPending.length },
           });
-        } else if (viewMode === 'tenant' && activeTenant) {
-          // Tenant view: filter by tenant
-          const tenantTemplates = templates.filter((t: any) => t.tenant_id === activeTenant.tenant_id);
-          const tenantRequests = allRequests.filter((r: any) => tmplTenantMap[r.template_id] === activeTenant.tenant_id);
-          const tenantPending = allPending.filter((a: any) => tmplTenantMap[a.template_id] === activeTenant.tenant_id);
-          const openRequests = tenantRequests.filter((r: any) => r.status === 'PENDING').length;
-          const closedRequests = tenantRequests.filter((r: any) => r.status !== 'PENDING').length;
-
-          setStats({
-            templates: { total: tenantTemplates.filter((t: any) => t.is_active).length },
-            requests: { total: tenantRequests.length, open: openRequests, closed: closedRequests },
-            pending: { total: tenantPending.length },
-          });
         }
       } catch {
         setStats(null);
@@ -265,7 +252,7 @@ const Home = () => {
           {tenantRoles.map((tr) => (
             <Grid size={{ xs: 12, md: systemRole ? 5 : 4 }} key={tr.tenant_id}>
               <Card
-                onClick={() => { switchToTenant(tr.tenant_id); navigate('/'); }}
+                onClick={() => { switchToTenant(tr.tenant_id); navigate(`/tenants/${tr.tenant_id}/dashboard`); }}
                 sx={{
                   p: 5, cursor: 'pointer', textAlign: 'center',
                   bgcolor: 'rgba(255,255,255,0.01)',
@@ -407,94 +394,11 @@ const Home = () => {
   }
 
   /* ──────────────────────────────────────────
-     TENANT Home Dashboard
+     TENANT Redirect Fallback
      ────────────────────────────────────────── */
   if (viewMode === "tenant" && activeTenant) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        {/* Hero */}
-        <Box sx={{ mb: 5 }}>
-          <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
-            <Typography variant="h4" sx={{
-              fontWeight: 800,
-              background: 'linear-gradient(90deg, #fff 0%, #3B82F6 100%)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
-            }}>
-              {activeTenant.tenant_name}
-            </Typography>
-            <Chip
-              label={activeTenant.role.replace('tenant_', '').replace(/^\w/, c => c.toUpperCase())}
-              size="small"
-              sx={{ fontWeight: 800, bgcolor: 'rgba(59,130,246,0.15)', color: '#3B82F6', border: '1px solid rgba(59,130,246,0.3)' }}
-            />
-          </Stack>
-          <Typography variant="body1" color="text.secondary">
-            Tenant workspace for <strong>{fullName}</strong>.
-          </Typography>
-        </Box>
-
-        {statsLoading && <LinearProgress sx={{ mb: 3, borderRadius: 2 }} />}
-
-        {/* Tenant Stats Row */}
-        <Grid container spacing={3} sx={{ mb: 5 }}>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <StatCard
-              title="Workflow Templates"
-              total={stats?.templates?.total ?? '—'}
-              subtitle="Assigned to this tenant"
-              icon={<Category />}
-              color="#8B5CF6"
-              onClick={() => navigate('/approvals-management/templates')}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <StatCard
-              title="My Requests"
-              total={stats?.requests?.total ?? '—'}
-              icon={<Assignment />}
-              color="#F59E0B"
-              detail1={{ label: 'Open', value: stats?.requests?.open ?? '—' }}
-              detail2={{ label: 'Closed', value: stats?.requests?.closed ?? '—' }}
-              onClick={() => navigate('/approvals/requests')}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <StatCard
-              title="Pending Approvals"
-              total={stats?.pending?.total ?? '—'}
-              subtitle="Actions required"
-              icon={<CheckCircle />}
-              color="#10B981"
-              onClick={() => navigate('/approvals/pending')}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <StatCard
-              title="Cloud Accounts"
-              total="—"
-              subtitle="Connected providers"
-              icon={<CloudCircle />}
-              color="#6C63FF"
-              onClick={() => navigate(`/tenants/${activeTenant.tenant_id}/cloud-accounts`)}
-            />
-          </Grid>
-        </Grid>
-
-        {/* Quick Actions */}
-        <Typography variant="h6" sx={{ fontWeight: 800, mb: 2, color: 'text.secondary' }}>Quick Actions</Typography>
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <QuickCard title="Cloud Accounts" desc="Manage cloud connections and resources." icon={<CloudCircle />} path={`/tenants/${activeTenant.tenant_id}/cloud-accounts`} color="#6C63FF" navigate={navigate} />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <QuickCard title="Cost Analytics" desc="Budget tracking and optimization." icon={<Hub />} path={`/tenants/${activeTenant.tenant_id}/finops`} color="#F59E0B" navigate={navigate} />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <QuickCard title="New Request" desc="Provision new cloud resources." icon={<RocketLaunch />} path="/resource-request/new" color="#10B981" navigate={navigate} />
-          </Grid>
-        </Grid>
-      </Container>
-    );
+    navigate(`/tenants/${activeTenant.tenant_id}/dashboard`, { replace: true });
+    return null;
   }
 
   return null;

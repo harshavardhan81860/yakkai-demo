@@ -1,8 +1,11 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, outerjoin, cast, String
+import datetime as dt
+from datetime import datetime
 from typing import Optional, List, Dict, Any
 
-from models.cloud_resource import CloudResource
+from sqlalchemy import select, func, outerjoin, cast, String, case
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from models.cloud_resource import CloudResource, CloudResourcePayload
 from engines.finops_job.db_models import DailyCost
 
 class CloudResourceRepository:
@@ -15,17 +18,33 @@ class CloudResourceRepository:
     ) -> List[Dict[str, Any]]:
         """
         Retrieves CloudResources and LEFT JOINs on FinOps DailyCost 
-        to aggregate the MTD cost perfectly by `provider_resource_id`.
+        to aggregate the MTD cost and LAST MONTH cost perfectly by `provider_resource_id`.
         """
-        # 1. Subquery to aggregate MTD cost per resource
-        # (Assuming MTD for now. Grouping broadly)
+        now = datetime.utcnow()
+        month_start = now.replace(day=1).date()
+        last_month_end = month_start - dt.timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+
+        # 1. Subquery to aggregate MTD cost and LAST MONTH cost per resource
         cost_subq = (
             select(
                 DailyCost.resource_id.label("cost_resource_id"),
-                func.sum(DailyCost.amortized_cost).label("mtd_cost")
+                func.sum(
+                    case(
+                        (DailyCost.date >= month_start, DailyCost.amortized_cost),
+                        else_=0
+                    )
+                ).label("mtd_cost"),
+                func.sum(
+                    case(
+                        ((DailyCost.date >= last_month_start) & (DailyCost.date <= last_month_end), DailyCost.amortized_cost),
+                        else_=0
+                    )
+                ).label("last_month_cost")
             )
             .where(DailyCost.tenant_id == tenant_id)
             .where(DailyCost.resource_id.isnot(None))
+            .where(DailyCost.date >= last_month_start)
             .group_by(DailyCost.resource_id)
             .subquery()
         )
@@ -34,7 +53,8 @@ class CloudResourceRepository:
         stmt = (
             select(
                 CloudResource, 
-                cost_subq.c.mtd_cost
+                cost_subq.c.mtd_cost,
+                cost_subq.c.last_month_cost
             )
             .outerjoin(
                 cost_subq, 
@@ -50,7 +70,7 @@ class CloudResourceRepository:
         
         # Format the result
         inventory = []
-        for resource, mtd_cost in result:
+        for resource, mtd_cost, last_month_cost in result:
             resource_dict = {
                 "id": str(resource.id),
                 "tenant_id": str(resource.tenant_id),
@@ -70,15 +90,28 @@ class CloudResourceRepository:
             }
             
             resource_dict["mtd_cost"] = float(mtd_cost) if mtd_cost is not None else 0.0
+            resource_dict["last_month_cost"] = float(last_month_cost) if last_month_cost is not None else 0.0
             
             # Fallback logic for AWS Service-Level aggregates (mocking missing direct mappings)
-            if resource.provider.lower() == 'aws' and resource_dict["mtd_cost"] == 0.0:
+            if resource.provider.lower() == 'aws' and resource_dict["mtd_cost"] == 0.0 and resource_dict["last_month_cost"] == 0.0:
                 resource_dict["is_cost_aggregate"] = True
-                # A full implementation would query a separate service-level AWS cost subquery here
-                # For now, we flag it.
             else:
                 resource_dict["is_cost_aggregate"] = False
                 
             inventory.append(resource_dict)
             
         return inventory
+
+    async def get_raw_payload(
+        self,
+        session: AsyncSession,
+        resource_id: str
+    ) -> Optional[Dict[str, Any]]:
+        from models.cloud_resource import CloudResourcePayload
+        import uuid
+        stmt = select(CloudResourcePayload).where(CloudResourcePayload.resource_id == uuid.UUID(resource_id))
+        result = await session.execute(stmt)
+        payload_record = result.scalars().first()
+        if payload_record:
+            return payload_record.raw_payload
+        return None

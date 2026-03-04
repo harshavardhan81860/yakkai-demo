@@ -23,6 +23,7 @@ class CloudResourceResponse(CloudResourceBase):
     
     # Metadata for FinOps join
     mtd_cost: Optional[float] = None
+    last_month_cost: Optional[float] = None
     is_cost_aggregate: Optional[bool] = False
 
     class Config:

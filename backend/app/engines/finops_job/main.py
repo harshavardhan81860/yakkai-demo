@@ -62,6 +62,8 @@ async def get_next_job(session: AsyncSession) -> FetchJob:
 
 async def execute_job(session: AsyncSession, job: FetchJob):
     """Executes the data fetching for a locked job."""
+    import time
+    start_time = time.time()
     try:
         # 1. Fetch Cloud Account
         account = await session.get(CloudAccount, job.account_id)
@@ -100,14 +102,18 @@ async def execute_job(session: AsyncSession, job: FetchJob):
         # 4. Success Completion
         job.status = "COMPLETED"
         job.completed_at = datetime.now(timezone.utc)
-        job.error_log = f"Successfully fetched and inserted {len(costs)} records."
-        logger.info(f"Job {job.id} completed. Inserted {len(costs)} records.")
+        elapsed = time.time() - start_time
+        time_taken = f"{elapsed:.2f}s" if elapsed < 60 else f"{elapsed/60:.2f}m"
+        job.error_log = f"Successfully fetched and inserted {len(costs)} records. (Time taken: {time_taken})"
+        logger.info(f"Job {job.id} completed. Inserted {len(costs)} records in {time_taken}.")
         
     except Exception as e:
-        logger.error(f"Job {job.id} failed: {e}\n{traceback.format_exc()}")
+        elapsed = time.time() - start_time
+        time_taken = f"{elapsed:.2f}s" if elapsed < 60 else f"{elapsed/60:.2f}m"
+        logger.error(f"Job {job.id} failed after {time_taken}: {e}\n{traceback.format_exc()}")
         job.status = "FAILED"
         job.completed_at = datetime.now(timezone.utc)
-        job.error_log = str(e)
+        job.error_log = f"{str(e)} (Time taken: {time_taken})"
 
 async def run_finops_engine():
     """Main loop for the Wake-Sleep worker."""
