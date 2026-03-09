@@ -219,27 +219,85 @@ const UserGroupMapping = () => {
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, lg: 4 }}>
-          <Card sx={{ p: 3 }}>
-            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Card
+            sx={(theme) => ({
+              p: 3,
+              borderRadius: 3,
+              border: "1px solid",
+              borderColor: theme.palette.divider,
+              background:
+                theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.02)"
+                  : "rgba(0,0,0,0.02)"
+            })}
+          >
+            <Typography
+              variant="subtitle2"
+              sx={{
+                mb: 2,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                gap: 1
+              }}
+            >
               <Person fontSize="small" /> Select User
             </Typography>
+
             <Autocomplete
               options={users}
               getOptionLabel={(u) => `${u.username} (${u.email})`}
               value={selectedUser}
               onChange={(_, user) => {
-                if (!user) return;
-                setSelectedUser(user);
-                fetchUserGroups(user.id).then(setAssignments);
-                navigate(`/user-group-mapping?userId=${user.id}`, { replace: true });
+                if (!user) return
+                setSelectedUser(user)
+                fetchUserGroups(user.id).then(setAssignments)
+                navigate(`/user-group-mapping?userId=${user.id}`, { replace: true })
               }}
-              renderInput={(params) => <TextField {...params} label="Search User" />}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Search User"
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": { borderColor: "divider" },
+                      "&:hover fieldset": { borderColor: "primary.main" },
+                      "&.Mui-focused fieldset": { borderColor: "primary.main" }
+                    }
+                  }}
+                />
+              )}
             />
+
             {selectedUser && (
-              <Box sx={{ mt: 3, p: 2, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <Typography variant="caption" color="text.secondary" display="block">User Details</Typography>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{selectedUser.username}</Typography>
-                <Typography variant="body2" color="text.secondary">{selectedUser.email}</Typography>
+              <Box
+                sx={(theme) => ({
+                  mt: 3,
+                  p: 2,
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: theme.palette.divider,
+                  background:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.04)"
+                      : "rgba(0,0,0,0.03)"
+                })}
+              >
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  User Details
+                </Typography>
+
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  {selectedUser.username}
+                </Typography>
+
+                <Typography variant="body2" color="text.secondary">
+                  {selectedUser.email}
+                </Typography>
               </Box>
             )}
           </Card>
@@ -247,10 +305,32 @@ const UserGroupMapping = () => {
 
         <Grid size={{ xs: 12, lg: 8 }}>
           {!selectedUser ? (
-            <Card sx={{ height: 400, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
+            <Card
+              sx={(theme) => ({
+                height: 400,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: 0.7,
+                borderRadius: 3,
+                border: "1px solid",
+                borderColor: theme.palette.divider,
+                boxShadow:
+                  theme.palette.mode === "dark"
+                    ? "0 8px 24px rgba(0,0,0,0.6)"
+                    : "0 8px 24px rgba(0,0,0,0.12)"
+              })}
+            >
               <AccountTree sx={{ fontSize: 60, mb: 2 }} />
-              <Typography variant="h6">Select a user</Typography>
-              <Typography variant="body2">Select a user to view and manage their groups</Typography>
+
+              <Typography variant="h6">
+                Select a user
+              </Typography>
+
+              <Typography variant="body2">
+                Select a user to view and manage their groups
+              </Typography>
             </Card>
           ) : (
             <Stack spacing={3}>
@@ -367,7 +447,29 @@ const UserGroupMapping = () => {
                   if (user) fetchUserGroups(user.id).then(setAssignments);
                 }}
                 isOptionEqualToValue={(option, value) => option.id === value.id}
-                renderInput={(params) => <TextField {...params} label="Select User *" />}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Select User *"
+                    sx={(theme) => ({
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": {
+                          borderColor:
+                            theme.palette.mode === "light"
+                              ? "rgba(0,0,0,0.3)"
+                              : "rgba(255,255,255,0.25)"
+                        },
+                        "&:hover fieldset": {
+                          borderColor: theme.palette.primary.main
+                        },
+                        "&.Mui-focused fieldset": {
+                          borderColor: theme.palette.primary.main,
+                          borderWidth: 2
+                        }
+                      }
+                    })}
+                  />
+                )}
               />
 
             </Grid>
@@ -383,12 +485,41 @@ const UserGroupMapping = () => {
             {assignType === 'tenant' && (
               <Grid size={12}>
                 <Autocomplete
-                  options={viewMode === "tenant" && activeTenant ? tenants.filter(t => String(t.id) === String(activeTenant.tenant_id)) : tenants}
+                  options={
+                    viewMode === "tenant" && activeTenant
+                      ? tenants.filter(t => String(t.id) === String(activeTenant.tenant_id))
+                      : tenants
+                  }
                   getOptionLabel={(t) => t.display_name}
                   value={selectedTenant}
-                  onChange={(_, v) => { setSelectedTenant(v); setSelectedCloud(null); }}
+                  onChange={(_, v) => {
+                    setSelectedTenant(v)
+                    setSelectedCloud(null)
+                  }}
                   disabled={viewMode === "tenant"}
-                  renderInput={(params) => <TextField {...params} label="Select Organization *" />}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Select Organization *"
+                      sx={(theme) => ({
+                        "& .MuiOutlinedInput-root": {
+                          "& fieldset": {
+                            borderColor:
+                              theme.palette.mode === "light"
+                                ? "rgba(0,0,0,0.3)"
+                                : "rgba(255,255,255,0.25)"
+                          },
+                          "&:hover fieldset": {
+                            borderColor: theme.palette.primary.main
+                          },
+                          "&.Mui-focused fieldset": {
+                            borderColor: theme.palette.primary.main,
+                            borderWidth: 2
+                          }
+                        }
+                      })}
+                    />
+                  )}
                 />
               </Grid>
             )}

@@ -49,14 +49,23 @@ const providerColors: Record<string, string> = {
     azure: "#0078D4",
 };
 
-const glassCard = {
-    background: "linear-gradient(145deg, rgba(17,24,39,0.95) 0%, rgba(17,24,39,0.8) 100%)",
+const glassCard = (theme: any) => ({
+    background:
+        theme.palette.mode === "dark"
+            ? "linear-gradient(145deg, rgba(17,24,39,0.95) 0%, rgba(17,24,39,0.8) 100%)"
+            : "linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.8) 100%)",
+
     backdropFilter: "blur(20px)",
-    border: "1px solid rgba(255,255,255,0.08)",
+
+    border:
+        theme.palette.mode === "dark"
+            ? "1px solid rgba(255,255,255,0.08)"
+            : "1px solid rgba(0,0,0,0.08)",
+
     borderRadius: 3,
     p: 2.5,
     mb: 2,
-};
+});
 
 const AccountOnboardingDialog = ({
     open, onClose, tenantId, onImportComplete,
@@ -445,13 +454,20 @@ const AccountOnboardingDialog = ({
 
             <Divider sx={{ my: 4, borderColor: "rgba(255,255,255,0.06)" }} />
 
-            <Box sx={{
-                ...glassCard,
-                border: testMode ? "1px solid rgba(245,158,11,0.4)" : "1px solid rgba(255,255,255,0.08)",
-                background: testMode
-                    ? "linear-gradient(145deg, rgba(245,158,11,0.08) 0%, rgba(17,24,39,0.95) 100%)"
-                    : glassCard.background,
-            }}>
+            <Box
+                sx={(theme) => ({
+                    ...glassCard(theme),
+                    border: testMode
+                        ? "1px solid rgba(245,158,11,0.4)"
+                        : theme.palette.mode === "dark"
+                            ? "1px solid rgba(255,255,255,0.08)"
+                            : "1px solid rgba(0,0,0,0.08)",
+
+                    background: testMode
+                        ? "linear-gradient(145deg, rgba(245,158,11,0.08) 0%, rgba(17,24,39,0.95) 100%)"
+                        : glassCard(theme).background,
+                })}
+            >
                 <Stack direction="row" alignItems="center" spacing={2}>
                     <Science sx={{ color: testMode ? "#F59E0B" : "text.secondary" }} />
                     <Box flex={1}>
@@ -774,7 +790,7 @@ const AccountOnboardingDialog = ({
             PaperProps={{
                 sx: {
                     minHeight: 480,
-                    background: "#111827", // Solid Dark Background to fix transparency
+                    background: (theme) => theme.palette.mode === "dark" ? "#111827" : "#ffffff",
                     backgroundImage: "linear-gradient(145deg, #1a2235 0%, #111827 100%)",
                     border: "1px solid rgba(255,255,255,0.12)",
                     borderRadius: 3,

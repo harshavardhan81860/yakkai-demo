@@ -122,7 +122,15 @@ const ApprovalTemplates = () => {
       </Box>
 
       {loading ? <LinearProgress sx={{ borderRadius: 2 }} /> : (
-        <TableContainer component={Paper} sx={{ borderRadius: 4, bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <TableContainer
+          component={Paper}
+          sx={{
+            borderRadius: 3,
+            boxShadow: 3,
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >
           <Table>
             <TableHead>
               <TableRow>
@@ -221,7 +229,12 @@ const ApprovalTemplates = () => {
       )}
 
       {/* Protocol Inspector */}
-      <Dialog open={!!viewTemplate} onClose={() => setViewTemplate(null)} maxWidth="sm" fullWidth>
+      <Dialog open={!!viewTemplate} onClose={() => setViewTemplate(null)} maxWidth="sm" fullWidth BackdropProps={{
+        sx: {
+          backdropFilter: "blur(6px)",
+          backgroundColor: "rgba(0,0,0,0.3)"
+        }
+      }}>
         <DialogTitle sx={{ fontWeight: 800 }}>Workflow Visualizer: {viewTemplate?.template_name}</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ py: 1 }}>

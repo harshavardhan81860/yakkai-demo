@@ -121,12 +121,39 @@ const TenantUsers = () => {
             </Box>
 
             {loading ? <LinearProgress sx={{ borderRadius: 2 }} /> : !activeTenantId ? (
-                <Card sx={{ height: 400, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5, bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <Typography variant="h6">Select a tenant</Typography>
+                <Card
+                    sx={(theme) => ({
+                        height: 400,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        opacity: 0.7,
+                        borderRadius: 3,
+                        bgcolor:
+                            theme.palette.mode === "dark"
+                                ? "rgba(255,255,255,0.02)"
+                                : "rgba(0,0,0,0.02)",
+                        border: "1px solid",
+                        borderColor: theme.palette.divider,
+                        boxShadow:
+                            theme.palette.mode === "dark"
+                                ? "0 8px 24px rgba(0,0,0,0.6)"
+                                : "0 8px 24px rgba(0,0,0,0.12)"
+                    })}
+                >                    <Typography variant="h6">Select a tenant</Typography>
                     <Typography variant="body2">Please select a tenant workspace to view its users</Typography>
                 </Card>
             ) : (
-                <TableContainer component={Paper} sx={{ borderRadius: 4, bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <TableContainer
+                    component={Paper}
+                    sx={{
+                        borderRadius: 3,
+                        boxShadow: 3,
+                        border: "1px solid",
+                        borderColor: "divider",
+                    }}
+                >
                     <Table>
                         <TableHead>
                             <TableRow>

@@ -41,8 +41,16 @@ const TenantResourceExplorer = () => {
                     </Typography>
                 </Box>
                 <Stack direction="row" spacing={2} alignItems="center">
-                    <Paper variant="outlined" sx={{ p: 1.5, px: 2, display: 'flex', gap: 3, bgcolor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                        <Box>
+                    <Paper variant='outlined'
+                        sx={{
+                            p: 2,
+                            mb: 4,
+                            borderRadius: 3,
+                            bgcolor: "action.hover",
+                            border: "1px solid",
+                            borderColor: "divider"
+                        }}
+                    >                        <Box>
                             <Typography variant="caption" display="block" color="text.secondary">Tenant Name</Typography>
                             <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#F59E0B' }}>{tenantName}</Typography>
                         </Box>

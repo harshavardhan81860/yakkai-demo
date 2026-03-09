@@ -130,15 +130,40 @@ const AccountEditDialog: React.FC<Props> = ({ open, onClose, account, onUpdate }
     const isStandaloneAzure = account?.cloud_provider === 'azure' && !isSubAccount && account?.cred_metadata?.account_type === 'subscription';
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="sm"
+            fullWidth
+            BackdropProps={{
+                sx: (theme) => ({
+                    backdropFilter: "blur(8px)",
+                    backgroundColor:
+                        theme.palette.mode === "light"
+                            ? "rgba(255,255,255,0.4)"
+                            : "rgba(0,0,0,0.4)"
+                })
+            }}
             PaperProps={{
-                sx: {
-                    background: "#111827", // Solid Dark Background
-                    backgroundImage: "linear-gradient(145deg, #1a2235 0%, #111827 100%)",
-                    border: "1px solid rgba(255,255,255,0.12)",
+                sx: (theme) => ({
+                    background:
+                        theme.palette.mode === "light"
+                            ? "#ffffff"
+                            : "#111827",
+                    backgroundImage:
+                        theme.palette.mode === "light"
+                            ? "linear-gradient(145deg, #ffffff 0%, #f3f4f6 100%)"
+                            : "linear-gradient(145deg, #1a2235 0%, #111827 100%)",
+                    border: `1px solid ${theme.palette.mode === "light"
+                        ? "rgba(0,0,0,0.12)"
+                        : "rgba(255,255,255,0.12)"
+                        }`,
                     borderRadius: 3,
-                    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)"
-                }
+                    boxShadow:
+                        theme.palette.mode === "light"
+                            ? "0 20px 40px rgba(0,0,0,0.15)"
+                            : "0 25px 50px -12px rgba(0,0,0,0.6)"
+                })
             }}
         >
             <DialogTitle>Edit Cloud Account</DialogTitle>
@@ -151,10 +176,39 @@ const AccountEditDialog: React.FC<Props> = ({ open, onClose, account, onUpdate }
                         fullWidth
                         value={name}
                         onChange={(e) => setName(e.target.value)}
+                        sx={(theme) => ({
+                            "& .MuiOutlinedInput-root": {
+                                "& fieldset": {
+                                    borderColor:
+                                        theme.palette.mode === "light"
+                                            ? "rgba(0,0,0,0.3)"
+                                            : "rgba(255,255,255,0.25)"
+                                },
+                                "&:hover fieldset": {
+                                    borderColor: theme.palette.primary.main
+                                },
+                                "&.Mui-focused fieldset": {
+                                    borderColor: theme.palette.primary.main,
+                                    borderWidth: 2
+                                }
+                            }
+                        })}
                     />
 
-                    <Box sx={{ p: 2, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 2 }}>
-                        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: 1 }}>
+                    <Box
+                        sx={(theme) => ({
+                            p: 2,
+                            border: `1px solid ${theme.palette.mode === "light"
+                                ? "rgba(0,0,0,0.08)"
+                                : "rgba(255,255,255,0.1)"
+                                }`,
+                            borderRadius: 2,
+                            boxShadow:
+                                theme.palette.mode === "light"
+                                    ? "0 4px 12px rgba(0,0,0,0.08)"
+                                    : "0 8px 20px rgba(0,0,0,0.5)"
+                        })}
+                    >                        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: 1 }}>
                             Cloud Identity
                         </Typography>
                         <Stack spacing={2} sx={{ mb: 3 }}>
@@ -252,6 +306,23 @@ const AccountEditDialog: React.FC<Props> = ({ open, onClose, account, onUpdate }
                                             fullWidth
                                             value={azClientId}
                                             onChange={(e) => setAzClientId(e.target.value)}
+                                            sx={(theme) => ({
+                                                "& .MuiOutlinedInput-root": {
+                                                    "& fieldset": {
+                                                        borderColor:
+                                                            theme.palette.mode === "light"
+                                                                ? "rgba(0,0,0,0.25)"
+                                                                : "rgba(255,255,255,0.25)"
+                                                    },
+                                                    "&:hover fieldset": {
+                                                        borderColor: theme.palette.primary.main
+                                                    },
+                                                    "&.Mui-focused fieldset": {
+                                                        borderColor: theme.palette.primary.main,
+                                                        borderWidth: 2
+                                                    }
+                                                }
+                                            })}
                                         />
                                         <TextField
                                             label="Client Secret"
@@ -262,6 +333,29 @@ const AccountEditDialog: React.FC<Props> = ({ open, onClose, account, onUpdate }
                                             onChange={(e) => setAzClientSecret(e.target.value)}
                                             placeholder={azClientSecret ? "Has value (leave empty to keep)" : "Enter new secret"}
                                             helperText="Only enter to update the secret"
+                                            sx={(theme) => ({
+                                                "& .MuiOutlinedInput-root": {
+                                                    "& fieldset": {
+                                                        borderColor:
+                                                            theme.palette.mode === "light"
+                                                                ? "rgba(0,0,0,0.25)"
+                                                                : "rgba(255,255,255,0.25)"
+                                                    },
+                                                    "&:hover fieldset": {
+                                                        borderColor: theme.palette.primary.main
+                                                    },
+                                                    "&.Mui-focused fieldset": {
+                                                        borderColor: theme.palette.primary.main,
+                                                        borderWidth: 2
+                                                    }
+                                                },
+                                                "& .MuiFormHelperText-root": {
+                                                    color:
+                                                        theme.palette.mode === "light"
+                                                            ? "rgba(0,0,0,0.6)"
+                                                            : "rgba(255,255,255,0.6)"
+                                                }
+                                            })}
                                         />
                                     </Stack>
                                 )}

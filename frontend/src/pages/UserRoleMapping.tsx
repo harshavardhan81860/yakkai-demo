@@ -224,8 +224,24 @@ const UserRoleMapping = () => {
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, lg: 4 }}>
-          <Card sx={{ p: 3 }}>
-            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Card
+            sx={{
+              p: 3,
+              border: "1px solid",
+              borderColor: "divider",
+              bgcolor: "background.paper"
+            }}
+          >
+            <Typography
+              variant="subtitle2"
+              sx={{
+                mb: 2,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                gap: 1
+              }}
+            >
               <Person fontSize="small" /> Identity Selection
             </Typography>
 
@@ -234,22 +250,62 @@ const UserRoleMapping = () => {
               getOptionLabel={(u) => `${u.username} (${u.email})`}
               value={selectedUser}
               onChange={(_, user) => {
-                setSelectedUser(user || null); // ensures state updates
+                setSelectedUser(user || null);
+
                 if (user) {
                   fetchUserRoles(user.id).then(setAssignments);
                   fetchUserTenants(user.id).then(setTenants);
+                  navigate(`/user-role-mapping?userId=${user.id}`, { replace: true });
                 }
-                if (user) navigate(`/user-role-mapping?userId=${user.id}`, { replace: true });
               }}
-              isOptionEqualToValue={(option, value) => option.id === value.id} // <-- critical
-              renderInput={(params) => <TextField {...params} label="Search User" variant="outlined" fullWidth />}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Search User"
+                  fullWidth
+                  sx={(theme) => ({
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": {
+                        borderColor:
+                          theme.palette.mode === "dark" ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.23)"
+                      },
+                      "&:hover fieldset": {
+                        borderColor: theme.palette.primary.main
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: theme.palette.primary.main,
+                        borderWidth: 2
+                      }
+                    }
+                  })}
+                />)}
             />
+
             {selectedUser && (
-              <Box sx={{ mt: 3, p: 2, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <Typography variant="caption" color="text.secondary" display="block">User Details</Typography>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{selectedUser.username}</Typography>
-                <Typography variant="body2" color="text.secondary">{selectedUser.email}</Typography>
-                <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+              <Box
+                sx={{
+                  mt: 3,
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: "action.hover",
+                  border: "1px solid",
+                  borderColor: "divider"
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" display="block">
+                  User Details
+                </Typography>
+
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  {selectedUser.username}
+                </Typography>
+
+                <Typography variant="body2" color="text.secondary">
+                  {selectedUser.email}
+                </Typography>
+
+                <Box sx={{ mt: 2, display: "flex", gap: 1, flexDirection: "column" }}>
                   <Chip label={`ID: ${selectedUser.id}`} size="small" variant="outlined" />
                   <Chip label="Active" size="small" color="success" />
                 </Box>
@@ -260,82 +316,183 @@ const UserRoleMapping = () => {
 
         <Grid size={{ xs: 12, lg: 8 }}>
           {!selectedUser ? (
-            <Card sx={{ height: 400, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
+            <Card
+              sx={(theme) => ({
+                height: 400,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: 0.7,
+                borderRadius: 3,
+                border: "1px solid",
+                borderColor: theme.palette.divider,
+                background:
+                  theme.palette.mode === "dark"
+                    ? "rgba(255,255,255,0.02)"
+                    : "rgba(0,0,0,0.02)",
+                boxShadow:
+                  theme.palette.mode === "dark"
+                    ? "0 10px 30px rgba(0,0,0,0.6)"
+                    : "0 10px 30px rgba(0,0,0,0.12)"
+              })}
+            >
               <History sx={{ fontSize: 60, mb: 2 }} />
               <Typography variant="h6">Select a user</Typography>
-              <Typography variant="body2">Select a user to view and manage their roles</Typography>
+              <Typography variant="body2">
+                Select a user to view and manage their roles
+              </Typography>
             </Card>
           ) : (
             <Stack spacing={3}>
               {/* System Roles */}
-              <Card sx={{ p: 0 }}>
-                <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Avatar sx={{ bgcolor: 'rgba(0,217,255,0.1)', color: '#00D9FF' }}><AdminPanelSettings /></Avatar>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>System Roles</Typography>
+              <Card sx={{ border: "1px solid", borderColor: "divider" }}>
+                <Box
+                  sx={{
+                    p: 2,
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5
+                  }}
+                >
+                  <Avatar sx={{ bgcolor: "rgba(0,217,255,0.1)", color: "#00D9FF" }}>
+                    <AdminPanelSettings />
+                  </Avatar>
+
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    System Roles
+                  </Typography>
                 </Box>
+
                 <TableContainer>
                   <Table>
                     <TableBody>
-                      {assignments.filter(a => roles.find(r => String(r.id) === String(a.role_id))?.is_system_role).length === 0 ? (
-                        <TableRow><TableCell align="center" sx={{ py: 4 }}><Typography color="text.secondary">No administrative roles assigned</Typography></TableCell></TableRow>
-                      ) : assignments.filter(a => roles.find(r => String(r.id) === String(a.role_id))?.is_system_role).map(a => (
-                        <TableRow key={a.id} sx={{ '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{roles.find(r => String(r.id) === String(a.role_id))?.name}</Typography>
-                              {a.is_inherited && (
-                                <Tooltip title={`Inherited from group: ${a.source_group_name}`}>
-                                  <Chip size="small" icon={<Info fontSize="small" />} label={a.source_group_name} color="info" variant="outlined" sx={{ height: 20 }} />
-                                </Tooltip>
-                              )}
-                            </Box>
-                          </TableCell>
-                          <TableCell align="right">
-                            {!a.is_inherited && (
-                              <Button size="small" color="error" startIcon={<Delete />} onClick={() => revoke(a.id as number)}>Revoke</Button>
-                            )}
+                      {assignments.filter(a =>
+                        roles.find(r => String(r.id) === String(a.role_id))?.is_system_role
+                      ).length === 0 ? (
+                        <TableRow>
+                          <TableCell align="center" sx={{ py: 4 }}>
+                            <Typography color="text.secondary">
+                              No administrative roles assigned
+                            </Typography>
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        assignments
+                          .filter(a =>
+                            roles.find(r => String(r.id) === String(a.role_id))?.is_system_role
+                          )
+                          .map(a => (
+                            <TableRow
+                              key={a.id}
+                              sx={{ "&:hover": { bgcolor: "action.hover" } }}
+                            >
+                              <TableCell>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                  {roles.find(r => String(r.id) === String(a.role_id))?.name}
+                                </Typography>
+                              </TableCell>
+
+                              <TableCell align="right">
+                                {!a.is_inherited && (
+                                  <Button
+                                    size="small"
+                                    color="error"
+                                    startIcon={<Delete />}
+                                    onClick={() => revoke(a.id as number)}
+                                  >
+                                    Revoke
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                      )}
                     </TableBody>
                   </Table>
                 </TableContainer>
               </Card>
 
               {/* Tenant Roles */}
-              <Card sx={{ p: 0 }}>
-                <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Avatar sx={{ bgcolor: 'rgba(108,99,255,0.1)', color: '#6C63FF' }}><Business /></Avatar>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>Organization Roles</Typography>
+              <Card sx={{ border: "1px solid", borderColor: "divider" }}>
+                <Box
+                  sx={{
+                    p: 2,
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5
+                  }}
+                >
+                  <Avatar sx={{ bgcolor: "rgba(108,99,255,0.1)", color: "#6C63FF" }}>
+                    <Business />
+                  </Avatar>
+
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    Organization Roles
+                  </Typography>
                 </Box>
+
                 {Object.keys(tenantGroups).length === 0 ? (
-                  <Box sx={{ p: 6, textAlign: 'center' }}><Typography color="text.secondary">No organization-specific roles assigned</Typography></Box>
+                  <Box sx={{ p: 6, textAlign: "center" }}>
+                    <Typography color="text.secondary">
+                      No organization-specific roles assigned
+                    </Typography>
+                  </Box>
                 ) : (
                   <List disablePadding>
                     {Object.entries(tenantGroups).map(([tid, assigns], idx) => (
                       <Box key={tid}>
                         {idx > 0 && <Divider />}
-                        <Box sx={{ px: 3, pt: 2, pb: 1, bgcolor: 'rgba(255,255,255,0.01)' }}>
-                          <Typography variant="caption" sx={{ fontWeight: 800, color: '#6C63FF', letterSpacing: 1 }}>TENANT: {tenants.find(t => String(t.id) === tid)?.display_name.toUpperCase()}</Typography>
+
+                        <Box
+                          sx={{
+                            px: 3,
+                            pt: 2,
+                            pb: 1,
+                            bgcolor: "action.hover"
+                          }}
+                        >
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontWeight: 800,
+                              color: "#6C63FF",
+                              letterSpacing: 1
+                            }}
+                          >
+                            TENANT:{" "}
+                            {tenants
+                              .find(t => String(t.id) === tid)
+                              ?.display_name.toUpperCase()}
+                          </Typography>
                         </Box>
+
                         {assigns.map(a => (
-                          <ListItem key={a.id} sx={{ px: 3, '&:hover': { bgcolor: 'rgba(255,255,255,0.02)' } }}>
-                            <ListItemText primary={<Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{roles.find(r => String(r.id) === String(a.role_id))?.name}</Typography>}
-                              secondary={
-                                <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                  <Typography variant="body2" component="span">{a.cloud_account_id ? `Restricted to Cloud: ${a.cloud_account_id}` : 'Tenant-wide scope'}</Typography>
-                                  {a.is_inherited && (
-                                    <Tooltip title={`Inherited from group: ${a.source_group_name}`}>
-                                      <Chip size="small" icon={<Info fontSize="small" />} label={a.source_group_name} color="info" variant="outlined" sx={{ height: 20 }} />
-                                    </Tooltip>
-                                  )}
-                                </Box>
-                              } />
-                            <ListItemSecondaryAction>
-                              {!a.is_inherited && (
-                                <IconButton edge="end" color="error" onClick={() => revoke(a.id as number)}><Delete fontSize="small" /></IconButton>
-                              )}
-                            </ListItemSecondaryAction>
+                          <ListItem
+                            key={a.id}
+                            sx={{ px: 3, "&:hover": { bgcolor: "action.hover" } }}
+                          >
+                            <ListItemText
+                              primary={
+                                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                  {roles.find(r => String(r.id) === String(a.role_id))?.name}
+                                </Typography>
+                              }
+                            />
+
+                            {!a.is_inherited && (
+                              <IconButton
+                                edge="end"
+                                color="error"
+                                onClick={() => revoke(a.id as number)}
+                              >
+                                <Delete fontSize="small" />
+                              </IconButton>
+                            )}
                           </ListItem>
                         ))}
                       </Box>
@@ -354,87 +511,185 @@ const UserRoleMapping = () => {
         onClose={() => setShowAssign(false)}
         maxWidth="xs"
         fullWidth
+        PaperProps={{
+          sx: (theme) => ({
+            borderRadius: 3,
+            border: "1px solid",
+            borderColor: theme.palette.divider,
+            background:
+              theme.palette.mode === "dark"
+                ? "rgba(20,20,20,0.9)"
+                : "rgba(255,255,255,0.95)",
+            backdropFilter: "blur(10px)"
+          })
+        }}
         slotProps={{
-          backdrop: { sx: { backgroundColor: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)' } }
+          backdrop: {
+            sx: {
+              backgroundColor: "rgba(0,0,0,0.6)",
+              backdropFilter: "blur(6px)"
+            }
+          }
         }}
       >
-        <DialogTitle sx={{ fontWeight: 700 }}>Assign Role</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 700 }}>
+          Assign Role
+        </DialogTitle>
+
         <DialogContent sx={{ pt: 2 }}>
-          <Grid container spacing={2.5}>
-            {/* 1. Select User */}
+          <Grid container spacing={2.5} >
+
+            {/* Select User */}
             <Grid size={12}>
               <Autocomplete
                 options={users.filter(u => !usersAssignedToRole.includes(u.id))}
                 getOptionLabel={(u) => `${u.username} (${u.email})`}
                 value={selectedUser}
                 onChange={(_, user) => {
-                  setSelectedUser(user || null);
+                  setSelectedUser(user || null)
                   if (user) {
-                    fetchUserRoles(user.id).then(setAssignments);
-                    fetchUserTenants(user.id).then(setTenants);
+                    fetchUserRoles(user.id).then(setAssignments)
+                    fetchUserTenants(user.id).then(setTenants)
                   }
                 }}
                 isOptionEqualToValue={(option, value) => option.id === value.id}
-                renderInput={(params) => <TextField {...params} label="Select User *" />}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Select User *"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": { borderColor: "divider" },
+                        "&:hover fieldset": { borderColor: "primary.main" },
+                        "&.Mui-focused fieldset": { borderColor: "primary.main" }
+                      }
+                    }}
+                  />
+                )}
               />
-
             </Grid>
 
-            {/* 2. Assignment Logic */}
+            {/* Assignment Logic */}
             <Grid size={12}>
-              <FormControl fullWidth disabled={viewMode === "tenant"}>
+              <FormControl
+                fullWidth
+                disabled={viewMode === "tenant"}
+                sx={{
+                  "& .MuiOutlinedInput-root fieldset": { borderColor: "divider" }
+                }}
+              >
                 <InputLabel>Assignment Logic</InputLabel>
+
                 <Select
                   value={assignType}
                   label="Assignment Logic"
                   onChange={e => {
-                    setAssignType(e.target.value as any);
-                    setSelectedRole(null);
+                    setAssignType(e.target.value as any)
+                    setSelectedRole(null)
                   }}
                 >
-                  {viewMode === "system" && <MenuItem value="system">Global Platform Privilege</MenuItem>}
-                  <MenuItem value="tenant">Organizational Tenant Access</MenuItem>
+                  {viewMode === "system" && (
+                    <MenuItem value="system">
+                      Global Platform Privilege
+                    </MenuItem>
+                  )}
+
+                  <MenuItem value="tenant">
+                    Organizational Tenant Access
+                  </MenuItem>
                 </Select>
               </FormControl>
             </Grid>
 
-            {/* 3. Tenant selection if assignType is tenant */}
-            {assignType === 'tenant' && (
+            {/* Tenant Selection */}
+            {assignType === "tenant" && (
               <Grid size={12}>
                 <Autocomplete
-                  options={viewMode === "tenant" && activeTenant ? tenants.filter(t => String(t.id) === String(activeTenant.tenant_id)) : tenants}
+                  options={
+                    viewMode === "tenant" && activeTenant
+                      ? tenants.filter(
+                        t => String(t.id) === String(activeTenant.tenant_id)
+                      )
+                      : tenants
+                  }
                   getOptionLabel={(t) => t.display_name}
                   value={selectedTenant}
                   onChange={(_, v) => setSelectedTenant(v)}
                   disabled={viewMode === "tenant"}
-                  renderInput={(params) => <TextField {...params} label="Target Tenant *" />}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Target Tenant *"
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          "& fieldset": { borderColor: "divider" },
+                          "&:hover fieldset": { borderColor: "primary.main" },
+                          "&.Mui-focused fieldset": { borderColor: "primary.main" }
+                        }
+                      }}
+                    />
+                  )}
                 />
               </Grid>
             )}
 
-
-            {/* 5. Role selection */}
+            {/* Role Selection */}
             <Grid size={12}>
               <Autocomplete
                 options={assignType === "system" ? systemRoles : tenantRoles}
-                getOptionLabel={(r) => r.tenant_id ? `${r.name} (${tenants.find(t => String(t.id) === String(r.tenant_id))?.display_name || 'Legacy Tenant'})` : r.name}
+                getOptionLabel={(r) =>
+                  r.tenant_id
+                    ? `${r.name} (${tenants.find(t => String(t.id) === String(r.tenant_id))?.display_name || "Legacy Tenant"})`
+                    : r.name
+                }
                 value={selectedRole}
                 onChange={(_, role) => setSelectedRole(role || null)}
                 isOptionEqualToValue={(option, value) => option.id === value.id}
-                renderInput={(params) => <TextField {...params} label="Select Role *" />}
-                disabled={assignType === 'tenant' && !selectedTenant}
+                disabled={assignType === "tenant" && !selectedTenant}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Select Role *"
+                    variant="outlined"
+                    sx={(theme) => ({
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 2,
+                        "& fieldset": {
+                          borderColor:
+                            theme.palette.mode === "light"
+                              ? "rgba(0,0,0,0.23)"
+                              : "rgba(255,255,255,0.2)"
+                        },
+                        "&:hover fieldset": {
+                          borderColor: theme.palette.primary.main
+                        },
+                        "&.Mui-focused fieldset": {
+                          borderColor: theme.palette.primary.main,
+                          borderWidth: 2
+                        }
+                      }
+                    })}
+                  />
+                )}
               />
             </Grid>
           </Grid>
         </DialogContent>
+
         <DialogActions sx={{ p: 2.5 }}>
-          <Button onClick={() => setShowAssign(false)}>Cancel</Button>
+          <Button onClick={() => setShowAssign(false)}>
+            Cancel
+          </Button>
+
           <Button
             variant="contained"
             onClick={confirmAssign}
-            disabled={!selectedUser || !selectedRole || usersAssignedToRole.length === users.length}
+            disabled={
+              !selectedUser ||
+              !selectedRole ||
+              usersAssignedToRole.length === users.length
+            }
           >
-
             Assign Role
           </Button>
         </DialogActions>

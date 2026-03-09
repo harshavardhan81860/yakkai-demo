@@ -89,8 +89,15 @@ const PolicySubjectList = () => {
       </Box>
 
       {loading ? <LinearProgress sx={{ borderRadius: 2 }} /> : (
-        <TableContainer component={Card} sx={{ borderRadius: 4 }}>
-          <Table>
+        <TableContainer
+          component={Card}
+          sx={{
+            borderRadius: 3,
+            boxShadow: 3,
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >            <Table>
             <TableHead>
               <TableRow>
                 <TableCell>Enforced Policy</TableCell>

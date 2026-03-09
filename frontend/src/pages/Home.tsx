@@ -34,19 +34,47 @@ interface StatCardProps {
 const StatCard = ({ title, total, subtitle, icon, color, detail1, detail2, onClick }: StatCardProps) => (
   <Card
     onClick={onClick}
-    sx={{
-      p: 3, cursor: onClick ? 'pointer' : 'default', height: '100%',
-      position: 'relative', overflow: 'hidden',
-      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      bgcolor: 'rgba(255,255,255,0.01)',
-      border: '1px solid rgba(255,255,255,0.05)',
-      '&:hover': onClick ? { transform: 'translateY(-4px)', boxShadow: `0 12px 30px ${color}15`, borderColor: `${color}33` } : {},
-      '&::before': {
-        content: '""', position: 'absolute', top: -50, right: -50,
-        width: 150, height: 150, borderRadius: '50%',
-        background: color, opacity: 0.04
-      }
-    }}
+    sx={(theme) => ({
+      p: 3,
+      cursor: onClick ? "pointer" : "default",
+      height: "100%",
+      position: "relative",
+      overflow: "hidden",
+      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+
+      bgcolor:
+        theme.palette.mode === "dark"
+          ? "rgba(190, 24, 24, 0.01)"
+          : "#ffffff",
+
+      border:
+        theme.palette.mode === "dark"
+          ? "1px solid rgba(255,255,255,0.05)"
+          : "1px solid rgba(0,0,0,0.08)",
+
+      "&:hover": onClick
+        ? {
+          transform: "translateY(-4px)",
+          boxShadow:
+            theme.palette.mode === "dark"
+              ? `0 12px 30px ${color}15`
+              : "0 8px 20px rgba(0,0,0,0.08)",
+          borderColor: `${color}33`,
+        }
+        : {},
+
+      "&::before": {
+        content: '""',
+        position: "absolute",
+        top: -50,
+        right: -50,
+        width: 150,
+        height: 150,
+        borderRadius: "50%",
+        background: color,
+        opacity: theme.palette.mode === "dark" ? 0.04 : 0.06,
+      },
+    })}
   >
     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
       <Avatar sx={{ bgcolor: `${color}15`, color: color, width: 48, height: 48 }}>
@@ -87,13 +115,37 @@ const StatCard = ({ title, total, subtitle, icon, color, detail1, detail2, onCli
 const QuickCard = ({ title, desc, icon, path, color, navigate }: any) => (
   <Card
     onClick={() => navigate(path)}
-    sx={{
-      p: 3, height: '100%', cursor: 'pointer',
-      bgcolor: 'rgba(255,255,255,0.01)',
-      border: '1px solid rgba(255,255,255,0.05)',
-      transition: 'all 0.2s ease',
-      '&:hover': { bgcolor: 'rgba(255,255,255,0.02)', borderColor: color, transform: 'translateY(-4px)' }
-    }}
+    sx={(theme) => ({
+      p: 3,
+      height: "100%",
+      cursor: "pointer",
+      transition: "all 0.2s ease",
+
+      bgcolor:
+        theme.palette.mode === "dark"
+          ? "rgba(255,255,255,0.01)"
+          : "#ffffff",
+
+      border:
+        theme.palette.mode === "dark"
+          ? "1px solid rgba(255,255,255,0.05)"
+          : "1px solid rgba(0,0,0,0.08)",
+
+      "&:hover": {
+        bgcolor:
+          theme.palette.mode === "dark"
+            ? "rgba(255,255,255,0.02)"
+            : "rgba(0,0,0,0.02)",
+
+        borderColor: color,
+        transform: "translateY(-4px)",
+
+        boxShadow:
+          theme.palette.mode === "dark"
+            ? `0 10px 25px ${color}22`
+            : "0 8px 20px rgba(0,0,0,0.08)",
+      },
+    })}
   >
     <Avatar sx={{ width: 40, height: 40, bgcolor: `${color}15`, color: color, mb: 2 }}>
       {icon}
@@ -194,12 +246,22 @@ const Home = () => {
         <Stack spacing={2} sx={{ mb: 8, textAlign: 'center', alignItems: 'center' }}>
           <Typography variant="h1" sx={{
             fontWeight: 900, letterSpacing: -3, lineHeight: 1,
-            background: 'linear-gradient(135deg, #fff 0%, #6C63FF 100%)',
+            background: 'linear-gradient(100deg, #4F46E5 0%, #6C63FF 50%, #9333EA 100%)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', mb: 1
           }}>
             YakkAI
           </Typography>
-          <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: -1, color: '#f3f4f6', opacity: 0.9 }}>
+          <Typography
+            variant="h4"
+            sx={(theme) => ({
+              fontWeight: 700,
+              letterSpacing: -1,
+              color: theme.palette.mode === 'dark'
+                ? '#ffffff'
+                : '#1f2937',  // dark gray for light mode
+              opacity: 0.9,
+            })}
+          >
             Multi-Cloud Infrastructure Platform
           </Typography>
           <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400, maxWidth: 660, lineHeight: 1.6, mt: 2 }}>
@@ -214,16 +276,37 @@ const Home = () => {
             <Grid size={{ xs: 12, md: 5 }}>
               <Card
                 onClick={() => { switchToSystem(); navigate('/'); }}
-                sx={{
-                  p: 5, cursor: 'pointer', textAlign: 'center',
-                  bgcolor: 'rgba(255,255,255,0.01)',
-                  border: '1px solid rgba(108,99,255,0.2)',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    bgcolor: 'rgba(108,99,255,0.05)', borderColor: '#6C63FF',
-                    transform: 'translateY(-8px)', boxShadow: '0 20px 40px rgba(108,99,255,0.15)',
-                  }
-                }}
+                sx={(theme) => ({
+                  p: 5,
+                  cursor: "pointer",
+                  textAlign: "center",
+                  transition: "all 0.3s ease",
+
+                  bgcolor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.01)"
+                      : "#ffffff",
+
+                  border:
+                    theme.palette.mode === "dark"
+                      ? "1px solid rgba(108,99,255,0.2)"
+                      : "1px solid rgba(108,99,255,0.25)",
+
+                  "&:hover": {
+                    bgcolor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(108,99,255,0.05)"
+                        : "rgba(108,99,255,0.08)",
+
+                    borderColor: "#6C63FF",
+                    transform: "translateY(-8px)",
+
+                    boxShadow:
+                      theme.palette.mode === "dark"
+                        ? "0 20px 40px rgba(108,99,255,0.15)"
+                        : "0 12px 28px rgba(108,99,255,0.18)",
+                  },
+                })}
               >
                 <Avatar sx={{
                   width: 72, height: 72, mx: 'auto', mb: 3,
@@ -253,16 +336,37 @@ const Home = () => {
             <Grid size={{ xs: 12, md: systemRole ? 5 : 4 }} key={tr.tenant_id}>
               <Card
                 onClick={() => { switchToTenant(tr.tenant_id); navigate(`/tenants/${tr.tenant_id}/dashboard`); }}
-                sx={{
-                  p: 5, cursor: 'pointer', textAlign: 'center',
-                  bgcolor: 'rgba(255,255,255,0.01)',
-                  border: '1px solid rgba(59,130,246,0.2)',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    bgcolor: 'rgba(59,130,246,0.05)', borderColor: '#3B82F6',
-                    transform: 'translateY(-8px)', boxShadow: '0 20px 40px rgba(59,130,246,0.15)',
-                  }
-                }}
+                sx={(theme) => ({
+                  p: 5,
+                  cursor: "pointer",
+                  textAlign: "center",
+                  transition: "all 0.3s ease",
+
+                  bgcolor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.01)"
+                      : "#ffffff",
+
+                  border:
+                    theme.palette.mode === "dark"
+                      ? "1px solid rgba(59,130,246,0.2)"
+                      : "1px solid rgba(59,130,246,0.25)",
+
+                  "&:hover": {
+                    bgcolor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(59,130,246,0.05)"
+                        : "rgba(59,130,246,0.08)",
+
+                    borderColor: "#3B82F6",
+                    transform: "translateY(-8px)",
+
+                    boxShadow:
+                      theme.palette.mode === "dark"
+                        ? "0 20px 40px rgba(59,130,246,0.15)"
+                        : "0 12px 28px rgba(59,130,246,0.18)",
+                  },
+                })}
               >
                 <Avatar sx={{
                   width: 72, height: 72, mx: 'auto', mb: 3,
@@ -301,7 +405,7 @@ const Home = () => {
         <Box sx={{ mb: 5 }}>
           <Typography variant="h4" sx={{
             fontWeight: 800, mb: 1,
-            background: 'linear-gradient(90deg, #fff 0%, #6C63FF 100%)',
+            background: 'linear-gradient(100deg, #4F46E5 0%, #6C63FF 50%, #9333EA 100%)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
           }}>
             System Dashboard

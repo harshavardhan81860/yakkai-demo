@@ -139,54 +139,118 @@ const PermissionPolicyCreate = () => {
       </Box>
 
       {loading ? <LinearProgress sx={{ borderRadius: 2 }} /> : (
-        <Card sx={{ p: 4, borderRadius: 4 }}>
-          <Grid container spacing={4}>
+        <Card sx={{
+          borderRadius: 3,
+          boxShadow: 3,
+          border: "1px solid",
+          borderColor: "divider",
+          p: 4
+        }}>
+
+          <Grid
+            container
+            spacing={4}
+            sx={(theme) => ({
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": {
+                  borderColor: theme.palette.divider
+                },
+                "&:hover fieldset": {
+                  borderColor: theme.palette.text.primary
+                },
+                "&.Mui-focused fieldset": {
+                  borderColor: theme.palette.primary.main
+                }
+              },
+              "& .MuiInputLabel-root": {
+                color: theme.palette.text.secondary
+              }
+            })}
+          >
             <Grid size={{ xs: 12, md: 6 }}>
-              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  mb: 2,
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1
+                }}
+              >
                 <Security fontSize="small" /> Logic Definition
               </Typography>
+
               <Stack spacing={3}>
                 <Autocomplete
                   options={resourceOptions}
                   value={rule.resource}
                   onChange={(_, v) => setRule({ ...rule, resource: v, action: null })}
-                  renderInput={(params) => <TextField {...params} label="Target Resource Type *" />}
+                  renderInput={(params) => (
+                    <TextField {...params} label="Target Resource Type *" />
+                  )}
                 />
+
                 <Autocomplete
                   options={actionOptions}
                   value={rule.action}
                   disabled={!rule.resource}
                   onChange={(_, v) => setRule({ ...rule, action: v })}
-                  renderInput={(params) => <TextField {...params} label="Permitted/Restricted Action *" />}
+                  renderInput={(params) => (
+                    <TextField {...params} label="Permitted/Restricted Action *" />
+                  )}
                 />
+
                 <FormControl fullWidth>
                   <InputLabel>Application Effect</InputLabel>
                   <Select
                     value={rule.effect}
                     label="Application Effect"
-                    onChange={e => setRule({ ...rule, effect: e.target.value as EffectType })}
+                    onChange={(e) =>
+                      setRule({ ...rule, effect: e.target.value as EffectType })
+                    }
                   >
                     <MenuItem value="ALLOW">Explicit Allow</MenuItem>
-                    <MenuItem value="DENY">Explicit Deny (Highest Precedence)</MenuItem>
+                    <MenuItem value="DENY">
+                      Explicit Deny (Highest Precedence)
+                    </MenuItem>
                   </Select>
                 </FormControl>
               </Stack>
             </Grid>
 
             <Grid size={{ xs: 12, md: 6 }}>
-              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  mb: 2,
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1
+                }}
+              >
                 <Gavel fontSize="small" /> Execution Scope
               </Typography>
+
               <Stack spacing={3}>
                 <FormControl fullWidth>
                   <InputLabel>Enforcement Scope</InputLabel>
+
                   <Select
                     value={rule.scope || ""}
                     label="Enforcement Scope"
-                    onChange={e => setRule({ ...rule, scope: e.target.value, tenantId: null })}
+                    onChange={(e) =>
+                      setRule({ ...rule, scope: e.target.value, tenantId: null })
+                    }
                   >
-                    <MenuItem value="SYSTEM">Platform-Wide (System)</MenuItem>
-                    <MenuItem value="TENANT">Organization-Specific (Tenant)</MenuItem>
+                    <MenuItem value="SYSTEM">
+                      Platform-Wide (System)
+                    </MenuItem>
+
+                    <MenuItem value="TENANT">
+                      Organization-Specific (Tenant)
+                    </MenuItem>
                   </Select>
                 </FormControl>
 
@@ -194,9 +258,13 @@ const PermissionPolicyCreate = () => {
                   <Autocomplete
                     options={tenants}
                     getOptionLabel={(t) => t.name}
-                    value={tenants.find(t => t.id === rule.tenantId) || null}
-                    onChange={(_, v) => setRule({ ...rule, tenantId: v?.id || null })}
-                    renderInput={(params) => <TextField {...params} label="Select Target Tenant *" />}
+                    value={tenants.find((t) => t.id === rule.tenantId) || null}
+                    onChange={(_, v) =>
+                      setRule({ ...rule, tenantId: v?.id || null })
+                    }
+                    renderInput={(params) => (
+                      <TextField {...params} label="Select Target Tenant *" />
+                    )}
                   />
                 )}
 
@@ -208,16 +276,21 @@ const PermissionPolicyCreate = () => {
                     disabled={submitting}
                     onClick={save}
                     startIcon={<Save />}
-                    sx={{
+                    sx={(theme) => ({
                       py: 1.5,
                       borderRadius: 3,
-                      fontSize: '1rem',
+                      fontSize: "1rem",
                       fontWeight: 700,
-                      background: 'linear-gradient(135deg,#6C63FF,#4A42D4)',
-                      boxShadow: '0 8px 16px rgba(108,99,255,0.2)'
-                    }}
+                      background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                      boxShadow:
+                        theme.palette.mode === "dark"
+                          ? "0 8px 16px rgba(0,0,0,0.4)"
+                          : "0 8px 16px rgba(0,0,0,0.15)"
+                    })}
                   >
-                    {submitting ? "Establishing Guardrail..." : "Commit Policy"}
+                    {submitting
+                      ? "Establishing Guardrail..."
+                      : "Commit Policy"}
                   </Button>
                 </Box>
               </Stack>

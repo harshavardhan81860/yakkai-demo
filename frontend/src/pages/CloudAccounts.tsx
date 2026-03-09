@@ -189,7 +189,7 @@ const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoo
                 color="inherit"
                 onClick={() => toggleRoot(row.id)}
                 startIcon={<AccountTree fontSize="small" />}
-                sx={{ textTransform: 'none', py: 0.2, borderColor: 'rgba(255,255,255,0.2)' }}
+                sx={{ textTransform: 'none', py: 0.2, borderColor: "divider" }}
               >
                 {isExpanded ? "Hide" : "Show"} Sub-Accounts ({subs.length})
               </Button>
@@ -211,8 +211,19 @@ const RecursiveAccountRow = ({ row, allAccounts, level, expandedRoots, toggleRoo
               </IconButton>
             </Tooltip>
 
-            <Menu anchorEl={anchorEl} open={openMenu} onClose={handleMenuClose} PaperProps={{ sx: { bgcolor: '#1e1e1e', backgroundImage: 'none', border: '1px solid rgba(255,255,255,0.1)' } }}>
-              <MenuItem onClick={() => { handleMenuClose(); handlers.handleEditAccount(row); }}>
+            <Menu
+              anchorEl={anchorEl}
+              open={openMenu}
+              onClose={handleMenuClose}
+              PaperProps={{
+                sx: {
+                  bgcolor: "background.paper",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  backgroundImage: "none"
+                }
+              }}
+            >              <MenuItem onClick={() => { handleMenuClose(); handlers.handleEditAccount(row); }}>
                 <ListItemIcon><Edit fontSize="small" /></ListItemIcon>
                 <ListItemText>Edit Account Details</ListItemText>
               </MenuItem>
@@ -461,7 +472,7 @@ const CloudAccounts = () => {
 
       {loading && <LinearProgress sx={{ mb: 2 }} />}
 
-      <Paper sx={{ background: 'rgba(17, 24, 39, 0.6)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+      <Paper sx={{ backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
         <TableContainer>
           <Table>
             <TableHead>
