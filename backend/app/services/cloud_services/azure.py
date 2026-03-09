@@ -105,6 +105,8 @@ async def get_instances(account_id: str, region: str) -> List[Dict]:
     compute, _, _, _ = await _get_azure_clients(account_id)
 
     results = []
+    
+    # 1. Fetch individual Virtual Machines
     for vm in compute.virtual_machines.list_all():
         if vm.location.lower() != region.lower():
             continue
@@ -113,10 +115,56 @@ async def get_instances(account_id: str, region: str) -> List[Dict]:
             "vm_id": vm.id,
             "name": vm.name,
             "location": vm.location,
+            "type": "microsoft.compute/virtualmachines",
             "size": vm.hardware_profile.vm_size if vm.hardware_profile else None,
             "provisioning_state": vm.provisioning_state,
+            "source_service": "Manual / Direct",
             "_raw": vm.as_dict() if hasattr(vm, 'as_dict') else {"id": vm.id, "name": vm.name}
         })
+
+    # 2. Fetch Virtual Machine Scale Set Instances (AKS Nodes)
+    # Most AKS nodes live here, and the portal expands them implicitly.
+    for vmss in compute.virtual_machine_scale_sets.list_all():
+        if vmss.location.lower() != region.lower():
+            continue
+
+        try:
+            # Extract Resource Group name from VMSS ID
+            # ID format: /subscriptions/.../resourceGroups/{rg}/providers/...
+            rg_name = vmss.id.split('/')[4]
+            
+            # Identify exact source service name
+            if rg_name.lower().startswith("mc_"):
+                # AKS Resource Groups follow pattern: MC_{resourceGroup}_{clusterName}_{region}
+                parts = rg_name.split('_')
+                if len(parts) >= 4:
+                    # The cluster name is usually the second to last part
+                    cluster_name = "_".join(parts[2:-1])
+                    source_svc = f"Azure Kubernetes Service ({cluster_name})"
+                else:
+                    source_svc = "Azure Kubernetes Service"
+            else:
+                source_svc = f"Virtual Machine Scale Set ({vmss.name})"
+            
+            # Use `virtual_machine_scale_set_vms` to list the actual instances inside the pool
+            for vm_instance in compute.virtual_machine_scale_set_vms.list(rg_name, vmss.name):
+                # We format the name as {ScaleSetName}_{InstanceId} to easily identify them
+                name = f"{vmss.name}_{vm_instance.instance_id}"
+                
+                results.append({
+                    "vm_id": vm_instance.id,
+                    "name": name,
+                    "location": vm_instance.location,
+                    "type": "microsoft.compute/virtualmachinescalesets/virtualmachines",
+                    "size": vm_instance.hardware_profile.vm_size if vm_instance.hardware_profile else (vmss.sku.name if vmss.sku else "Unknown"),
+                    "provisioning_state": vm_instance.provisioning_state,
+                    "source_service": source_svc,
+                    "_raw": vm_instance.as_dict() if hasattr(vm_instance, 'as_dict') else {"id": vm_instance.id, "name": vm_instance.name}
+                })
+        except Exception as e:
+            # Shield against malformed IDs or permission issues on specific scale sets
+            continue
+
     return results
 
 # --------------------------------------------------
