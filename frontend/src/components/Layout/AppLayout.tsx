@@ -17,6 +17,7 @@ import GlobalHeader from './GlobalHeader';
 
 import SettingsDialog from '../Settings/SettingsDialog';
 import { Settings as SettingsIcon } from '@mui/icons-material';
+import logo from "../../../public/logo-yakkai.png";
 
 const DRAWER_WIDTH = 280;
 
@@ -195,21 +196,18 @@ const AppLayout = () => {
                     },
                 }}
             >
-                {/* Brand Logo & Platform Description */}
                 <Box
                     onClick={() => navigate('/')}
                     sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 2, minHeight: 90, cursor: 'pointer' }}
                 >
-                    <Box id="platform-logo" sx={{
-                        display: 'flex', p: 1, borderRadius: '12px',
-                        background: 'linear-gradient(135deg, #6C63FF 0%, #3B82F6 100%)',
-                        boxShadow: '0 4px 12px rgba(108,99,255,0.3)',
-                        flexShrink: 0
-                    }}>
-                        <Cloud sx={{ color: '#fff' }} />
-                    </Box>
+
+                    <img
+                        src={logo}
+                        alt="Yakkai Logo"
+                        style={{ width: 40, height: 40 }}
+                    />
                     {!collapsed && (
-                        <Box sx={{ minWidth: 0 }}>
+                        <Box sx={{display: 'flex', alignItems: 'center', flexDirection:'column', minWidth: 0 }}>
                             <Typography variant="h6" sx={{
                                 fontWeight: 900, fontSize: '1.2rem', color: 'text.primary', letterSpacing: -0.5, lineHeight: 1.2
                             }}>

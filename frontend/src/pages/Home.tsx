@@ -16,6 +16,8 @@ import api from "../services/api";
 import { fetchApprovalTemplates } from "../services/approvalTemplatesService";
 import { fetchApprovalRequests } from "../services/approvalRequestsService";
 import { fetchPendingApprovals } from "../services/pendingApprovalsService";
+import logoright from "../assets/yakkailogo.png";
+
 
 /* ────────────────────────────────────────────
    Dashboard Stat Card
@@ -228,7 +230,9 @@ const Home = () => {
 
   if (loading) {
     return (
+
       <Container maxWidth="lg" sx={{ py: 8, textAlign: 'center' }}>
+
         <CircularProgress sx={{ color: '#6C63FF' }} />
         <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
           Loading your workspace…
@@ -244,26 +248,26 @@ const Home = () => {
     return (
       <Container maxWidth="lg" sx={{ py: 8 }}>
         <Stack spacing={2} sx={{ mb: 8, textAlign: 'center', alignItems: 'center' }}>
-          <Typography variant="h1" sx={{
-            fontWeight: 900, letterSpacing: -3, lineHeight: 1,
-            background: 'linear-gradient(100deg, #4F46E5 0%, #6C63FF 50%, #9333EA 100%)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', mb: 1
-          }}>
-            YakkAI
-          </Typography>
-          <Typography
-            variant="h4"
-            sx={(theme) => ({
-              fontWeight: 700,
-              letterSpacing: -1,
-              color: theme.palette.mode === 'dark'
-                ? '#ffffff'
-                : '#1f2937',  // dark gray for light mode
-              opacity: 0.9,
-            })}
-          >
-            Multi-Cloud Infrastructure Platform
-          </Typography>
+
+          <div style={{ display: 'flex', flexDirection: 'row' ,alignItems: 'center',gap:5}}>
+            <Typography variant="h1" sx={{
+              fontWeight: 900,
+              letterSpacing: -3,
+              lineHeight: 1,
+              background: 'linear-gradient(100deg, #4F46E5 0%, #6C63FF 50%, #9333EA 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 1
+            }}>
+              YakkAI
+            </Typography>
+            <img
+              src={logoright}
+              width="80"
+              height="80"
+            />
+          </div>
+
           <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400, maxWidth: 660, lineHeight: 1.6, mt: 2 }}>
             Welcome, <Box component="span" sx={{ color: '#6C63FF', fontWeight: 700 }}>{fullName}</Box>.
             Select how you'd like to access the platform.
