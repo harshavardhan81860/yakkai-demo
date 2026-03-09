@@ -243,8 +243,17 @@ const Components = () => {
           >
             Cloud Accounts
           </Button>
-          <Paper variant="outlined" sx={{ p: 1.5, px: 2, display: 'flex', gap: 3, bgcolor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-            <Box><Typography variant="caption" display="block" color="text.secondary">Tenant</Typography><Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#F59E0B' }}>{tenantName}</Typography></Box>
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 1.5,
+              px: 2,
+              display: "flex",
+              gap: 3,
+              bgcolor: "action.hover",
+              borderColor: "divider"
+            }}
+          >            <Box><Typography variant="caption" display="block" color="text.secondary">Tenant</Typography><Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#F59E0B' }}>{tenantName}</Typography></Box>
             <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />
             <Box><Typography variant="caption" display="block" color="text.secondary">Provider</Typography><Chip label={cloudAccountType} size="small" color={cloudAccountType === 'AWS' ? 'warning' : 'info'} sx={{ fontWeight: 800, height: 20, fontSize: '0.65rem' }} /></Box>
             <Divider orientation="vertical" flexItem sx={{ bgcolor: 'rgba(255,255,255,0.1)' }} />

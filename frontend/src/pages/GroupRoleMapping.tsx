@@ -180,31 +180,103 @@ const GroupRoleMapping = () => {
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, lg: 4 }}>
-          <Card sx={{ p: 3 }}>
-            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Card
+            sx={(theme) => ({
+              p: 3,
+              borderRadius: 3,
+              border: "1px solid",
+              borderColor: theme.palette.divider,
+              background:
+                theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.02)"
+                  : "rgba(0,0,0,0.02)"
+            })}
+          >
+            <Typography
+              variant="subtitle2"
+              sx={{
+                mb: 2,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                gap: 1
+              }}
+            >
               <Groups fontSize="small" /> Select Group
             </Typography>
+
             <Autocomplete
               options={groups}
               getOptionLabel={(g) => g.name}
               value={selectedGroup}
               onChange={(_, group) => {
-                if (!group) return;
-                setSelectedGroup(group);
-                setAssignments([]);
-                fetchGroupRoles(group.id).then(setAssignments);
-                navigate(`/group-role-mapping?groupId=${group.id}`, { replace: true });
+                if (!group) return
+                setSelectedGroup(group)
+                setAssignments([])
+                fetchGroupRoles(group.id).then(setAssignments)
+                navigate(`/group-role-mapping?groupId=${group.id}`, { replace: true })
               }}
-              renderInput={(params) => <TextField {...params} label="Search Group" variant="outlined" fullWidth />}
               sx={{ mt: 1 }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Search Group"
+                  fullWidth
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": { borderColor: "divider" },
+                      "&:hover fieldset": { borderColor: "primary.main" },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "primary.main",
+                        borderWidth: 2
+                      }
+                    }
+                  }}
+                />
+              )}
             />
+
             {selectedGroup && (
-              <Box sx={{ mt: 3, p: 2, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <Typography variant="caption" color="text.secondary" display="block">Group Details</Typography>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{selectedGroup.name}</Typography>
-                <Typography variant="body2" color="text.secondary">{selectedGroup.description}</Typography>
-                <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                  <Chip label={selectedGroup.is_system_group ? 'System' : 'Tenant'} size="small" variant="outlined" sx={{ color: selectedGroup.is_system_group ? '#00D9FF' : '#6C63FF', borderColor: selectedGroup.is_system_group ? '#00D9FF' : '#6C63FF' }} />
+              <Box
+                sx={(theme) => ({
+                  mt: 3,
+                  p: 2,
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: theme.palette.divider,
+                  background:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.04)"
+                      : "rgba(0,0,0,0.03)"
+                })}
+              >
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  Group Details
+                </Typography>
+
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  {selectedGroup.name}
+                </Typography>
+
+                <Typography variant="body2" color="text.secondary">
+                  {selectedGroup.description}
+                </Typography>
+
+                <Box sx={{ mt: 2, display: "flex", gap: 1 }}>
+                  <Chip
+                    label={selectedGroup.is_system_group ? "System" : "Tenant"}
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      color: selectedGroup.is_system_group ? "#00D9FF" : "#6C63FF",
+                      borderColor:
+                        selectedGroup.is_system_group ? "#00D9FF" : "#6C63FF"
+                    }}
+                  />
                 </Box>
               </Box>
             )}
@@ -213,10 +285,32 @@ const GroupRoleMapping = () => {
 
         <Grid size={{ xs: 12, lg: 8 }}>
           {!selectedGroup ? (
-            <Card sx={{ height: 400, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
+            <Card
+              sx={(theme) => ({
+                height: 400,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: 0.7,
+                borderRadius: 3,
+                border: "1px solid",
+                borderColor: theme.palette.divider,
+                boxShadow:
+                  theme.palette.mode === "dark"
+                    ? "0 10px 30px rgba(0,0,0,0.6)"
+                    : "0 10px 30px rgba(0,0,0,0.12)"
+              })}
+            >
               <Security sx={{ fontSize: 60, mb: 2 }} />
-              <Typography variant="h6">Select a group</Typography>
-              <Typography variant="body2">Select a group to view and manage their roles</Typography>
+
+              <Typography variant="h6">
+                Select a group
+              </Typography>
+
+              <Typography variant="body2">
+                Select a group to view and manage their roles
+              </Typography>
             </Card>
           ) : (
             <Stack spacing={3}>
@@ -316,11 +410,39 @@ const GroupRoleMapping = () => {
             <Grid size={12}>
               <Autocomplete
                 options={assignType === "system" ? systemRoles : tenantRoles}
-                getOptionLabel={(r) => r.tenant_id ? `${r.name} (${tenants.find(t => String(t.id) === String(r.tenant_id))?.display_name || 'Legacy Tenant'})` : r.name}
+                getOptionLabel={(r) =>
+                  r.tenant_id
+                    ? `${r.name} (${tenants.find(t => String(t.id) === String(r.tenant_id))?.display_name ||
+                    "Legacy Tenant"
+                    })`
+                    : r.name
+                }
                 value={selectedRole}
                 onChange={(_, v) => setSelectedRole(v)}
-                renderInput={(params) => <TextField {...params} label="Select Role *" />}
-                disabled={assignType === 'tenant' && !selectedTenant}
+                disabled={assignType === "tenant" && !selectedTenant}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Select Role *"
+                    sx={(theme) => ({
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": {
+                          borderColor:
+                            theme.palette.mode === "light"
+                              ? "rgba(0,0,0,0.3)"
+                              : "rgba(255,255,255,0.25)"
+                        },
+                        "&:hover fieldset": {
+                          borderColor: theme.palette.primary.main
+                        },
+                        "&.Mui-focused fieldset": {
+                          borderColor: theme.palette.primary.main,
+                          borderWidth: 2
+                        }
+                      }
+                    })}
+                  />
+                )}
               />
             </Grid>
           </Grid>

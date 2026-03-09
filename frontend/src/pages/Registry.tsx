@@ -101,8 +101,15 @@ const Registry = () => {
       </Box>
 
       {loading ? <LinearProgress sx={{ borderRadius: 2 }} /> : (
-        <TableContainer component={Paper} sx={{ borderRadius: 4, bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <Table>
+        <TableContainer
+          component={Paper}
+          sx={{
+            borderRadius: 3,
+            boxShadow: 3,
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >            <Table>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 700 }}>{pageLabel}</TableCell>
@@ -143,7 +150,20 @@ const Registry = () => {
       )}
 
       {/* Editor Modal */}
-      <Dialog open={showModal} onClose={() => setShowModal(false)} maxWidth="xs" fullWidth>
+      <Dialog
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        maxWidth="xs"
+        fullWidth
+        slotProps={{
+          backdrop: {
+            sx: {
+              backdropFilter: "blur(6px)",
+              backgroundColor: "rgba(0,0,0,0.5)"
+            }
+          }
+        }}
+      >
         <DialogTitle sx={{ fontWeight: 700 }}>{editingRow ? "Edit" : "Add"} {pageLabel}</DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -155,7 +175,21 @@ const Registry = () => {
               onChange={e => setForm({ ...form, name: sanitizeName(e.target.value) })}
               helperText="Use uppercase (e.g. AWS_S3)"
               autoFocus
+              sx={(theme) => ({
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": {
+                    borderColor: theme.palette.divider
+                  },
+                  "&:hover fieldset": {
+                    borderColor: theme.palette.text.primary
+                  },
+                  "&.Mui-focused fieldset": {
+                    borderColor: theme.palette.primary.main
+                  }
+                }
+              })}
             />
+
             <TextField
               fullWidth
               label="Description"
@@ -163,6 +197,19 @@ const Registry = () => {
               rows={3}
               value={form.description || ""}
               onChange={e => setForm({ ...form, description: e.target.value })}
+              sx={(theme) => ({
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": {
+                    borderColor: theme.palette.divider
+                  },
+                  "&:hover fieldset": {
+                    borderColor: theme.palette.text.primary
+                  },
+                  "&.Mui-focused fieldset": {
+                    borderColor: theme.palette.primary.main
+                  }
+                }
+              })}
             />
           </Stack>
         </DialogContent>

@@ -17,6 +17,7 @@ import UserRolesGroupsDialog from "../components/Common/UserRolesGroupsDialog";
 import ProfileDialog from "../components/Profile/ProfileDialog";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
 import GenericResultDialog from "../components/Common/GenericResultDialog";
+import TablePagination from "@mui/material/TablePagination";
 
 const Users = () => {
   const navigate = useNavigate();
@@ -27,6 +28,9 @@ const Users = () => {
   const [viewRolesUser, setViewRolesUser] = useState<{ id: number; name: string } | null>(null);
   const [editUser, setEditUser] = useState<UserRow | null>(null);
   const [resultDialog, setResultDialog] = useState<{ success: boolean; message: string; user?: UserRow } | null>(null);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(4);
+
 
   const loadUsers = async () => {
     setLoading(true);
@@ -70,6 +74,19 @@ const Users = () => {
     }
   };
 
+  /*Pagination */
+
+  const handleChangePage = (_: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
   return (
     <Box>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -94,9 +111,30 @@ const Users = () => {
       <Box sx={{ mb: 3 }}>
         <Breadcrumbs items={[{ label: "Identity", path: "/users" }, { label: "Users" }]} />
       </Box>
+      <TablePagination
+        component="div"
+        count={users.length}
+        page={page}
+        onPageChange={handleChangePage}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        rowsPerPageOptions={[4]}
+        sx={{
+          borderTop: "1px solid",
+          borderColor: "divider",
+        }}
+      />
 
       {loading ? <LinearProgress sx={{ borderRadius: 2 }} /> : (
-        <TableContainer component={Paper} sx={{ borderRadius: 4, bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <TableContainer
+          component={Paper}
+          sx={{
+            borderRadius: 3,
+            boxShadow: 3,
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >
           <Table>
             <TableHead>
               <TableRow>
@@ -107,7 +145,9 @@ const Users = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {users.map((u) => (
+              {users
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((u) => (
                 <TableRow key={u.id} sx={{ opacity: u.is_active ? 1 : 0.5 }}>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

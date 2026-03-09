@@ -76,7 +76,15 @@ const ApprovalPolicyList = () => {
       </Box>
 
       {loading ? <LinearProgress sx={{ borderRadius: 2 }} /> : (
-        <TableContainer component={Paper} sx={{ borderRadius: 4, bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
+         <TableContainer
+          component={Paper}
+          sx={{
+            borderRadius: 3,
+            boxShadow: 3,
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >  
           <Table>
             <TableHead>
               <TableRow>
@@ -156,7 +164,12 @@ const ApprovalPolicyList = () => {
       )}
 
       {/* Condition Inspector */}
-      <Dialog open={viewGroups.open} onClose={() => setViewGroups({ groups: [], open: false })} maxWidth="sm" fullWidth>
+      <Dialog open={viewGroups.open} onClose={() => setViewGroups({ groups: [], open: false })} maxWidth="sm" fullWidth    BackdropProps={{
+          sx: {
+            backdropFilter: "blur(6px)",
+            backgroundColor: "rgba(0,0,0,0.3)"
+          }
+        }}>
         <DialogTitle sx={{ fontWeight: 800 }}>Enforcement Conditions</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ py: 1 }}>

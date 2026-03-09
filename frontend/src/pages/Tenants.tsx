@@ -107,24 +107,51 @@ const Tenants = () => {
           {tenants.map((t) => (
             <Grid key={t.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
               <Card
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
+                sx={(theme) => ({
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
                   p: 2,
                   borderRadius: 4,
-                  transition: 'all 0.2s ease',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                  bgcolor: t.is_active ? 'rgba(108,99,255,0.02)' : 'rgba(255,255,255,0.01)',
+                  transition: "all 0.2s ease",
+                  position: "relative",
+                  overflow: "hidden",
+
+                  border:
+                    theme.palette.mode === "dark"
+                      ? "1px solid rgba(255,255,255,0.05)"
+                      : "1px solid rgba(0,0,0,0.08)",
+
+                  bgcolor:
+                    theme.palette.mode === "dark"
+                      ? t.is_active
+                        ? "rgba(108,99,255,0.02)"
+                        : "rgba(255,255,255,0.01)"
+                      : t.is_active
+                        ? "rgba(108,99,255,0.05)"
+                        : "#ffffff",
+
                   opacity: t.is_active ? 1 : 0.5,
-                  filter: t.is_active ? 'none' : 'grayscale(0.5)',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  '&:hover': {
-                    borderColor: 'rgba(108,99,255,0.3)',
-                    bgcolor: 'rgba(255,255,255,0.02)'
-                  }
-                }}
+                  filter: t.is_active ? "none" : "grayscale(0.5)",
+
+                  "&:hover": {
+                    borderColor: "rgba(108,99,255,0.3)",
+
+                    bgcolor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.02)"
+                        : "rgba(108,99,255,0.08)",
+
+                    boxShadow:
+                      theme.palette.mode === "dark"
+                        ? "0 12px 40px rgba(108,99,255,0.15)"
+                        : "0 6px 20px rgba(0,0,0,0.08)",
+
+                    "& .MuiTypography-root": {
+                      color: theme.palette.mode === "dark" ? "#fff" : "#111827",
+                    },
+                  },
+                })}
               >
                 {/* Status Indicator Dot */}
                 <Box sx={{
@@ -143,7 +170,7 @@ const Tenants = () => {
                   <Business sx={{ fontSize: 24 }} />
                 </Avatar>
 
-                <Typography variant="subtitle1" sx={{ fontWeight: 800, textAlign: 'center', mb: 0.2, color: t.is_active ? '#fff' : '#6B7280' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, textAlign: 'center', mb: 0.2, color: t.is_active ? '' : '#6B7280' }}>
                   {t.display_name}
                 </Typography>
                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', fontSize: '0.65rem', mb: 2 }}>
@@ -211,26 +238,66 @@ const Tenants = () => {
         maxWidth="xs"
         fullWidth
         slotProps={{
-          backdrop: { sx: { backgroundColor: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)' } }
+          backdrop: {
+            sx: {
+              backgroundColor: "rgba(0,0,0,0.8)",
+              backdropFilter: "blur(4px)"
+            }
+          }
+        }}
+        PaperProps={{
+          sx: (theme) => ({
+            bgcolor: theme.palette.background.paper,
+            border: "1px solid",
+            borderColor: theme.palette.divider
+          })
         }}
       >
-        <DialogTitle sx={{ fontWeight: 700 }}>{showCreate === 'create' ? 'Create New Tenant' : 'Edit Tenant'}</DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>
+          {showCreate === "create" ? "Create New Tenant" : "Edit Tenant"}
+        </DialogTitle>
+
+        <DialogContent
+          sx={(theme) => ({
+            pt: 2,
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: theme.palette.divider
+              },
+              "&:hover fieldset": {
+                borderColor: theme.palette.text.primary
+              },
+              "&.Mui-focused fieldset": {
+                borderColor: theme.palette.primary.main
+              }
+            }
+          })}
+        >
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
               fullWidth
               label="Technical Name"
               placeholder="e.g. ALPHA_DIV"
               value={form.name}
-              onChange={e => setForm({ ...form, name: e.target.value })}
-              disabled={showCreate === 'edit'}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              disabled={showCreate === "edit"}
             />
-            <TextField fullWidth label="Display Name" placeholder="e.g. Alpha Division" value={form.display_name} onChange={e => setForm({ ...form, display_name: e.target.value })} />
+
+            <TextField
+              fullWidth
+              label="Display Name"
+              placeholder="e.g. Alpha Division"
+              value={form.display_name}
+              onChange={(e) => setForm({ ...form, display_name: e.target.value })}
+            />
           </Stack>
         </DialogContent>
+
         <DialogActions sx={{ p: 3 }}>
           <Button onClick={() => setShowCreate(null)}>Cancel</Button>
-          <Button variant="contained" onClick={submitSave}>{showCreate === 'create' ? 'Create' : 'Save Changes'}</Button>
+          <Button variant="contained" onClick={submitSave}>
+            {showCreate === "create" ? "Create" : "Save Changes"}
+          </Button>
         </DialogActions>
       </Dialog>
 

@@ -121,11 +121,11 @@ const CachedInventory = ({ accountName, isTenantView, tenantId, cloudAccountId }
                     mb: 2,
                     p: 1.5,
                     px: 2.5,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    bgcolor: 'rgba(255,255,255,0.015)',
-                    borderColor: 'rgba(255,255,255,0.08)',
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    bgcolor: "action.hover",
+                    borderColor: "divider"
                 }}
             >
                 <Stack direction="row" spacing={4} alignItems="center" divider={<Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />}>
@@ -169,8 +169,8 @@ const CachedInventory = ({ accountName, isTenantView, tenantId, cloudAccountId }
                     mb: 2,
                     p: 1.5,
                     px: 2.5,
-                    bgcolor: 'rgba(255,255,255,0.015)',
-                    borderColor: 'rgba(255,255,255,0.08)',
+                    bgcolor: "action.hover",
+                    borderColor: "divider"
                 }}
             >
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
@@ -190,8 +190,25 @@ const CachedInventory = ({ accountName, isTenantView, tenantId, cloudAccountId }
                 <Grid container spacing={1.5}>
                     <Grid size={{ xs: 12, sm: 6, md: isTenantView ? 2 : 3 }}>
                         <TextField
-                            fullWidth size="small" label="Resource Name" placeholder="Search..."
-                            value={nameFilter} onChange={(e) => setNameFilter(e.target.value)}
+                            fullWidth
+                            size="small"
+                            label="Resource Name"
+                            placeholder="Search..."
+                            value={nameFilter}
+                            onChange={(e) => setNameFilter(e.target.value)}
+                            sx={(theme) => ({
+                                "& .MuiOutlinedInput-root": {
+                                    "& fieldset": {
+                                        borderColor: theme.palette.divider
+                                    },
+                                    "&:hover fieldset": {
+                                        borderColor: theme.palette.text.primary
+                                    },
+                                    "&.Mui-focused fieldset": {
+                                        borderColor: theme.palette.primary.main
+                                    }
+                                }
+                            })}
                         />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: isTenantView ? 2 : 3 }}>

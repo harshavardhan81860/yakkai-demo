@@ -19,12 +19,23 @@ import GenericResultDialog from "../components/Common/GenericResultDialog";
 import { Tabs, Tab } from "@mui/material";
 import { fetchGroupRoles, GroupRoleAssignment }
   from "../services/groupRolesService";
+import { useTheme, useMediaQuery } from "@mui/material";
+import { AccessMappingRole, fetchUserAccessMappings } from "../services/userAccessMappingService";
+import { User } from "..";
 import { useRole } from "../contexts/RoleContext";
+import { fetchAllRoles, RoleRow } from "../services/rolesService";
+import TablePagination from "@mui/material/TablePagination";
 
+interface MergedRole extends GroupRoleAssignment {
+  name: string
+  scope_type: "SYSTEM" | "TENANT"
+  assignment_type: "DIRECT"
+}
 
 const Groups = (
 ) => {
   const navigate = useNavigate();
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const { viewMode, activeTenant } = useRole();
   const [groups, setGroups] = useState<GroupRow[]>([]);
   const [tenants, setTenants] = useState<TenantRow[]>([]);
@@ -47,6 +58,40 @@ const Groups = (
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const isUserTab = tabValue === 0;
   const assignLabel = isUserTab ? "Assign User" : "Assign Role";
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const [accessRoles, setAccessRoles] = useState<AccessMappingRole[]>([]);
+  const [allRoles, setAllRoles] = useState<RoleRow[]>([]);
+  const [allGroups, setAllGroups] = useState<GroupRow[]>([]);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(4);
+  useEffect(() => {
+    if (!selectedUser) return;
+
+    const loadAccessMappings = async () => {
+      const data = await fetchUserAccessMappings(selectedUser.id);
+      if (data) {
+        setAccessRoles(data.roles);
+      }
+    };
+
+    loadAccessMappings();
+  }, [selectedUser]);
+
+  const mergedRoles: MergedRole[] = groupRoles.map((gr) => {
+    const fullRole = allRoles.find(
+      (r) => String(r.id) === String(gr.role_id)
+    );
+
+    const isSystem = fullRole?.is_system_role === true;
+
+    return {
+      ...gr,
+      name: fullRole?.name ?? "-",
+      scope_type: isSystem ? "SYSTEM" : "TENANT",
+      assignment_type: "DIRECT",
+    };
+  });
 
   const loadData = async () => {
     setLoading(true);
@@ -83,20 +128,22 @@ const Groups = (
 
   const handleViewUsers = async (group: GroupRow) => {
     setSelectedGroupName(group.name);
-    setSelectedGroupId(group.id);   // ✅ ADD THIS
+    setSelectedGroupId(group.id);
     setViewUsersModal(true);
     setLoadingUsers(true);
     setLoadingRoles(true);
     setTabValue(0);
 
     try {
-      const [users, roles] = await Promise.all([
+      const [users, roles, rolesList] = await Promise.all([
         getGroupUsers(group.id),
-        fetchGroupRoles(group.id)
+        fetchGroupRoles(group.id),
+        fetchAllRoles()
       ]);
 
       setViewUsers(users);
       setGroupRoles(roles);
+      setAllRoles(rolesList);
     } catch {
       setViewUsers([]);
       setGroupRoles([]);
@@ -149,17 +196,48 @@ const Groups = (
     }
   };
 
-  const getTenantName = (id: number | null) => tenants.find((t) => t.id === id)?.display_name ?? "—";
+  const getTenantName = (id: number | null) => tenants.find((t) => Number(t.id) === id)?.display_name ?? "—";
+
+
+  /*Pagination */
+
+  const handleChangePage = (_: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
 
   return (
-    <Box>
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box>
+    <Box sx={{ width: '100%', overflowX: 'hidden' }}>
+      <Box
+        sx={{
+          mb: 4,
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          justifyContent: { xs: 'flex-start', md: 'space-between' },
+          alignItems: { xs: 'baseline', md: 'center' },
+          gap: { xs: 2.5, md: 0 }
+        }}
+      >        <Box>
           <Typography variant="h4" sx={{ fontWeight: 800 }}>Groups</Typography>
           <Typography variant="body2" color="text.secondary">Create and manage user groups</Typography>
         </Box>
-        <Stack direction="row" spacing={1.5}>
-          <Button variant="outlined" startIcon={<People />} onClick={() => navigate("/user-group-mapping")}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={1.5}
+          sx={{
+            width: { xs: '100%', sm: 'auto' },
+            '& button': {
+              width: { xs: '100%', sm: 'auto' }
+            }
+          }}
+        >          <Button variant="outlined" startIcon={<People />} onClick={() => navigate("/user-group-mapping")}>
             Assign Users
           </Button>
           <Button variant="outlined" startIcon={<Security />} onClick={() => navigate("/group-role-mapping")}>
@@ -173,59 +251,227 @@ const Groups = (
       <Box sx={{ mb: 3 }}>
         <Breadcrumbs items={[{ label: "Identity", path: "/users" }, { label: "Groups" }]} />
       </Box>
+      <TablePagination
+        component="div"
+        count={filteredGroups.length}
+        page={page}
+        onPageChange={handleChangePage}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        rowsPerPageOptions={[4]}
+        sx={{
+          borderTop: "1px solid",
+          borderColor: "divider",
+        }}
+      />
+      {loading ? (
+        <LinearProgress sx={{ borderRadius: 2 }} />
+      ) : isMobile ? (
 
-      {loading ? <LinearProgress sx={{ borderRadius: 2 }} /> : (
-        <TableContainer component={Paper} sx={{ borderRadius: 4, bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <Table>
+        /* ================= MOBILE CARD VIEW ================= */
+        <Stack spacing={2}>
+          {groups.map((g) => (
+            <Card
+              key={g.id}
+              sx={{
+                p: 2,
+                borderRadius: 3,
+                opacity: g.is_active ? 1 : 0.6,
+                border: '1px solid rgba(255,255,255,0.05)',
+                bgcolor: 'rgba(255,255,255,0.01)'
+              }}
+            >
+              <Stack spacing={1.5}>
+
+                {/* Group Header */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Avatar
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      bgcolor: g.is_system_group
+                        ? 'rgba(0,217,255,0.1)'
+                        : 'rgba(108,99,255,0.1)',
+                      color: g.is_system_group ? '#00D9FF' : '#6C63FF',
+                    }}
+                  >
+                    <GroupsIcon fontSize="small" />
+                  </Avatar>
+
+                  <Box>
+                    <Typography fontWeight={700}>
+                      {g.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {g.description}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Scope */}
+                <Typography variant="body2">
+                  Scope: {g.is_system_group
+                    ? "System"
+                    : getTenantName(g.tenant_id || null)}
+                </Typography>
+
+                {/* Email */}
+                <Typography variant="body2">
+                  Email: {g.email || "—"}
+                </Typography>
+
+                {/* Status */}
+                <Chip
+                  label={g.is_active ? "Active" : "Inactive"}
+                  size="small"
+                  color={g.is_active ? "success" : "default"}
+                  variant="outlined"
+                  sx={{ width: 'fit-content' }}
+                />
+
+                {/* Actions */}
+                <Stack direction="row" spacing={1}>
+                  <IconButton size="small" onClick={() => handleViewUsers(g)}>
+                    <People fontSize="small" />
+                  </IconButton>
+
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setEditGroup(g);
+                      setEditDescription(g.description);
+                      setEditEmail(g.email || "");
+                    }}
+                  >
+                    <Edit fontSize="small" />
+                  </IconButton>
+
+                  <IconButton
+                    size="small"
+                    onClick={() => handleToggle(g)}
+                    sx={{ color: g.is_active ? '#EF4444' : '#10B981' }}
+                  >
+                    {g.is_active
+                      ? <Block fontSize="small" />
+                      : <CheckCircle fontSize="small" />}
+                  </IconButton>
+                </Stack>
+
+              </Stack>
+            </Card>
+          ))}
+        </Stack>
+
+      ) : (
+
+        /* ================= DESKTOP TABLE ================= */
+        <TableContainer
+          component={Paper}
+          sx={{
+            borderRadius: 3,
+            boxShadow: 3,
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          <Table sx={{ minWidth: 650 }}>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 700 }}>Group Name</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Scope</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700 }}>
+                  Actions
+                </TableCell>
               </TableRow>
             </TableHead>
+
             <TableBody>
-              {filteredGroups.map((g) => (
-                <TableRow key={g.id} sx={{ opacity: g.is_active ? 1 : 0.5 }}>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar sx={{
-                        width: 32, height: 32,
-                        bgcolor: g.is_system_group ? 'rgba(0,217,255,0.1)' : 'rgba(108,99,255,0.1)',
-                        color: g.is_system_group ? '#00D9FF' : '#6C63FF',
-                      }}>
-                        <GroupsIcon fontSize="small" />
-                      </Avatar>
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{g.name}</Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 200, display: 'block' }}>{g.description}</Typography>
+              {filteredGroups
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((g) => (
+                  <TableRow key={g.id} sx={{ opacity: g.is_active ? 1 : 0.5 }}>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Avatar
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            bgcolor: g.is_system_group
+                              ? 'rgba(0,217,255,0.1)'
+                              : 'rgba(108,99,255,0.1)',
+                            color: g.is_system_group ? '#00D9FF' : '#6C63FF',
+                          }}
+                        >
+                          <GroupsIcon fontSize="small" />
+                        </Avatar>
+                        <Box>
+                          <Typography variant="subtitle2" fontWeight={700}>
+                            {g.name}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                          >
+                            {g.description}
+                          </Typography>
+                        </Box>
                       </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">{g.is_system_group ? "System" : getTenantName(g.tenant_id || null)}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="caption" color="text.secondary">{g.email || '—'}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip label={g.is_active ? "Active" : "Inactive"} size="small" variant="outlined" color={g.is_active ? "success" : "default"} />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="View Members">
-                      <IconButton size="small" onClick={() => handleViewUsers(g)} sx={{ mr: 1 }}><People fontSize="small" /></IconButton>
-                    </Tooltip>
-                    <Tooltip title="Edit">
-                      <IconButton size="small" onClick={() => { setEditGroup(g); setEditDescription(g.description); setEditEmail(g.email || ""); }} sx={{ mr: 1 }}><Edit fontSize="small" /></IconButton>
-                    </Tooltip>
-                    <IconButton size="small" onClick={() => handleToggle(g)} sx={{ color: g.is_active ? '#EF4444' : '#10B981' }}>
-                      {g.is_active ? <Block fontSize="small" /> : <CheckCircle fontSize="small" />}
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+
+                    <TableCell>
+                      {g.is_system_group
+                        ? "System"
+                        : getTenantName(g.tenant_id || null)}
+                    </TableCell>
+
+                    <TableCell>
+                      {g.email || "—"}
+                    </TableCell>
+
+                    <TableCell>
+                      <Chip
+                        label={g.is_active ? "Active" : "Inactive"}
+                        size="small"
+                        variant="outlined"
+                        color={g.is_active ? "success" : "default"}
+                      />
+                    </TableCell>
+
+                    <TableCell align="right">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleViewUsers(g)}
+                        sx={{ mr: 1 }}
+                      >
+                        <People fontSize="small" />
+                      </IconButton>
+
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setEditGroup(g);
+                          setEditDescription(g.description);
+                          setEditEmail(g.email || "");
+                        }}
+                        sx={{ mr: 1 }}
+                      >
+                        <Edit fontSize="small" />
+                      </IconButton>
+
+                      <IconButton
+                        size="small"
+                        onClick={() => handleToggle(g)}
+                        sx={{ color: g.is_active ? '#EF4444' : '#10B981' }}
+                      >
+                        {g.is_active
+                          ? <Block fontSize="small" />
+                          : <CheckCircle fontSize="small" />}
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
             </TableBody>
           </Table>
         </TableContainer>
@@ -303,38 +549,58 @@ const Groups = (
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Role ID</TableCell>
-                    <TableCell>Scope</TableCell>
-                    <TableCell>Scope Name</TableCell>
-
+                    <TableCell>Name</TableCell>
+                    <TableCell>Scope Type</TableCell>
+                    <TableCell>Tenant</TableCell>
+                    {/* <TableCell>Assignment Type</TableCell>
+                    <TableCell>Assignment Name</TableCell> */}
                   </TableRow>
                 </TableHead>
+
                 <TableBody>
-                  {groupRoles.length ? groupRoles.map(r => {
-                    const isSystem = !r.tenant_id;
-
-                    const tenantName = tenants.find(
-                      t => String(t.id) === String(r.tenant_id)
-                    )?.display_name ?? "";
-
-                    return (
+                  {mergedRoles.length ? (
+                    mergedRoles.map((r) => (
                       <TableRow key={r.id}>
-                        <TableCell>{r.role_id}</TableCell>
 
-                        {/* Scope Column */}
+                        {/* Role Name */}
                         <TableCell>
-                          {isSystem ? "System" : "Tenant"}
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                            {r.name}
+                          </Typography>
                         </TableCell>
 
-                        {/* Scope Name Column */}
+                        {/* Scope Type */}
                         <TableCell>
-                          {isSystem ? "" : tenantName}
-                        </TableCell>
+                          <Chip
+                            label={r.scope_type}
+                            size="small"
+                            color={r.scope_type === "SYSTEM" ? "secondary" : "primary"}
+                          />                        </TableCell>
+
+                        {/* Tenant */}
+                        <TableCell>
+                          <Typography variant="caption"> {r.scope_type === "SYSTEM" ? "-" : tenants.find((t) => String(t.id) === String(r.tenant_id))?.display_name ?? "-"}
+                          </Typography> </TableCell>
+
+                        {/* Assignment Type */}
+                        {/* <TableCell>
+                          <Chip
+                            label="DIRECT"
+                            size="small"
+                            color="primary"
+                          />
+                        </TableCell> */}
+
+                        {/* Assignment Name */}
+                        {/* <TableCell>
+                          -
+                        </TableCell> */}
+
                       </TableRow>
-                    );
-                  }) : (
+                    ))
+                  ) : (
                     <TableRow>
-                      <TableCell colSpan={3} align="center">
+                      <TableCell colSpan={5} align="center">
                         No roles assigned
                       </TableCell>
                     </TableRow>
@@ -386,6 +652,13 @@ const Groups = (
             margin="normal"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": { borderColor: "divider" },
+                "&:hover fieldset": { borderColor: "primary.main" },
+                "&.Mui-focused fieldset": { borderColor: "primary.main", borderWidth: 2 }
+              }
+            }}
           />
 
           <TextField
@@ -394,6 +667,13 @@ const Groups = (
             margin="normal"
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": { borderColor: "divider" },
+                "&:hover fieldset": { borderColor: "primary.main" },
+                "&.Mui-focused fieldset": { borderColor: "primary.main", borderWidth: 2 }
+              }
+            }}
           />
 
           <TextField
@@ -402,15 +682,36 @@ const Groups = (
             margin="normal"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-            sx={{ mb: 2 }}
+            sx={{
+              mb: 2,
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": { borderColor: "divider" },
+                "&:hover fieldset": { borderColor: "primary.main" },
+                "&.Mui-focused fieldset": { borderColor: "primary.main", borderWidth: 2 }
+              }
+            }}
           />
 
-          <FormControl fullWidth margin="normal">
+          <FormControl
+            fullWidth
+            margin="normal"
+            sx={{
+              "& .MuiOutlinedInput-root fieldset": { borderColor: "divider" },
+              "& .MuiOutlinedInput-root:hover fieldset": { borderColor: "primary.main" },
+              "& .MuiOutlinedInput-root.Mui-focused fieldset": { borderColor: "primary.main", borderWidth: 2 }
+            }}
+          >
             <InputLabel>Group Scope</InputLabel>
             <Select
               value={form.is_system_group}
               label="Group Scope"
-              onChange={(e) => setForm({ ...form, is_system_group: e.target.value, tenant_id: e.target.value ? null : form.tenant_id })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  is_system_group: e.target.value,
+                  tenant_id: e.target.value ? null : form.tenant_id
+                })
+              }
             >
               <MenuItem value={true as any}>System Group (Global)</MenuItem>
               <MenuItem value={false as any}>Tenant Group (Organization specific)</MenuItem>
@@ -418,15 +719,25 @@ const Groups = (
           </FormControl>
 
           {!form.is_system_group && (
-            <FormControl fullWidth margin="normal">
+            <FormControl
+              fullWidth
+              margin="normal"
+              sx={{
+                "& .MuiOutlinedInput-root fieldset": { borderColor: "divider" },
+                "& .MuiOutlinedInput-root:hover fieldset": { borderColor: "primary.main" },
+                "& .MuiOutlinedInput-root.Mui-focused fieldset": { borderColor: "primary.main", borderWidth: 2 }
+              }}
+            >
               <InputLabel>Select Tenant</InputLabel>
               <Select
                 value={form.tenant_id || ""}
                 label="Select Tenant"
                 onChange={(e) => setForm({ ...form, tenant_id: e.target.value })}
               >
-                {tenants.map(t => (
-                  <MenuItem key={t.id} value={t.id}>{t.display_name}</MenuItem>
+                {tenants.map((t) => (
+                  <MenuItem key={t.id} value={t.id}>
+                    {t.display_name}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -473,6 +784,16 @@ const Groups = (
             margin="normal"
             value={editDescription}
             onChange={(e) => setEditDescription(e.target.value)}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": { borderColor: "divider" },
+                "&:hover fieldset": { borderColor: "primary.main" },
+                "&.Mui-focused fieldset": {
+                  borderColor: "primary.main",
+                  borderWidth: 2
+                }
+              }
+            }}
           />
 
           <TextField
@@ -481,6 +802,16 @@ const Groups = (
             margin="normal"
             value={editEmail}
             onChange={(e) => setEditEmail(e.target.value)}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": { borderColor: "divider" },
+                "&:hover fieldset": { borderColor: "primary.main" },
+                "&.Mui-focused fieldset": {
+                  borderColor: "primary.main",
+                  borderWidth: 2
+                }
+              }
+            }}
           />
         </DialogContent>
         <DialogActions>
@@ -502,3 +833,6 @@ const Groups = (
 };
 
 export default Groups;
+
+
+

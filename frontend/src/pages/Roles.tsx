@@ -4,7 +4,8 @@ import {
   Box, Typography, Button, Card, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Chip, IconButton, Avatar, TextField, Dialog,
   DialogTitle, DialogContent, DialogActions, LinearProgress, Tooltip, Grid,
-  Stack, Paper, Tab, Tabs, FormControl, InputLabel, Select, MenuItem
+  Stack, Paper, Tab, Tabs, FormControl, InputLabel, Select, MenuItem,
+  Divider
 } from "@mui/material";
 import {
   Add, Security, People, Groups, Edit, CheckCircle, Block,
@@ -17,7 +18,9 @@ import {
 import { fetchAllTenants, type TenantRow } from "../services/tenantsService";
 import { useRole } from "../contexts/RoleContext";
 import Breadcrumbs from "../components/Common/Breadcrumbs";
-import { fetchAllGroups } from "../services/groupsService";
+import { fetchAllGroups, GroupRow } from "../services/groupsService";
+import { GroupRoleAssignment } from "../services/groupRolesService";
+import TablePagination from "@mui/material/TablePagination";
 
 
 const Roles = () => {
@@ -26,22 +29,26 @@ const Roles = () => {
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [tenants, setTenants] = useState<TenantRow[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [groupRoles, setGroupRoles] = useState<GroupRoleAssignment[]>([]);
   const [viewRoleModal, setViewRoleModal] = useState(false);
   const [selectedRole, setSelectedRole] = useState<RoleRow | null>(null);
   const [roleUsers, setRoleUsers] = useState<any[]>([]);
   const [roleGroups, setRoleGroups] = useState<any[]>([]);
   const [loadingRoleData, setLoadingRoleData] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
+  const [allGroups, setAllGroups] = useState<GroupRow[]>([]);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(4);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [rolesData, tenantsData] = await Promise.all([
+      const [rolesData, tenantsData, groupsData] = await Promise.all([
         fetchAllRoles(),
         fetchAllTenants(),
+        fetchAllGroups(),
       ]);
-
+      setAllGroups(groupsData);
       setRoles([...rolesData].sort((a, b) => Number(b.is_active) - Number(a.is_active) || a.id.localeCompare(b.id)));
       setTenants(tenantsData.filter((t) => t.is_active));
       // setRoles([...rolesData].sort((a, b) => Number(b.is_active) - Number(a.is_active) ||  a.id.localeCompare(b.id)));
@@ -99,7 +106,22 @@ const Roles = () => {
     }
   };
 
+  const mergedGroupAssignments = groupRoles.map((gr) => {
+    const fullGroup = allGroups.find(
+      (g) => String(g.id) === String(gr.group_id)
+    );
 
+    const scopeType = fullGroup?.is_system_group
+      ? "SYSTEM"
+      : "TENANT";
+
+    return {
+      ...gr,
+      name: fullGroup?.name ?? "-",
+      email: fullGroup?.email ?? "-",
+      scope_type: scopeType,
+    };
+  });
 
   const getTenantName = (id: string | null) => tenants.find((t) => String(t.id) === String(id))?.display_name ?? "—";
 
@@ -114,6 +136,19 @@ const Roles = () => {
     );
 
     setViewRoleModal(false);
+  };
+
+  /*Pagination */
+
+  const handleChangePage = (_: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
   };
 
 
@@ -137,10 +172,29 @@ const Roles = () => {
       <Box sx={{ mb: 3 }}>
         <Breadcrumbs items={[{ label: "Identity", path: "/users" }, { label: "Roles" }]} />
       </Box>
-
+      <TablePagination
+        component="div"
+        count={filteredRoles.length}
+        page={page}
+        onPageChange={handleChangePage}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        rowsPerPageOptions={[4]}
+        sx={{
+          borderTop: "1px solid",
+          borderColor: "divider",
+        }}
+      />
       {loading ? <LinearProgress sx={{ borderRadius: 2 }} /> : (
-        <TableContainer component={Paper} sx={{ borderRadius: 4, bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <Table>
+        <TableContainer
+          component={Paper}
+          sx={{
+            borderRadius: 3,
+            boxShadow: 3,
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >          <Table>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 700 }}>Role Name</TableCell>
@@ -150,39 +204,46 @@ const Roles = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredRoles.map((r) => (
-                <TableRow key={r.id} sx={{ opacity: r.is_active ? 1 : 0.5 }}>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar sx={{
-                        width: 32, height: 32,
-                        bgcolor: r.is_system_role ? 'rgba(0,217,255,0.1)' : 'rgba(108,99,255,0.1)',
-                        color: r.is_system_role ? '#00D9FF' : '#6C63FF',
-                      }}>
-                        <Security fontSize="small" />
-                      </Avatar>
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{r.name}</Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 200, display: 'block' }}>{r.description}</Typography>
+              {filteredRoles
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((r) => (
+                  <TableRow key={r.id} sx={{
+                    transition: "0.2s",
+                    "&:hover": {
+                      backgroundColor: "action.hover",
+                    },
+                  }}>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Avatar sx={{
+                          width: 32, height: 32,
+                          bgcolor: r.is_system_role ? 'rgba(0,217,255,0.1)' : 'rgba(108,99,255,0.1)',
+                          color: r.is_system_role ? '#00D9FF' : '#6C63FF',
+                        }}>
+                          <Security fontSize="small" />
+                        </Avatar>
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{r.name}</Typography>
+                          <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 200, display: 'block' }}>{r.description}</Typography>
+                        </Box>
                       </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">{r.is_system_role ? "System" : getTenantName(r.tenant_id)}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip label={r.is_active ? "Active" : "Inactive"} size="small" variant="outlined" color={r.is_active ? "success" : "default"} />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="View Assignments">
-                      <IconButton size="small" onClick={() => handleViewPeople(r)} sx={{ mr: 1 }}><People fontSize="small" /></IconButton>
-                    </Tooltip>
-                    <IconButton size="small" onClick={() => handleToggle(r)} sx={{ color: r.is_active ? '#EF4444' : '#10B981' }}>
-                      {r.is_active ? <Block fontSize="small" /> : <CheckCircle fontSize="small" />}
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">{r.is_system_role ? "System" : getTenantName(r.tenant_id)}</Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip label={r.is_active ? "Active" : "Inactive"} size="small" variant="outlined" color={r.is_active ? "success" : "default"} />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="View Assignments">
+                        <IconButton size="small" onClick={() => handleViewPeople(r)} sx={{ mr: 1 }}><People fontSize="small" /></IconButton>
+                      </Tooltip>
+                      <IconButton size="small" onClick={() => handleToggle(r)} sx={{ color: r.is_active ? '#EF4444' : '#10B981' }}>
+                        {r.is_active ? <Block fontSize="small" /> : <CheckCircle fontSize="small" />}
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
             </TableBody>
           </Table>
         </TableContainer>
@@ -192,68 +253,139 @@ const Roles = () => {
       <Dialog
         open={viewRoleModal}
         onClose={() => setViewRoleModal(false)}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
         slotProps={{
-          backdrop: { sx: { backgroundColor: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)' } }
+          backdrop: {
+            sx: {
+              backgroundColor: "rgba(0, 0, 0, 0.4)",
+              backdropFilter: "blur(8px)",
+            },
+          },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 700 }}>{selectedRole?.name} Assignments</DialogTitle>
-        <DialogContent sx={{ p: 0 }}>
-          <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} variant="fullWidth">
-            <Tab label="Users" />
-            <Tab label="Groups" />
-          </Tabs>
-          {loadingRoleData ? <LinearProgress /> : activeTab === 0 ? (
-            <Table size="small">
-              <TableHead><TableRow><TableCell>User</TableCell><TableCell>Tenant</TableCell><TableCell>Email</TableCell></TableRow></TableHead>
-              <TableBody>
-                {roleUsers.length ? roleUsers.map(u => (
-                  <TableRow key={u.id}>
-                    <TableCell>{u.username}</TableCell>
-                    <TableCell>{getTenantName(u.tenant_id)}</TableCell>
-                    <TableCell>{u.email}</TableCell>
-                  </TableRow>
-                )) : <TableRow><TableCell colSpan={3} align="center" sx={{ py: 4 }}>No users assigned</TableCell></TableRow>}
-              </TableBody>
-            </Table>
+        {/* ================= HEADER ================= */}
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" fontWeight={700}>
+            {selectedRole?.name}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Manage access mappings
+          </Typography>
+        </DialogTitle>
+
+        <Divider />
+
+        {/* ================= TABS ================= */}
+        <Tabs
+          value={activeTab}
+          onChange={(_, v) => setActiveTab(v)}
+          sx={{ px: 2 }}
+        >
+          <Tab label="Users" />
+          <Tab label="Groups" />
+        </Tabs>
+
+        <Divider />
+
+        {/* ================= CONTENT ================= */}
+        <DialogContent sx={{ p: 3 }}>
+          {loadingRoleData ? (
+            <LinearProgress />
           ) : (
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Tenant</TableCell>
-                  <TableCell>ID</TableCell>
-                  <TableCell>Email</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {roleGroups.length ? roleGroups.map(g => (
-                  <TableRow key={g.id}>
-                    <TableCell>{g.name}</TableCell>
-                    <TableCell>{getTenantName(g.tenant_id)}</TableCell>
-                    <TableCell>{g.id}</TableCell>
-                    <TableCell>{g.email?.trim() ? g.email : "-"}</TableCell>
-                  </TableRow>
-                )) : (
-                  <TableRow>
-                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
-                      No groups linked
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <>
+              {/* -------- USERS TAB -------- */}
+              {activeTab === 0 && (
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>User</TableCell>
+                      <TableCell>Tenant</TableCell>
+                      <TableCell>Email</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {roleUsers.length ? (
+                      roleUsers.map((u) => (
+                        <TableRow key={u.id}>
+                          <TableCell>{u.username}</TableCell>
+                          <TableCell>{getTenantName(u.tenant_id)}</TableCell>
+                          <TableCell>{u.email}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3} align="center">
+                          No users assigned
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+
+              )}
+
+
+              {/* -------- GROUPS TAB -------- */}
+              {activeTab === 1 && (
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Name</TableCell>
+                      <TableCell>Scope Type</TableCell>
+                      <TableCell>Tenant</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {roleGroups.length ? (
+                      roleGroups.map((g) => (
+                        <TableRow key={g.id}>
+                          <TableCell>
+                            <Typography fontWeight={600}>
+                              {g.name}
+                            </Typography>
+                          </TableCell>
+
+                          <TableCell>
+                            <Chip
+                              label={g.is_system_group ? "SYSTEM" : "TENANT"}
+                              size="small"
+                              color={
+                                g.is_system_group ? "secondary" : "primary"
+                              }
+                            />
+                          </TableCell>
+
+                          <TableCell>
+                            {g.is_system_group
+                              ? "-"
+                              : getTenantName(g.tenant_id)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3} align="center">
+                          No groups assigned
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </>
           )}
         </DialogContent>
+
+        <Divider />
+
+        {/* ================= ACTIONS ================= */}
         <DialogActions
           sx={{
             p: 2.5,
             borderTop: "1px solid rgba(255,255,255,0.06)",
-            justifyContent: "flex-end"
           }}
         >
-          {/* Assign Button */}
           <Button
             variant="outlined"
             startIcon={activeTab === 0 ? <People /> : <Groups />}
@@ -263,7 +395,6 @@ const Roles = () => {
             {activeTab === 0 ? "Assign User" : "Assign Group"}
           </Button>
 
-          {/* Close Button */}
           <Button
             onClick={() => setViewRoleModal(false)}
             variant="contained"
@@ -271,7 +402,9 @@ const Roles = () => {
           >
             Close
           </Button>
-        </DialogActions>  </Dialog>    </Box>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 

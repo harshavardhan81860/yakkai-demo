@@ -8,6 +8,8 @@ import {
 import {
     Refresh, History, PlayArrow, Science, CheckCircle, Warning, Close
 } from "@mui/icons-material";
+import { useTheme } from "@mui/material/styles";
+import theme from "../theme";
 
 // Simulation Dialog (The "Inner" process dialog)
 const DriftSimulationDialog = ({ open, onClose, accountName, onComplete }: {
@@ -17,6 +19,7 @@ const DriftSimulationDialog = ({ open, onClose, accountName, onComplete }: {
     onComplete: (status: string) => void
 }) => {
     const [step, setStep] = useState(0);
+    const theme = useTheme();
 
     useEffect(() => {
         if (open) {
@@ -33,16 +36,34 @@ const DriftSimulationDialog = ({ open, onClose, accountName, onComplete }: {
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="md"
+            fullWidth
             PaperProps={{
-                sx: {
-                    background: "#111827",
-                    backgroundImage: "linear-gradient(145deg, #1a2235 0%, #111827 100%)",
-                    border: "1px solid rgba(255,255,255,0.12)",
+                sx: (theme) => ({
+                    background: theme.palette.mode === "dark" ? "#111827" : "#ffffff",
+
+                    backgroundImage:
+                        theme.palette.mode === "dark"
+                            ? "linear-gradient(145deg, #1a2235 0%, #111827 100%)"
+                            : "none",
+
+                    border:
+                        theme.palette.mode === "dark"
+                            ? "1px solid rgba(255,255,255,0.12)"
+                            : "1px solid rgba(0,0,0,0.08)",
+
                     borderRadius: 3,
-                    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-                    minHeight: '400px'
-                }
+
+                    boxShadow:
+                        theme.palette.mode === "dark"
+                            ? "0 25px 50px -12px rgba(0,0,0,0.5)"
+                            : "0 10px 30px rgba(0,0,0,0.12)",
+
+                    minHeight: "400px",
+                }),
             }}
         >
             <DialogTitle sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', pb: 2 }}>
@@ -137,14 +158,28 @@ const DriftDashboardDialog: React.FC<DriftDashboardDialogProps> = ({ open, onClo
             maxWidth="xl"
             fullWidth
             PaperProps={{
-                sx: {
-                    background: "#0F172A",
-                    backgroundImage: "linear-gradient(145deg, #1E293B 0%, #0F172A 100%)",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                sx: (theme) => ({
+                    background: theme.palette.mode === "dark" ? "#0F172A" : "#ffffff",
+
+                    backgroundImage:
+                        theme.palette.mode === "dark"
+                            ? "linear-gradient(145deg, #1E293B 0%, #0F172A 100%)"
+                            : "none",
+
+                    border:
+                        theme.palette.mode === "dark"
+                            ? "1px solid rgba(255,255,255,0.1)"
+                            : "1px solid rgba(0,0,0,0.08)",
+
                     borderRadius: 3,
-                    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
-                    minHeight: '80vh'
-                }
+
+                    boxShadow:
+                        theme.palette.mode === "dark"
+                            ? "0 25px 50px -12px rgba(0,0,0,0.7)"
+                            : "0 10px 30px rgba(0,0,0,0.12)",
+
+                    minHeight: "80vh",
+                }),
             }}
         >
             <DialogTitle sx={{ p: 0 }}>
@@ -171,7 +206,13 @@ const DriftDashboardDialog: React.FC<DriftDashboardDialogProps> = ({ open, onClo
                                 <Warning />
                             </Avatar>
                             <Box>
-                                <Typography variant="h4" sx={{ fontWeight: 900, color: 'white' }}>
+                                <Typography
+                                    variant="h4"
+                                    sx={{
+                                        fontWeight: 900,
+                                        color: theme.palette.mode === "dark" ? "" : "#111"
+                                    }}
+                                >
                                     Drift Discovery Console
                                 </Typography>
                                 <Typography variant="body2" color="slate.400" sx={{ mt: 0.5 }}>
@@ -196,7 +237,12 @@ const DriftDashboardDialog: React.FC<DriftDashboardDialogProps> = ({ open, onClo
                         >
                             Execute Drift Scan
                         </Button>
-                        <IconButton onClick={onClose} sx={{ color: 'white' }}>
+                        <IconButton
+                            onClick={onClose}
+                            sx={{
+                                color: theme.palette.mode === "dark" ? "" : "#111"
+                            }}
+                        >
                             <Close />
                         </IconButton>
                     </Stack>
@@ -207,21 +253,46 @@ const DriftDashboardDialog: React.FC<DriftDashboardDialogProps> = ({ open, onClo
                 <Grid container spacing={4}>
                     {/* KPI Cards */}
                     <Grid size={{ xs: 12, md: 4 }}>
-                        <Paper sx={{ p: 3, background: 'rgba(255,255,255,0.03)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <Paper sx={{
+                            borderRadius: 3,
+                            boxShadow: 3,
+                            border: "1px solid",
+                            borderColor: "divider",
+                            p: 3
+                        }}>
                             <Typography variant="overline" sx={{ color: 'slate.400', fontWeight: 700 }}>Total Assertions</Typography>
-                            <Typography variant="h3" sx={{ fontWeight: 900, color: 'white', mt: 1 }}>12</Typography>
+                            <Typography
+                                variant="h3"
+                                sx={{
+                                    fontWeight: 900,
+                                    mt: 1,
+                                    color: theme.palette.mode === "dark" ? "" : "#111"
+                                }}
+                            >12</Typography>
                             <Typography variant="caption" color="success.light" sx={{ mt: 1, display: 'block' }}>↑ 14% vs last period</Typography>
                         </Paper>
                     </Grid>
                     <Grid size={{ xs: 12, md: 4 }}>
-                        <Paper sx={{ p: 3, background: 'rgba(255,255,255,0.03)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <Paper sx={{
+                            borderRadius: 3,
+                            boxShadow: 3,
+                            border: "1px solid",
+                            borderColor: "divider",
+                            p: 3
+                        }}>
                             <Typography variant="overline" color="warning.main" sx={{ fontWeight: 700 }}>Drift Exceptions (MTD)</Typography>
                             <Typography variant="h3" color="warning.main" sx={{ fontWeight: 900, mt: 1 }}>2</Typography>
                             <Typography variant="caption" color="warning.light" sx={{ mt: 1, display: 'block' }}>Critical environmental deviation</Typography>
                         </Paper>
                     </Grid>
                     <Grid size={{ xs: 12, md: 4 }}>
-                        <Paper sx={{ p: 3, background: 'rgba(255,255,255,0.03)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <Paper sx={{
+                            borderRadius: 3,
+                            boxShadow: 3,
+                            border: "1px solid",
+                            borderColor: "divider",
+                            p: 3
+                        }}>
                             <Typography variant="overline" color="success.main" sx={{ fontWeight: 700 }}>Infrastructure health</Typography>
                             <Stack direction="row" alignItems="center" spacing={2} sx={{ mt: 1 }}>
                                 <CheckCircle sx={{ fontSize: 36 }} color="success" />
@@ -232,14 +303,20 @@ const DriftDashboardDialog: React.FC<DriftDashboardDialogProps> = ({ open, onClo
                     </Grid>
 
                     {/* Activity Log */}
-                    <Grid size={{ xs: 12 }}>
-                        <Paper sx={{ background: 'rgba(255,255,255,0.02)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                    <Grid size={{ xs: 12 }} >
+                        <Paper sx={{
+                            borderRadius: 3,
+                            boxShadow: 3,
+                            border: "1px solid",
+                            borderColor: "divider",
+                            p: 3
+                        }}>
                             <Box sx={{ p: 3, borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Typography variant="h6" sx={{ fontWeight: 800 }}>Audit Ledger & Synchronization History</Typography>
                                 <IconButton size="small" sx={{ color: 'slate.400' }}><Refresh /></IconButton>
                             </Box>
-                            <TableContainer>
-                                <Table>
+                            <TableContainer >
+                                <Table >
                                     <TableHead sx={{ background: 'rgba(255,255,255,0.03)' }}>
                                         <TableRow>
                                             <TableCell sx={{ color: 'slate.300', fontWeight: 700 }}>Event Timestamp</TableCell>
@@ -254,7 +331,12 @@ const DriftDashboardDialog: React.FC<DriftDashboardDialogProps> = ({ open, onClo
                                         {activities.map((act) => (
                                             <TableRow key={act.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                                                 <TableCell sx={{ color: 'slate.400', fontFamily: 'monospace' }}>{act.timestamp}</TableCell>
-                                                <TableCell sx={{ fontWeight: 700, color: 'white' }}>{act.type}</TableCell>
+                                                <TableCell
+                                                    sx={{
+                                                        fontWeight: 700,
+                                                        color: theme.palette.mode === "dark" ? "" : "#111"
+                                                    }}
+                                                >{act.type}</TableCell>
                                                 <TableCell sx={{ color: 'slate.300' }}>{act.operator}</TableCell>
                                                 <TableCell>
                                                     <Chip

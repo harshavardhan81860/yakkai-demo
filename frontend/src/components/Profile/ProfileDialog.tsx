@@ -136,57 +136,77 @@ const ProfileDialog = ({ open, onClose, targetUser }: ProfileDialogProps) => {
 
             <Divider />
 
-            <DialogContent sx={{ pt: 2 }}>
-                {loading ? (
-                    <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-                        Loading profile…
-                    </Typography>
-                ) : (
-                    <Stack spacing={2}>
-                        <Stack direction="row" spacing={2}>
-                            <TextField label="First Name" fullWidth size="small"
-                                value={form.first_name}
-                                onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-                            />
-                            <TextField label="Last Name" fullWidth size="small"
-                                value={form.last_name}
-                                onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                            />
-                        </Stack>
-
-                        <TextField label="Mobile" fullWidth size="small"
-                            value={form.mobile}
-                            onChange={(e) => setForm({ ...form, mobile: e.target.value })}
+            <DialogContent
+                sx={(theme) => ({
+                    pt: 2,
+                    "& .MuiOutlinedInput-root": {
+                        "& fieldset": {
+                            borderColor:
+                                theme.palette.mode === "dark"
+                                    ? "rgba(255,255,255,0.15)"
+                                    : "rgba(0,0,0,0.23)"
+                        },
+                        "&:hover fieldset": {
+                            borderColor:
+                                theme.palette.mode === "dark"
+                                    ? "rgba(255,255,255,0.35)"
+                                    : "rgba(0,0,0,0.45)"
+                        },
+                        "&.Mui-focused fieldset": {
+                            borderColor: theme.palette.primary.main
+                        }
+                    }
+                })}
+            >                {loading ? (
+                <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+                    Loading profile…
+                </Typography>
+            ) : (
+                <Stack spacing={2}>
+                    <Stack direction="row" spacing={2}>
+                        <TextField label="First Name" fullWidth size="small"
+                            value={form.first_name}
+                            onChange={(e) => setForm({ ...form, first_name: e.target.value })}
                         />
-
-                        <TextField label="Department" fullWidth size="small"
-                            value={form.department}
-                            onChange={(e) => setForm({ ...form, department: e.target.value })}
+                        <TextField label="Last Name" fullWidth size="small"
+                            value={form.last_name}
+                            onChange={(e) => setForm({ ...form, last_name: e.target.value })}
                         />
-
-                        <FormControl fullWidth size="small">
-                            <InputLabel>Gender</InputLabel>
-                            <Select value={form.gender} label="Gender"
-                                onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                            >
-                                <MenuItem value="">Not specified</MenuItem>
-                                <MenuItem value="male">Male</MenuItem>
-                                <MenuItem value="female">Female</MenuItem>
-                                <MenuItem value="other">Other</MenuItem>
-                            </Select>
-                        </FormControl>
-
-                        {result && (
-                            <Chip
-                                label={result.message}
-                                color={result.success ? 'success' : 'error'}
-                                variant="outlined"
-                                size="small"
-                                sx={{ fontWeight: 600 }}
-                            />
-                        )}
                     </Stack>
-                )}
+
+                    <TextField label="Mobile" fullWidth size="small"
+                        value={form.mobile}
+                        onChange={(e) => setForm({ ...form, mobile: e.target.value })}
+                    />
+
+                    <TextField label="Department" fullWidth size="small"
+                        value={form.department}
+                        onChange={(e) => setForm({ ...form, department: e.target.value })}
+                    />
+
+                    <FormControl fullWidth size="small">
+                        <InputLabel>Gender</InputLabel>
+                        <Select value={form.gender} label="Gender"
+                            onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                        >
+                            <MenuItem value="">Not specified</MenuItem>
+                            <MenuItem value="male">Male</MenuItem>
+                            <MenuItem value="female">Female</MenuItem>
+                            <MenuItem value="other">Other</MenuItem>
+                        </Select>
+                    </FormControl>
+
+                    {result && (
+                        <Chip
+                            label={result.message}
+                            color={result.success ? 'success' : 'error'}
+                            variant="outlined"
+                            size="small"
+                            sx={{ fontWeight: 600 }}
+                        />
+                    )}
+                </Stack>
+            )}
             </DialogContent>
 
             <Divider />

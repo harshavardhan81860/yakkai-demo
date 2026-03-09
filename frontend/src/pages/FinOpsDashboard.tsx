@@ -4,7 +4,8 @@ import {
     Box, Typography, Grid, Card, Button, Stack, Paper, Select,
     MenuItem, FormControl, InputLabel, CircularProgress, Tooltip,
     Avatar, LinearProgress, Divider, Table, TableBody, TableCell,
-    TableContainer, TableHead, TableRow, Tabs, Tab, TextField
+    TableContainer, TableHead, TableRow, Tabs, Tab, TextField,
+    useTheme
 } from "@mui/material";
 import {
     ArrowBack, Refresh, Payments, TrendingUp,
@@ -28,6 +29,8 @@ const FinOpsDashboard = () => {
     const location = useLocation();
     const { activeTenant } = useRole();
     const { settings } = useSettings();
+    const theme = useTheme();
+
 
     const tenantName = activeTenant?.tenant_name || (location.state as any)?.tenantName || "Tenant";
     const [accounts, setAccounts] = useState<CloudAccountRow[]>([]);
@@ -172,10 +175,31 @@ const FinOpsDashboard = () => {
                     <Typography variant="body2" color="text.secondary">Unified financial visibility across cloud environments</Typography>
                 </Box>
                 <Stack direction="row" spacing={2} alignItems="center">
-                    <Paper variant="outlined" sx={{ p: 1.5, px: 2, display: 'flex', gap: 3, bgcolor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                    <Paper
+                        variant="outlined"
+                        sx={(theme) => ({
+                            p: 1.5,
+                            px: 2,
+                            display: "flex",
+                            gap: 3,
+                            bgcolor:
+                                theme.palette.mode === "dark"
+                                    ? "rgba(255,255,255,0.02)"
+                                    : "rgba(0,0,0,0.02)",
+                            borderColor:
+                                theme.palette.mode === "dark"
+                                    ? "rgba(255,255,255,0.06)"
+                                    : "rgba(0,0,0,0.12)"
+                        })}
+                    >
                         <Box>
-                            <Typography variant="caption" display="block" color="text.secondary">Tenant Name</Typography>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#F59E0B' }}>{tenantName}</Typography>
+                            <Typography variant="caption" display="block" color="text.secondary">
+                                Tenant Name
+                            </Typography>
+
+                            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#F59E0B" }}>
+                                {tenantName}
+                            </Typography>
                         </Box>
                     </Paper>
                     <Stack direction="row" spacing={1.5}>
@@ -188,8 +212,16 @@ const FinOpsDashboard = () => {
             </Box>
 
             {/* Filters Panel */}
-            <Paper sx={{ p: 2, mb: 4, bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 3 }}>
-                <Grid container spacing={2} alignItems="center">
+            <Paper
+                sx={{
+                    p: 2,
+                    mb: 4,
+                    borderRadius: 3,
+                    bgcolor: "action.hover",
+                    border: "1px solid",
+                    borderColor: "divider"
+                }}
+            >                <Grid container spacing={2} alignItems="center">
                     <Grid size={{ xs: 12, sm: 3 }}>
                         <FormControl fullWidth size="small">
                             <InputLabel>Time Period</InputLabel>
@@ -267,8 +299,16 @@ const FinOpsDashboard = () => {
                         <>
                             {/* KPI Cards */}
                             <Grid size={{ xs: 12, md: 4 }}>
-                                <Card sx={{ p: 3, borderRadius: 4, height: '100%', border: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.01)' }}>
-                                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                                <Card
+                                    sx={{
+                                        p: 3,
+                                        borderRadius: 4,
+                                        height: "100%",
+                                        border: "1px solid",
+                                        borderColor: "divider",
+                                        bgcolor: "background.paper"
+                                    }}
+                                >                                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
                                         <Avatar sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6' }}><Payments /></Avatar>
                                         <Box>
                                             <Typography variant="caption" color="text.secondary" fontWeight={700}>TOTAL SPEND</Typography>
@@ -279,8 +319,16 @@ const FinOpsDashboard = () => {
                             </Grid>
 
                             <Grid size={{ xs: 12, md: 4 }}>
-                                <Card sx={{ p: 3, borderRadius: 4, height: '100%', border: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.01)' }}>
-                                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                                <Card
+                                    sx={{
+                                        p: 3,
+                                        borderRadius: 4,
+                                        height: "100%",
+                                        border: "1px solid",
+                                        borderColor: "divider",
+                                        bgcolor: "background.paper"
+                                    }}
+                                >                                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
                                         <Avatar sx={{ bgcolor: 'rgba(255, 153, 0, 0.1)', color: '#FF9900' }}>A</Avatar>
                                         <Box sx={{ flexGrow: 1 }}>
                                             <Typography variant="caption" color="text.secondary" fontWeight={700}>AWS SPEND</Typography>
@@ -293,8 +341,16 @@ const FinOpsDashboard = () => {
                             </Grid>
 
                             <Grid size={{ xs: 12, md: 4 }}>
-                                <Card sx={{ p: 3, borderRadius: 4, height: '100%', border: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.01)' }}>
-                                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                                <Card
+                                    sx={{
+                                        p: 3,
+                                        borderRadius: 4,
+                                        height: "100%",
+                                        border: "1px solid",
+                                        borderColor: "divider",
+                                        bgcolor: "background.paper"
+                                    }}
+                                >                                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
                                         <Avatar sx={{ bgcolor: 'rgba(0, 120, 212, 0.1)', color: '#0078D4' }}>Z</Avatar>
                                         <Box sx={{ flexGrow: 1 }}>
                                             <Typography variant="caption" color="text.secondary" fontWeight={700}>AZURE SPEND</Typography>
@@ -308,23 +364,65 @@ const FinOpsDashboard = () => {
 
                             {/* Trend Line Chart */}
                             <Grid size={{ xs: 12, md: 8 }}>
-                                <Card sx={{ p: 3, borderRadius: 4, height: '100%', minHeight: 400, border: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.01)' }}>
-                                    <Typography variant="h6" sx={{ fontWeight: 800, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Card
+                                    sx={{
+                                        p: 3,
+                                        borderRadius: 4,
+                                        height: "100%",
+                                        border: "1px solid",
+                                        borderColor: "divider",
+                                        bgcolor: "background.paper"
+                                    }}
+                                >                                    <Typography variant="h6" sx={{ fontWeight: 800, mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <InsertChartOutlined color="primary" /> Daily Spend Trend
                                     </Typography>
 
-                                    <Box sx={{ height: 300, width: '100%' }}>
+
+                                    <Box sx={{ height: 300, width: "100%" }}>
                                         <ResponsiveContainer width="100%" height="100%">
                                             <LineChart data={trendData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                                                <XAxis dataKey="date" stroke="rgba(255,255,255,0.5)" tick={{ fill: 'rgba(255,255,255,0.5)' }} />
-                                                <YAxis stroke="rgba(255,255,255,0.5)" tick={{ fill: 'rgba(255,255,255,0.5)' }} tickFormatter={(val) => `$${val}`} />
-                                                <RechartsTooltip
-                                                    contentStyle={{ backgroundColor: '#1e1e1e', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                                                    formatter={(value: any) => [fmt(value as number), "Cost"]}
-                                                    labelStyle={{ color: '#fff', marginBottom: '8px' }}
+
+                                                <CartesianGrid
+                                                    stroke={theme.palette.mode === "dark" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
+                                                    strokeDasharray="3 3"
                                                 />
-                                                <Line type="monotone" dataKey="cost" stroke="#3B82F6" strokeWidth={3} dot={{ r: 4, fill: '#3B82F6' }} activeDot={{ r: 8 }} />
+
+                                                <XAxis
+                                                    dataKey="date"
+                                                    stroke={theme.palette.mode === "dark" ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.6)"}
+                                                    tick={{
+                                                        fill: theme.palette.mode === "dark" ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.6)"
+                                                    }}
+                                                />
+
+                                                <YAxis
+                                                    stroke={theme.palette.mode === "dark" ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.6)"}
+                                                    tick={{
+                                                        fill: theme.palette.mode === "dark" ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.6)"
+                                                    }}
+                                                    tickFormatter={(val) => `$${val}`}
+                                                />
+
+                                                <RechartsTooltip
+                                                    contentStyle={{
+                                                        backgroundColor: theme.palette.mode === "dark" ? "#1e1e1e" : "#ffffff",
+                                                        borderColor: theme.palette.mode === "dark" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
+                                                        borderRadius: "8px",
+                                                        color: theme.palette.text.primary
+                                                    }}
+                                                    formatter={(value: any) => [fmt(value as number), "Cost"]}
+                                                    labelStyle={{ color: theme.palette.text.primary, marginBottom: "8px" }}
+                                                />
+
+                                                <Line
+                                                    type="monotone"
+                                                    dataKey="cost"
+                                                    stroke="#3B82F6"
+                                                    strokeWidth={3}
+                                                    dot={{ r: 4, fill: "#3B82F6" }}
+                                                    activeDot={{ r: 8 }}
+                                                />
+
                                             </LineChart>
                                         </ResponsiveContainer>
                                     </Box>
@@ -334,8 +432,16 @@ const FinOpsDashboard = () => {
                             {/* Donut Services Chart */}
                             <Grid size={{ xs: 12, md: 4 }}>
                                 <Stack spacing={3} sx={{ height: '100%' }}>
-                                    <Card sx={{ p: 3, borderRadius: 4, flexGrow: 1, border: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.01)' }}>
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Card
+                                        sx={{
+                                            p: 3,
+                                            borderRadius: 4,
+                                            height: "100%",
+                                            border: "1px solid",
+                                            borderColor: "divider",
+                                            bgcolor: "background.paper"
+                                        }}
+                                    >                                        <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <DonutLarge fontSize="small" color="secondary" /> Top Cost Drivers
                                         </Typography>
 
@@ -388,7 +494,16 @@ const FinOpsDashboard = () => {
                     {/* Service/Resource Cost Tabular View (Tab 1) */}
                     {tabIndex === 1 && (
                         <Grid size={{ xs: 12 }}>
-                            <Card sx={{ p: 3, borderRadius: 4, border: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.01)' }}>
+                            <Card
+                                sx={{
+                                    p: 3,
+                                    borderRadius: 4,
+                                    height: "100%",
+                                    border: "1px solid",
+                                    borderColor: "divider",
+                                    bgcolor: "background.paper"
+                                }}
+                            >
                                 <Typography variant="h6" sx={{ fontWeight: 800, mb: 3 }}>Resource & Service Cost Breakdown</Typography>
                                 <TableContainer>
                                     <Table size="small">
