@@ -181,12 +181,28 @@ const ApprovalTemplateEditor = () => {
 
       {loading ? <LinearProgress sx={{ borderRadius: 2 }} /> : (
         <Stack spacing={4}>
-          <Card sx={{ p: 4, borderRadius: 4 }}>
+          <Card sx={{
+            borderRadius: 3,
+            boxShadow: 3,
+            border: "1px solid",
+            borderColor: "divider",
+            p: 4
+          }}>
             <Grid container spacing={4}>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    mb: 2,
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1
+                  }}
+                >
                   <Shield fontSize="small" /> Basic Configuration
                 </Typography>
+
                 <TextField
                   fullWidth
                   label="Protocol Name *"
@@ -194,16 +210,48 @@ const ApprovalTemplateEditor = () => {
                   value={templateName}
                   onChange={(e) => setTemplateName(e.target.value)}
                   placeholder="e.g. Production Infrastructure Change"
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": { borderColor: "divider" },
+                      "&:hover fieldset": { borderColor: "primary.main" },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "primary.main",
+                        borderWidth: 2
+                      }
+                    }
+                  }}
                 />
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    mb: 2,
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1
+                  }}
+                >
                   <Settings fontSize="small" /> Governance Scope
                 </Typography>
+
                 <Grid container spacing={2}>
                   <Grid size={6}>
-                    <FormControl fullWidth size="small">
+                    <FormControl
+                      fullWidth
+                      size="small"
+                      sx={{
+                        "& .MuiOutlinedInput-root fieldset": { borderColor: "divider" },
+                        "& .MuiOutlinedInput-root:hover fieldset": { borderColor: "primary.main" },
+                        "& .MuiOutlinedInput-root.Mui-focused fieldset": {
+                          borderColor: "primary.main",
+                          borderWidth: 2
+                        }
+                      }}
+                    >
                       <InputLabel>Scope</InputLabel>
+
                       <Select
                         value={scope}
                         label="Scope"
@@ -215,6 +263,7 @@ const ApprovalTemplateEditor = () => {
                       </Select>
                     </FormControl>
                   </Grid>
+
                   <Grid size={6}>
                     {scope === "TENANT" && (
                       <Autocomplete
@@ -224,7 +273,22 @@ const ApprovalTemplateEditor = () => {
                         value={tenants.find(t => t.id.toString() === selectedTenant) || null}
                         onChange={(_, v) => setSelectedTenant(v?.id.toString() || null)}
                         disabled={isEdit}
-                        renderInput={(p) => <TextField {...p} label="Target Tenant" />}
+                        renderInput={(p) => (
+                          <TextField
+                            {...p}
+                            label="Target Tenant"
+                            sx={{
+                              "& .MuiOutlinedInput-root": {
+                                "& fieldset": { borderColor: "divider" },
+                                "&:hover fieldset": { borderColor: "primary.main" },
+                                "&.Mui-focused fieldset": {
+                                  borderColor: "primary.main",
+                                  borderWidth: 2
+                                }
+                              }
+                            }}
+                          />
+                        )}
                       />
                     )}
                   </Grid>
@@ -242,8 +306,20 @@ const ApprovalTemplateEditor = () => {
                   type="number"
                   label="Default SLA (Minutes)"
                   value={defaultSla ?? ""}
-                  onChange={(e) => setDefaultSla(e.target.value ? Number(e.target.value) : null)}
+                  onChange={(e) =>
+                    setDefaultSla(e.target.value ? Number(e.target.value) : null)
+                  }
                   placeholder="Minutes before escalation"
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": { borderColor: "divider" },
+                      "&:hover fieldset": { borderColor: "primary.main" },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "primary.main",
+                        borderWidth: 2
+                      }
+                    }
+                  }}
                 />
               </Grid>
             </Grid>
@@ -266,21 +342,54 @@ const ApprovalTemplateEditor = () => {
                   {/* Strategy Settings */}
                   <Grid size={{ xs: 12, lg: 4 }}>
                     <Stack spacing={2}>
-                      <FormControl fullWidth size="small">
+                      <FormControl
+                        fullWidth
+                        size="small"
+                        sx={{
+                          "& .MuiOutlinedInput-root fieldset": { borderColor: "divider" },
+                          "& .MuiOutlinedInput-root:hover fieldset": { borderColor: "primary.main" },
+                          "& .MuiOutlinedInput-root.Mui-focused fieldset": {
+                            borderColor: "primary.main",
+                            borderWidth: 2
+                          }
+                        }}
+                      >
                         <InputLabel>Decision Strategy</InputLabel>
-                        <Select value={l.approval_strategy} label="Decision Strategy" onChange={e => updateLevel(i, "approval_strategy", e.target.value)}>
+
+                        <Select
+                          value={l.approval_strategy}
+                          label="Decision Strategy"
+                          onChange={e => updateLevel(i, "approval_strategy", e.target.value)}
+                        >
                           <MenuItem value="ANY">Any Single Approver (OR)</MenuItem>
                           <MenuItem value="ALL">Total Consensus (AND)</MenuItem>
                           <MenuItem value="QUORUM">Weighted Quorum (COUNT)</MenuItem>
                         </Select>
                       </FormControl>
+
                       <TextField
                         fullWidth
                         size="small"
                         label="Required Count (Optional)"
                         type="number"
                         value={l.required_approvals ?? ""}
-                        onChange={e => updateLevel(i, "required_approvals", e.target.value ? Number(e.target.value) : null)}
+                        onChange={e =>
+                          updateLevel(
+                            i,
+                            "required_approvals",
+                            e.target.value ? Number(e.target.value) : null
+                          )
+                        }
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            "& fieldset": { borderColor: "divider" },
+                            "&:hover fieldset": { borderColor: "primary.main" },
+                            "&.Mui-focused fieldset": {
+                              borderColor: "primary.main",
+                              borderWidth: 2
+                            }
+                          }
+                        }}
                       />
                     </Stack>
                   </Grid>
@@ -293,49 +402,131 @@ const ApprovalTemplateEditor = () => {
                           <Autocomplete
                             size="small"
                             options={users}
-                            getOptionLabel={u => u.username}
+                            getOptionLabel={(u) => u.username}
                             onChange={(_, v) => v && addApprover(i, "USER", v.username)}
-                            renderInput={p => <TextField {...p} label="Inject User" />}
+                            renderInput={(p) => (
+                              <TextField
+                                {...p}
+                                label="Inject User"
+                                sx={{
+                                  "& .MuiOutlinedInput-root": {
+                                    "& fieldset": { borderColor: "divider" },
+                                    "&:hover fieldset": { borderColor: "primary.main" },
+                                    "&.Mui-focused fieldset": {
+                                      borderColor: "primary.main",
+                                      borderWidth: 2
+                                    }
+                                  }
+                                }}
+                              />
+                            )}
                           />
                         </Grid>
+
                         <Grid size={4}>
                           <Autocomplete
                             size="small"
                             options={roles}
-                            getOptionLabel={r => r.name}
+                            getOptionLabel={(r) => r.name}
                             onChange={(_, v) => v && addApprover(i, "ROLE", v.name)}
-                            renderInput={p => <TextField {...p} label="Inject Role" />}
+                            renderInput={(p) => (
+                              <TextField
+                                {...p}
+                                label="Inject Role"
+                                sx={{
+                                  "& .MuiOutlinedInput-root": {
+                                    "& fieldset": { borderColor: "divider" },
+                                    "&:hover fieldset": { borderColor: "primary.main" },
+                                    "&.Mui-focused fieldset": {
+                                      borderColor: "primary.main",
+                                      borderWidth: 2
+                                    }
+                                  }
+                                }}
+                              />
+                            )}
                           />
                         </Grid>
+
                         <Grid size={4}>
                           <Autocomplete
                             size="small"
                             options={groups}
-                            getOptionLabel={g => g.name}
+                            getOptionLabel={(g) => g.name}
                             onChange={(_, v) => v && addApprover(i, "GROUP", v.name)}
-                            renderInput={p => <TextField {...p} label="Inject Group" />}
+                            renderInput={(p) => (
+                              <TextField
+                                {...p}
+                                label="Inject Group"
+                                sx={{
+                                  "& .MuiOutlinedInput-root": {
+                                    "& fieldset": { borderColor: "divider" },
+                                    "&:hover fieldset": { borderColor: "primary.main" },
+                                    "&.Mui-focused fieldset": {
+                                      borderColor: "primary.main",
+                                      borderWidth: 2
+                                    }
+                                  }
+                                }}
+                              />
+                            )}
                           />
                         </Grid>
                       </Grid>
 
-                      {/* Selected Approvers List */}
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, p: 2, borderRadius: 2, bgcolor: 'rgba(0,0,0,0.1)', minHeight: 60 }}>
-                        {l.approvers.length === 0 && <Typography variant="caption" color="text.secondary" sx={{ m: 'auto' }}>No approvers designated for this interval</Typography>}
+                      {/* Selected Approvers */}
+                      <Box
+                        sx={(theme) => ({
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 1.5,
+                          p: 2,
+                          borderRadius: 2,
+                          border: "1px solid",
+                          borderColor: theme.palette.divider,
+                          background:
+                            theme.palette.mode === "dark"
+                              ? "rgba(255,255,255,0.03)"
+                              : "rgba(0,0,0,0.03)",
+                          minHeight: 60
+                        })}
+                      >
+                        {l.approvers.length === 0 && (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ m: "auto" }}
+                          >
+                            No approvers designated for this interval
+                          </Typography>
+                        )}
+
                         {l.approvers.map((a: any, ai: number) => (
                           <Chip
                             key={ai}
-                            avatar={<Avatar sx={{ bgcolor: 'transparent' }}>{a.approver_type === 'USER' ? <Person sx={{ fontSize: 14 }} /> : <GroupWork sx={{ fontSize: 14 }} />}</Avatar>}
+                            avatar={
+                              <Avatar sx={{ bgcolor: "transparent" }}>
+                                {a.approver_type === "USER" ? (
+                                  <Person sx={{ fontSize: 14 }} />
+                                ) : (
+                                  <GroupWork sx={{ fontSize: 14 }} />
+                                )}
+                              </Avatar>
+                            }
                             label={`${a.approver_type}: ${a.approver_value}`}
                             onDelete={() => removeApprover(i, ai)}
                             sx={{
-                              bgcolor: a.is_mandatory ? 'rgba(0,217,255,0.1)' : 'rgba(255,255,255,0.05)',
-                              borderColor: a.is_mandatory ? '#00D9FF' : 'transparent',
-                              borderWidth: 1, borderStyle: 'solid'
+                              bgcolor: a.is_mandatory
+                                ? "rgba(0,217,255,0.12)"
+                                : "action.hover",
+                              border: "1px solid",
+                              borderColor: a.is_mandatory ? "#00D9FF" : "divider"
                             }}
                             onClick={() => {
-                              const u = [...levels];
-                              u[i].approvers[ai].is_mandatory = !u[i].approvers[ai].is_mandatory;
-                              setLevels(normalizeLevels(u));
+                              const u = [...levels]
+                              u[i].approvers[ai].is_mandatory =
+                                !u[i].approvers[ai].is_mandatory
+                              setLevels(normalizeLevels(u))
                             }}
                           />
                         ))}

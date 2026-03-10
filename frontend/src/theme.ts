@@ -15,7 +15,7 @@ export const getAppTheme = (mode: 'light' | 'dark') => createTheme({
         info: { main: '#3B82F6' },
         text: {
             primary: mode === 'dark' ? '#F3F4F6' : '#111827',
-            secondary: mode === 'dark' ? '#9CA3AF' : '#4B5563'
+            secondary: mode === 'dark' ? '#9CA3AF' : '#111827'
         },
     },
     typography: {
@@ -24,8 +24,11 @@ export const getAppTheme = (mode: 'light' | 'dark') => createTheme({
         h5: { fontWeight: 700, letterSpacing: '-0.01em' },
         h6: { fontWeight: 600 },
         subtitle1: { fontWeight: 500 },
-        body2: { color: '#9CA3AF' },
+        body2: {
+            color: mode === "dark" ? "#9CA3AF" : "#111827"
+        },
     },
+    
     shape: { borderRadius: 12 },
     components: {
         MuiCard: {
@@ -71,7 +74,7 @@ export const getAppTheme = (mode: 'light' | 'dark') => createTheme({
         MuiTableCell: {
             styleOverrides: {
                 root: { borderBottom: mode === 'dark' ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)' },
-                head: { fontWeight: 700, color: mode === 'dark' ? '#9CA3AF' : '#6B7280', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' },
+                head: { fontWeight: 700, color: mode === 'dark' ? '#9CA3AF' : '#111827', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.05em' },
             },
         },
         MuiDialog: {

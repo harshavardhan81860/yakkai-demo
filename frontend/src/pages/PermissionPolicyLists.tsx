@@ -74,8 +74,15 @@ const PolicyList = () => {
       </Box>
 
       {loading ? <LinearProgress sx={{ borderRadius: 2 }} /> : (
-        <TableContainer component={Paper} sx={{ borderRadius: 4, bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <Table>
+        <TableContainer
+          component={Paper}
+          sx={{
+            borderRadius: 3,
+            boxShadow: 3,
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >  <Table>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 700 }}>Target</TableCell>

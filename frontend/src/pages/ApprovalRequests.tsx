@@ -128,7 +128,15 @@ const ApprovalRequests = () => {
       </Box>
 
       {loading ? <LinearProgress sx={{ borderRadius: 2 }} /> : (
-        <TableContainer component={Card} sx={{ borderRadius: 4 }}>
+        <TableContainer
+          component={Card}
+          sx={{
+            borderRadius: 3,
+            boxShadow: 3,
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >
           <Table>
             <TableHead>
               <TableRow>
@@ -207,8 +215,18 @@ const ApprovalRequests = () => {
       )}
 
       {/* FLOW DETAILS DIALOG */}
-      <Dialog open={!!viewDetails} onClose={() => setViewDetails(null)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 700 }}>
+      <Dialog
+        open={!!viewDetails}
+        onClose={() => setViewDetails(null)}
+        maxWidth="md"
+        fullWidth
+        BackdropProps={{
+          sx: {
+            backdropFilter: "blur(6px)",
+            backgroundColor: "rgba(0,0,0,0.3)"
+          }
+        }}
+      >        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 700 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Avatar sx={{ bgcolor: 'rgba(108,99,255,0.1)', color: '#6C63FF' }}><History /></Avatar>
             <Box>

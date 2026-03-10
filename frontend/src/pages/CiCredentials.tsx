@@ -96,7 +96,15 @@ const CiCredentials = () => {
       </Box>
 
       {loading ? <LinearProgress sx={{ borderRadius: 2 }} /> : (
-        <TableContainer component={Card} sx={{ borderRadius: 4 }}>
+        <TableContainer
+          component={Card}
+          sx={{
+            borderRadius: 3,
+            boxShadow: 3,
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >
           <Table>
             <TableHead>
               <TableRow>
@@ -168,20 +176,70 @@ const CiCredentials = () => {
         }}
       >
         <DialogTitle sx={{ fontWeight: 700 }}>{editing ? "Update" : "Setup"} CI Runner</DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
+        <DialogContent sx={{ pt: 20 }}>
           <Grid container spacing={2.5}>
             {!editing && (
               <Grid size={12}>
-                <FormControl fullWidth>
+                <FormControl
+                  fullWidth
+                  sx={{
+                    "& .MuiOutlinedInput-root fieldset": { borderColor: "divider" },
+                    "& .MuiOutlinedInput-root:hover fieldset": { borderColor: "primary.main" },
+                    "& .MuiOutlinedInput-root.Mui-focused fieldset": {
+                      borderColor: "primary.main",
+                      borderWidth: 2
+                    }
+                  }}
+                >
                   <InputLabel>Provider Platform</InputLabel>
-                  <Select value={form.provider} label="Provider Platform" onChange={e => setForm({ ...form, provider: e.target.value })}>
-                    {PROVIDERS.map(p => <MenuItem key={p} value={p} sx={{ textTransform: 'capitalize' }}>{p}</MenuItem>)}
+                  <Select
+                    value={form.provider}
+                    label="Provider Platform"
+                    onChange={e => setForm({ ...form, provider: e.target.value })}
+                  >
+                    {PROVIDERS.map(p => (
+                      <MenuItem key={p} value={p} sx={{ textTransform: "capitalize" }}>
+                        {p}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
             )}
-            <Grid size={12}><TextField fullWidth label="Base API URL" value={form.base_url || ""} onChange={e => setForm({ ...form, base_url: e.target.value })} placeholder="e.g. https://gitlab.com" /></Grid>
-            <Grid size={12}><TextField fullWidth label="Project ID / Scope" value={form.project_id || ""} onChange={e => setForm({ ...form, project_id: e.target.value })} /></Grid>
+
+            <Grid size={12}>
+              <TextField
+                fullWidth
+                label="Base API URL"
+                value={form.base_url || ""}
+                onChange={e => setForm({ ...form, base_url: e.target.value })}
+                placeholder="e.g. https://gitlab.com"
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    "& fieldset": { borderColor: "divider" },
+                    "&:hover fieldset": { borderColor: "primary.main" },
+                    "&.Mui-focused fieldset": { borderColor: "primary.main", borderWidth: 2 }
+                  }
+                }}
+              />
+            </Grid>
+
+            <Grid size={12}>
+              <TextField
+                fullWidth
+                label="Project ID / Scope"
+                value={form.project_id || ""}
+                onChange={e => setForm({ ...form, project_id: e.target.value })}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    "& fieldset": { borderColor: "divider" },
+                    "&:hover fieldset": { borderColor: "primary.main" },
+                    "&.Mui-focused fieldset": { borderColor: "primary.main", borderWidth: 2 }
+                  }
+                }}
+              />
+            </Grid>
+
             <Grid size={12}>
               <TextField
                 fullWidth
@@ -189,10 +247,19 @@ const CiCredentials = () => {
                 type={showToken ? "text" : "password"}
                 value={form.token || ""}
                 onChange={e => setForm({ ...form, token: e.target.value })}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    "& fieldset": { borderColor: "divider" },
+                    "&:hover fieldset": { borderColor: "primary.main" },
+                    "&.Mui-focused fieldset": { borderColor: "primary.main", borderWidth: 2 }
+                  }
+                }}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
-                      <IconButton size="small" onClick={() => setShowToken(!showToken)}>{showToken ? <VisibilityOff /> : <Visibility />}</IconButton>
+                      <IconButton size="small" onClick={() => setShowToken(!showToken)}>
+                        {showToken ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
                     </InputAdornment>
                   )
                 }}

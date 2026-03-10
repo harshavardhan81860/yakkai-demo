@@ -78,7 +78,31 @@ const DecisionHistory = () => {
       </Box>
 
       {mode === 'admin' && (
-        <Card sx={{ p: 3, mb: 3, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.02)' }}>
+        <Card
+          sx={(theme) => ({
+            p: 3,
+            mb: 3,
+            borderRadius: 3,
+            bgcolor:
+              theme.palette.mode === "dark"
+                ? "rgba(255,255,255,0.02)"
+                : "rgba(0,0,0,0.02)",
+            border: "1px solid",
+            borderColor: theme.palette.divider,
+
+            "& .MuiOutlinedInput-root": {
+              "& fieldset": {
+                borderColor: theme.palette.divider
+              },
+              "&:hover fieldset": {
+                borderColor: theme.palette.text.primary
+              },
+              "&.Mui-focused fieldset": {
+                borderColor: theme.palette.primary.main
+              }
+            }
+          })}
+        >
           <Grid container spacing={2} alignItems="center">
             <Grid size={{ xs: 12, md: 6 }}>
               <Autocomplete
@@ -86,12 +110,20 @@ const DecisionHistory = () => {
                 getOptionLabel={(u) => `${u.username} (${u.email})`}
                 value={selectedUser}
                 onChange={(_, v) => setSelectedUser(v)}
-                renderInput={(params) => <TextField {...params} label="Investigation Target (User Email/Username)" size="small" />}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Investigation Target (User Email/Username)"
+                    size="small"
+                  />
+                )}
               />
             </Grid>
+
             <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="caption" color="text.secondary">
-                Select a user to audit their historical approval decisions across all governance workflows.
+                Select a user to audit their historical approval decisions across all
+                governance workflows.
               </Typography>
             </Grid>
           </Grid>
@@ -106,7 +138,16 @@ const DecisionHistory = () => {
       ) : (
         <Stack spacing={2}>
           {actions.length === 0 ? (
-            <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 4, bgcolor: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.1)' }}>
+            <Paper sx={{
+              p: 4,
+              textAlign: "center",
+              borderRadius: 3,
+              boxShadow: 3,
+              bgcolor: "rgba(255,255,255,0.01)",
+              border: "1px solid",
+              borderColor: "divider",
+            }}
+            >
               <HistoryEdu sx={{ fontSize: 40, color: 'text.disabled', mb: 1, opacity: 0.2 }} />
               <Typography variant="body2" color="text.secondary">No historical decisions identified</Typography>
             </Paper>

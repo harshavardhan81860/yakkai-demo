@@ -141,7 +141,13 @@ const PolicySubjectCreate = () => {
       </Box>
 
       {loading ? <LinearProgress sx={{ borderRadius: 2 }} /> : (
-        <Card sx={{ p: 4, borderRadius: 4 }}>
+        <Card   sx={{
+            borderRadius: 3,
+            boxShadow: 3,
+            border: "1px solid",
+            borderColor: "divider",
+            p:4
+          }}>
           <Grid container spacing={4}>
             <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>

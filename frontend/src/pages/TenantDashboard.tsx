@@ -27,19 +27,47 @@ interface StatCardProps {
 const StatCard = ({ title, total, subtitle, icon, color, detail1, detail2, onClick }: StatCardProps) => (
     <Card
         onClick={onClick}
-        sx={{
-            p: 3, cursor: onClick ? 'pointer' : 'default', height: '100%',
-            position: 'relative', overflow: 'hidden',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            bgcolor: 'rgba(255,255,255,0.01)',
-            border: '1px solid rgba(255,255,255,0.05)',
-            '&:hover': onClick ? { transform: 'translateY(-4px)', boxShadow: `0 12px 30px ${color}15`, borderColor: `${color}33` } : {},
-            '&::before': {
-                content: '""', position: 'absolute', top: -50, right: -50,
-                width: 150, height: 150, borderRadius: '50%',
-                background: color, opacity: 0.04
-            }
-        }}
+        sx={(theme) => ({
+            p: 3,
+            cursor: onClick ? "pointer" : "default",
+            height: "100%",
+            position: "relative",
+            overflow: "hidden",
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+
+            bgcolor:
+                theme.palette.mode === "dark"
+                    ? "rgba(255,255,255,0.01)"
+                    : "#ffffff",
+
+            border:
+                theme.palette.mode === "dark"
+                    ? "1px solid rgba(255,255,255,0.05)"
+                    : "1px solid rgba(0,0,0,0.08)",
+
+            "&:hover": onClick
+                ? {
+                    transform: "translateY(-4px)",
+                    borderColor: `${color}33`,
+                    boxShadow:
+                        theme.palette.mode === "dark"
+                            ? `0 12px 30px ${color}20`
+                            : `0 8px 22px ${color}25`,
+                }
+                : {},
+
+            "&::before": {
+                content: '""',
+                position: "absolute",
+                top: -50,
+                right: -50,
+                width: 150,
+                height: 150,
+                borderRadius: "50%",
+                background: color,
+                opacity: theme.palette.mode === "dark" ? 0.04 : 0.08,
+            },
+        })}
     >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
             <Avatar sx={{ bgcolor: `${color}15`, color: color, width: 48, height: 48 }}>
@@ -170,8 +198,17 @@ const TenantDashboard = () => {
                 </Box>
 
                 {/* Tenant Context Box */}
-                <Paper variant="outlined" sx={{ p: 1.5, px: 2, display: 'flex', gap: 3, bgcolor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                    <Box>
+                <Paper
+                    variant="outlined"
+                    sx={{
+                        p: 1.5,
+                        px: 2,
+                        display: "flex",
+                        gap: 3,
+                        bgcolor: "action.hover",
+                        borderColor: "divider",
+                    }}
+                >                    <Box>
                         <Typography variant="caption" display="block" color="text.secondary">Tenant Name</Typography>
                         <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#F59E0B' }}>{tenantName}</Typography>
                     </Box>
@@ -183,24 +220,41 @@ const TenantDashboard = () => {
                     <Box key={idx} sx={{ flex: '1 1 calc(33.333% - 24px)', minWidth: 280 }}>
                         <Card
                             onClick={() => navigate(tile.path, { state: { tenantName } })}
-                            sx={{
+                            sx={(theme) => ({
                                 p: 4,
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                textAlign: 'center',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                border: '1px solid rgba(255,255,255,0.05)',
-                                bgcolor: 'rgba(255,255,255,0.02)',
-                                '&:hover': {
+                                height: "100%",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                textAlign: "center",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease",
+
+                                border:
+                                    theme.palette.mode === "dark"
+                                        ? "1px solid rgba(255,255,255,0.05)"
+                                        : "1px solid rgba(0,0,0,0.08)",
+
+                                bgcolor:
+                                    theme.palette.mode === "dark"
+                                        ? "rgba(255,255,255,0.02)"
+                                        : "#ffffff",
+
+                                "&:hover": {
                                     borderColor: tile.color,
-                                    transform: 'translateY(-4px)',
-                                    bgcolor: 'rgba(255,255,255,0.04)',
-                                    boxShadow: `0 8px 24px ${tile.bg}`
-                                }
-                            }}
+                                    transform: "translateY(-4px)",
+
+                                    bgcolor:
+                                        theme.palette.mode === "dark"
+                                            ? "rgba(255,255,255,0.04)"
+                                            : "rgba(0,0,0,0.02)",
+
+                                    boxShadow:
+                                        theme.palette.mode === "dark"
+                                            ? `0 8px 24px ${tile.bg}`
+                                            : `0 6px 18px ${tile.bg}`,
+                                },
+                            })}
                         >
                             <Avatar sx={{ width: 80, height: 80, mb: 3, bgcolor: tile.bg, color: tile.color }}>
                                 {tile.icon}

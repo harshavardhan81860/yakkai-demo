@@ -68,7 +68,15 @@ const CatalogAdminPage = () => {
                 ))}
             </Grid>
 
-            <TableContainer component={Card} sx={{ borderRadius: 4 }}>
+               <TableContainer
+          component={Card}
+          sx={{
+            borderRadius: 3,
+            boxShadow: 3,
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        > 
                 <Table>
                     <TableHead>
                         <TableRow>

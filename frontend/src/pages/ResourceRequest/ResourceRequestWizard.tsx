@@ -216,31 +216,52 @@ const ResourceRequestWizard = () => {
     const renderStep1_Context = () => (
         <Box sx={{ mt: 4 }}>
             <Typography variant="h6" gutterBottom>Where should this resource behave?</Typography>
-            <Grid container spacing={3}>
+            <Grid
+                container
+                spacing={3}
+                sx={(theme) => ({
+                    "& .MuiOutlinedInput-root": {
+                        "& fieldset": {
+                            borderColor: theme.palette.divider
+                        },
+                        "&:hover fieldset": {
+                            borderColor: theme.palette.text.primary
+                        },
+                        "&.Mui-focused fieldset": {
+                            borderColor: theme.palette.primary.main
+                        }
+                    }
+                })}
+            >
                 <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                         select
                         fullWidth
                         label="Select Tenant"
                         value={formData.tenant}
-                        onChange={(e) => handleContextSelect('tenant', e.target.value)}
+                        onChange={(e) => handleContextSelect("tenant", e.target.value)}
                     >
-                        {TENANTS.map(t => (
-                            <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
+                        {TENANTS.map((t) => (
+                            <MenuItem key={t.id} value={t.id}>
+                                {t.name}
+                            </MenuItem>
                         ))}
                     </TextField>
                 </Grid>
+
                 <Grid size={{ xs: 12, md: 6 }}>
                     <TextField
                         select
                         fullWidth
                         label="Select Cloud Account"
                         value={formData.cloudAccount}
-                        onChange={(e) => handleContextSelect('cloudAccount', e.target.value)}
+                        onChange={(e) => handleContextSelect("cloudAccount", e.target.value)}
                         disabled={!formData.tenant}
                     >
-                        {(CLOUD_ACCOUNTS[formData.tenant] || []).map(acc => (
-                            <MenuItem key={acc.id} value={acc.id}>{acc.name} ({acc.provider})</MenuItem>
+                        {(CLOUD_ACCOUNTS[formData.tenant] || []).map((acc) => (
+                            <MenuItem key={acc.id} value={acc.id}>
+                                {acc.name} ({acc.provider})
+                            </MenuItem>
                         ))}
                     </TextField>
                 </Grid>
@@ -254,27 +275,57 @@ const ResourceRequestWizard = () => {
             <Box sx={{ mt: 4 }}>
                 <Typography variant="h6" gutterBottom>Select a Service</Typography>
                 <Grid container spacing={2}>
-                    {services.map(srv => (
+                    {services.map((srv) => (
                         <Grid size={{ xs: 12, md: 4 }} key={srv.id}>
                             <Card
                                 variant="outlined"
-                                sx={{
-                                    borderColor: formData.serviceId === srv.id ? 'primary.main' : undefined,
+                                sx={(theme) => ({
+                                    border: "1px solid",
+                                    borderColor:
+                                        formData.serviceId === srv.id
+                                            ? theme.palette.primary.main
+                                            : theme.palette.divider,
                                     borderWidth: formData.serviceId === srv.id ? 2 : 1,
-                                    bgcolor: formData.serviceId === srv.id ? 'action.selected' : undefined
-                                }}
+                                    bgcolor:
+                                        formData.serviceId === srv.id
+                                            ? theme.palette.action.selected
+                                            : theme.palette.mode === "dark"
+                                                ? "rgba(255,255,255,0.02)"
+                                                : "rgba(0,0,0,0.02)",
+                                    transition: "all 0.2s ease"
+                                })}
                             >
-                                <CardActionArea onClick={() => setFormData(p => ({ ...p, serviceId: srv.id }))} sx={{ p: 2 }}>
-                                    <Box display="flex" flexDirection="column" alignItems="center">
+                                <CardActionArea
+                                    onClick={() =>
+                                        setFormData((p) => ({ ...p, serviceId: srv.id }))
+                                    }
+                                    sx={{ p: 2 }}
+                                >
+                                    <Box
+                                        display="flex"
+                                        flexDirection="column"
+                                        alignItems="center"
+                                    >
                                         {srv.icon}
-                                        <Typography variant="subtitle1" mt={1}>{srv.name}</Typography>
-                                        <Typography variant="caption" color="text.secondary">{srv.type}</Typography>
+
+                                        <Typography variant="subtitle1" mt={1}>
+                                            {srv.name}
+                                        </Typography>
+
+                                        <Typography variant="caption" color="text.secondary">
+                                            {srv.type}
+                                        </Typography>
                                     </Box>
                                 </CardActionArea>
                             </Card>
                         </Grid>
                     ))}
-                    {services.length === 0 && <Typography color="text.secondary">Select a valid Cloud Account first.</Typography>}
+
+                    {services.length === 0 && (
+                        <Typography color="text.secondary">
+                            Select a valid Cloud Account first.
+                        </Typography>
+                    )}
                 </Grid>
             </Box>
         )
