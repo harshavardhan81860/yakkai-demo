@@ -98,7 +98,7 @@ async def execute_job(session: AsyncSession, job: ResourceSyncJob):
                 credential=StaticTokenCredential(creds["access_token"])
             )
             subscription_id = creds.get("subscription_id", str(account.id))
-            resources = await asyncio.to_thread(fetcher.fetch_resources, subscription_id)
+            resources = await fetcher.fetch_resources(subscription_id, str(account.id))
 
         else:
             raise ValueError(f"Unsupported provider: {provider}")

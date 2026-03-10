@@ -166,6 +166,18 @@ const Components = () => {
         { field: 'id_name', headerName: 'ID / Name', flex: 1, minWidth: 200, renderCell: (p) => <Box sx={{ py: 1 }}><Typography variant="subtitle2" sx={{ fontWeight: 700, wordBreak: 'break-all' }}>{p.row.instance_id || p.row.name}</Typography><Typography variant="caption" color="text.secondary" sx={{ wordBreak: 'break-all' }}>{p.row.image_id}</Typography></Box> },
         { field: 'state', headerName: 'State', width: 110, renderCell: (p) => <Chip label={p.row.state || 'Unknown'} size="small" color={p.row.state === 'running' || p.row.state === 'active' ? 'success' : 'warning'} sx={{ borderRadius: 1.5, fontSize: '0.7rem' }} /> },
         { field: 'type', headerName: 'Hardware', width: 130, valueGetter: (v, row) => row.type || row.size },
+        {
+          field: 'source_service',
+          headerName: 'Source Service',
+          width: 160,
+          renderCell: (p) => {
+            const val = p.row.source_service || 'Manual / Direct';
+            if (val === 'Manual / Direct') {
+              return <Typography variant="caption" color="text.secondary">{val}</Typography>;
+            }
+            return <Chip label={val} size="small" color="primary" variant="outlined" sx={{ fontSize: '0.65rem', borderRadius: 1 }} />;
+          }
+        },
         { field: 'network', headerName: 'Network', width: 160, renderCell: (p) => <Box sx={{ py: 1 }}><Typography variant="body2">{p.row.public_ip || p.row.private_ip || '-'}</Typography><Typography variant="caption" color="text.secondary">{p.row.availability_zone}</Typography></Box> },
         {
           field: 'tags', headerName: 'Tags', width: 100, renderCell: (p) => {

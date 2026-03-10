@@ -49,16 +49,35 @@ class CloudResourceRepository:
             .subquery()
         )
 
-        # 2. Main query: match resource ID to cost resource ID
+        from models.resource_catalog import ProviderResourceMapping, CanonicalResourceType, ResourceCategory
+
+        # 2. Main query: match resource ID to cost resource ID AND map to Catalog
         stmt = (
             select(
                 CloudResource, 
                 cost_subq.c.mtd_cost,
-                cost_subq.c.last_month_cost
+                cost_subq.c.last_month_cost,
+                CanonicalResourceType.display_name.label("canonical_name"),
+                CanonicalResourceType.is_billable,
+                ResourceCategory.display_name.label("category_name"),
+                ResourceCategory.icon.label("category_icon")
             )
             .outerjoin(
                 cost_subq, 
                 CloudResource.provider_resource_id == cost_subq.c.cost_resource_id
+            )
+            .outerjoin(
+                ProviderResourceMapping,
+                (CloudResource.provider == ProviderResourceMapping.provider) & 
+                (CloudResource.resource_type == ProviderResourceMapping.provider_resource_type)
+            )
+            .outerjoin(
+                CanonicalResourceType,
+                ProviderResourceMapping.canonical_type_id == CanonicalResourceType.id
+            )
+            .outerjoin(
+                ResourceCategory,
+                CanonicalResourceType.category_id == ResourceCategory.id
             )
             .where(CloudResource.tenant_id == tenant_id)
         )
@@ -70,7 +89,15 @@ class CloudResourceRepository:
         
         # Format the result
         inventory = []
-        for resource, mtd_cost, last_month_cost in result:
+        for row in result:
+            resource = row[0]
+            mtd_cost = row[1]
+            last_month_cost = row[2]
+            canonical_name = row[3]
+            is_billable = row[4]
+            category_name = row[5]
+            category_icon = row[6]
+
             resource_dict = {
                 "id": str(resource.id),
                 "tenant_id": str(resource.tenant_id),
@@ -87,6 +114,10 @@ class CloudResourceRepository:
                 "last_synced_at": resource.last_synced_at,
                 "created_at": resource.created_at,
                 "updated_at": resource.updated_at,
+                "portal_name": canonical_name or resource.resource_type,
+                "category": category_name or "Uncategorized",
+                "category_icon": category_icon,
+                "is_billable": bool(is_billable) if is_billable is not None else False
             }
             
             resource_dict["mtd_cost"] = float(mtd_cost) if mtd_cost is not None else 0.0

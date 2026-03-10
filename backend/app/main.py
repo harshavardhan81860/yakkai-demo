@@ -28,6 +28,7 @@ from api.v1.routers.notification_routes import router as notification_router
 from api.v1.routers.user_setting_routes import router as user_setting_router
 from api.v1.routers.finops_routes import router as finops_router
 from api.v1.routers.cloud_resource_routes import router as cloud_resource_router
+from api.v1.routers.resource_catalog_routes import router as resource_catalog_router
 
 from services.registry_validation_service import RegistryValidationService
 from db.engine import get_session
@@ -174,6 +175,7 @@ app.include_router(notification_router, prefix=api_prefix)
 app.include_router(user_setting_router, prefix=api_prefix)
 app.include_router(finops_router, prefix=api_prefix)
 app.include_router(cloud_resource_router, prefix=api_prefix)
+app.include_router(resource_catalog_router, prefix=api_prefix)
 
 #this is to validate all regitry is been created while application startup.
 #commenting fo development 
