@@ -84,6 +84,7 @@ const Layout = () => {
                 <NavLink to="/approvals-management" className="nav-button nav-subitem">Workflow Definitions</NavLink>
                 <NavLink to="/permissions-management" className="nav-button nav-subitem">Permissions</NavLink>
                 <NavLink to="/registry" className="nav-button nav-subitem">Resource Registry</NavLink>
+                <NavLink to="/resource-catalog" className="nav-button nav-subitem">Resource Catalog</NavLink>
                 <div className="nav-button nav-subitem nav-disabled">
                   Quotas <span className="badge-soon">Soon</span>
                 </div>

@@ -23,6 +23,7 @@ import Groups from "./pages/Groups";
 import UserGroupMapping from "./pages/UserGroupMapping";
 import GroupRoleMapping from "./pages/GroupRoleMapping";
 import Registry from "./pages/Registry";
+import ResourceCatalog from "./pages/ResourceCatalog";
 
 // ── Approvals ──
 import ApprovalsLayout from "./pages/ApprovalsLayout";
@@ -209,6 +210,11 @@ function App() {
                 <Route path="/registry" element={
                     <RoleGuard allowed={ADMIN_MANAGER}>
                         <Registry />
+                    </RoleGuard>
+                } />
+                <Route path="/resource-catalog" element={
+                    <RoleGuard allowed={["system_admin", "system_manager", "system_user", "tenant_admin"]}>
+                        <ResourceCatalog />
                     </RoleGuard>
                 } />
 

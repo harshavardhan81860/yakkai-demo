@@ -84,6 +84,12 @@ const getSystemMenuItems = (roleName: string | null): MenuItemType[] => {
         items.push({ text: 'Policy List', icon: <Policy />, path: '/permissions-management/policy_list' });
         items.push({ text: 'Policy Subjects', icon: <People />, path: '/permissions-management/policy_subjects' });
         items.push({ text: 'Resource Registry', icon: <Inventory />, path: '/registry' });
+        items.push({ text: 'Resource Catalog', icon: <Category />, path: '/resource-catalog' });
+        items.push({ divider: true });
+    } else if (isUser) {
+        // system_user can only view the Resource Catalog
+        items.push({ header: 'Governance' });
+        items.push({ text: 'Resource Catalog', icon: <Category />, path: '/resource-catalog' });
         items.push({ divider: true });
     }
 
@@ -137,6 +143,7 @@ const getTenantMenuItems = (tenantId: string, roleName: string | null): MenuItem
         items.push({ header: 'Governance' });
         items.push({ text: 'Policy List', icon: <Policy />, path: '/permissions-management/policy_list' });
         items.push({ text: 'Resource Registry', icon: <Inventory />, path: '/registry' });
+        items.push({ text: 'Resource Catalog', icon: <Category />, path: '/resource-catalog' });
         items.push({ divider: true });
     }
 
