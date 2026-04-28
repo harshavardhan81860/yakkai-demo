@@ -1,14 +1,15 @@
 stages:
   - build
+  - deploy
 
 variables:
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
   DOCKER_DRIVER: overlay2
 
-  BACKEND_IMAGE_NAME: "registry.gitlab.com/guhatek/yakkai/backend"
-  FRONTEND_IMAGE_NAME: "registry.gitlab.com/guhatek/yakkai/frontend"
-  IMAGE_TAG: "develop"
+  BACKEND_IMAGE_NAME: "registry.gitlab.com/harshavardhan81860/yakkai-demo/backend"
+  FRONTEND_IMAGE_NAME: "registry.gitlab.com/harshavardhan81860/yakkai-demo/frontend"
+  IMAGE_TAG: $CI_COMMIT_REF_NAME
 
 before_script:
   - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
@@ -22,12 +23,11 @@ build-backend:
   services:
     - name: docker:24.0.5-dind
       command: ["--tls=false"]
+  before_script:
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
   script:
-    - echo "Building backend image"
-    - docker build -t $BACKEND_IMAGE_NAME:$IMAGE_TAG ./backend
-    - docker push $BACKEND_IMAGE_NAME:$IMAGE_TAG
-  only:
-    - develop
+    - docker build -t $CI_REGISTRY_IMAGE/backend:$IMAGE_TAG backend/
+    - docker push $CI_REGISTRY_IMAGE/backend:$IMAGE_TAG
 
 # -------------------------
 # Frontend build
@@ -38,14 +38,51 @@ build-frontend:
   services:
     - name: docker:24.0.5-dind
       command: ["--tls=false"]
+  before_script:
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
   script:
-    - echo "Building frontend image with BUILD_SCRIPT=build:dev"
-    - docker build --build-arg BUILD_SCRIPT=build:dev -t $FRONTEND_IMAGE_NAME:$IMAGE_TAG ./frontend
-    - docker push $FRONTEND_IMAGE_NAME:$IMAGE_TAG
-  only:
-    - develop
+    - docker build -t $CI_REGISTRY_IMAGE/frontend:$IMAGE_TAG frontend/
+    - docker push $CI_REGISTRY_IMAGE/frontend:$IMAGE_TAG
 
 #---------------------
-# Terraform 
-#-------------------------
+# Deploy 
+#----------------------
+deploy_backend:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache git
+    - git config --global user.email "harsha81860@gmail.com"
+    - git config --global user.name "harshavardhan81860"
+    - git remote set-url origin https://oauth2:aQIBXp87iS7T1K_FfngOXWM6MQpvOjEKdTptZXUydg8.01.170e05n0u@gitlab.com/harshavardhan81860/yakkai-demo.git
+  script:
+    - IMAGE_PATH="$CI_REGISTRY_IMAGE/backend:$IMAGE_TAG"
+    - wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
+    - /usr/bin/yq -i '.spec.template.spec.containers[0].image = "'"$IMAGE_PATH"'"' helm/yaakai/templates/backend-deployment.yaml
+    - git add .
+    - git commit -m "deploy backend $IMAGE_TAG [skip ci]" || echo "No changes"
+    - git push origin HEAD:$CI_COMMIT_BRANCH
+  only:
+    - main
+    - develop
+
+deploy_frontend:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache git
+    - git config --global user.email "harsha81860@gmail.com"
+    - git config --global user.name "harshavardhan81860"
+    - git remote set-url origin https://oauth2:aQIBXp87iS7T1K_FfngOXWM6MQpvOjEKdTptZXUydg8.01.170e05n0u@gitlab.com/harshavardhan81860/yakkai-demo.git
+  script:
+    - IMAGE_PATH="$CI_REGISTRY_IMAGE/frontend:$IMAGE_TAG"
+    - wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
+    - /usr/bin/yq -i '.spec.template.spec.containers[0].image = "'"$IMAGE_PATH"'"' helm/yaakai/templates/frontend-deployment.yaml
+    - git add .
+    - git commit -m "deploy frontend $IMAGE_TAG [skip ci]" || echo "No changes"
+    - git push origin HEAD:$CI_COMMIT_BRANCH
+  only:
+    - main
+    - develop
+
 
