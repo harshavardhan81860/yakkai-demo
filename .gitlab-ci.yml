@@ -58,8 +58,8 @@ deploy_backend:
   script:
     - IMAGE_PATH="$CI_REGISTRY_IMAGE/backend:$IMAGE_TAG"
     - wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
-    - /usr/bin/yq -i '.spec.template.spec.containers[0].image = "'"$IMAGE_PATH"'"' helm/yaakai/templates/backend-deployment.yaml
-    - git add .
+    - /usr/bin/yq -i '.spec.template.spec.containers[0].image = "'"$IMAGE_PATH"'"' helm/yaakai/values/values-dev.yaml
+    - git add helm/yaakai/values/values-dev.yaml
     - git commit -m "deploy backend $IMAGE_TAG [skip ci]" || echo "No changes"
     - git push origin HEAD:$CI_COMMIT_BRANCH
   only:
@@ -77,8 +77,8 @@ deploy_frontend:
   script:
     - IMAGE_PATH="$CI_REGISTRY_IMAGE/frontend:$IMAGE_TAG"
     - wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
-    - /usr/bin/yq -i '.spec.template.spec.containers[0].image = "'"$IMAGE_PATH"'"' helm/yaakai/templates/frontend-deployment.yaml
-    - git add .
+    - /usr/bin/yq -i '.spec.template.spec.containers[0].image = "'"$IMAGE_PATH"'"' helm/yaakai/values/values-dev.yaml
+    - git add helm/yaakai/values/values-dev.yaml
     - git commit -m "deploy frontend $IMAGE_TAG [skip ci]" || echo "No changes"
     - git push origin HEAD:$CI_COMMIT_BRANCH
   only:
