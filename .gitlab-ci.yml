@@ -61,8 +61,8 @@ deploy_manifests:
     - git config --global user.name "harshavardhan81860"
     - git remote set-url origin https://oauth2:aQIBXp87iS7T1K_FfngOXWM6MQpvOjEKdTptZXUydg8.01.170e05n0u@gitlab.com/harshavardhan81860/yakkai-demo.git
   script:
-    - yq -i '.spec.template.spec.containers[0].image = "'${BACKEND_IMAGE}:${IMAGE_TAG}'"' backend-deployment.yaml
-    - yq -i '.spec.template.spec.containers[0].image = "'${FRONTEND_IMAGE}:${IMAGE_TAG}'"' frontend-deployment.yaml
+    - yq -i '.spec.template.spec.containers[0].image = "'${BACKEND_IMAGE_NAME}:${IMAGE_TAG}'"' backend-deployment.yaml
+    - yq -i '.spec.template.spec.containers[0].image = "'${FRONTEND_IMAGE_NAME}:${IMAGE_TAG}'"' frontend-deployment.yaml
     - git add .
     - git commit -m "chore(deploy): update images to $IMAGE_TAG [skip ci]" || echo "No changes"
     - git push origin HEAD:$CI_COMMIT_BRANCH
