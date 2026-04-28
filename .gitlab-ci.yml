@@ -6,8 +6,8 @@ variables:
   DOCKER_TLS_CERTDIR: ""
   DOCKER_DRIVER: overlay2
 
-  BACKEND_IMAGE_NAME: "registry.gitlab.com/guhatek/yakkai/backend"
-  FRONTEND_IMAGE_NAME: "registry.gitlab.com/guhatek/yakkai/frontend"
+  BACKEND_IMAGE_NAME: "registry.gitlab.com/harshavardhan81860/yakkai-demo/backend"
+  FRONTEND_IMAGE_NAME: "registry.gitlab.com/harshavardhan81860/yakkai-demo/frontend"
   IMAGE_TAG: "develop"
 
 before_script:
