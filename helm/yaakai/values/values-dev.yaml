@@ -2,28 +2,20 @@ postgres:
   enabled: false
   image: postgres:15
   port: 5432
-
   dbName: keycloakdb
   dbUser: postgres
   dbPassword: postgres
-
   service:
     type: ClusterIP
-
-
 keycloak:
   enabled: true
   name: keycloak
-
   image: quay.io/keycloak/keycloak:21.1.1
   port: 8080
-
   adminUser: admin
   adminPassword: admin
-
   service:
     type: ClusterIP
-
   database:
     type: postgres
     host: yb-tserver-service.yugabyte.svc.cluster.local
@@ -31,10 +23,8 @@ keycloak:
     name: keycloak_suyasevai
     user: suyasevai_user
     password: LocalDB
-
   hostdetails:
-    hosturl : "https://yakkai.guhatek.org/keycloak"  
-
+    hosturl: "https://yakkai.guhatek.org/keycloak"
   resources:
     requests:
       cpu: 60m
@@ -42,35 +32,29 @@ keycloak:
     limits:
       cpu: 500m
       memory: 768Mi
-
 backend:
   enabled: true
   name: backend-dev
   port: 8000
-
   image:
     repository: registry.gitlab.com/guhatek/yakkai/backend
     tag: develop
     pullPolicy: Always
-
   service:
-    type: ClusterIP     
-
+    type: ClusterIP
   config:
     app:
       name: cloud-selfservice-backend
       environment: dev
       version: v1
-
     keycloak:
       realm: yakkai-dev
       authServerUrl: https://yakkai.guhatek.org/keycloak
       clientId: backend-dev
       clientSecret: lOZxgqKynryn8CTT2YLiDus66V6sP7LZ
       tempPassword: Welcome@123
-      cloud_client_id: portal-cloud   
+      cloud_client_id: portal-cloud
       cloud_client_secret: jlAH4l1bP6O829KQAcI9Xn2Zcn2psZ89
-
     database:
       type: postgres
       host: yb-tserver-service.yugabyte.svc.cluster.local
@@ -80,19 +64,16 @@ backend:
       password: LocalDB
       maxConnections: 10
       minConnections: 2
-
     logging:
       level: INFO
       filePath: /app/logs/app.log
-
   resources:
-      requests:
-        cpu: 20m
-        memory: 128Mi
-      limits:
-        cpu: 200m
-        memory: 256Mi
-
+    requests:
+      cpu: 20m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
 frontend:
   enabled: true
   name: frontend-dev
@@ -100,11 +81,10 @@ frontend:
     repository: registry.gitlab.com/guhatek/yakkai/frontend
     tag: develop
     pullPolicy: Always
-  port: 80  #don't change as it is hardcoded in nginx build 
+  port: 80 #don't change as it is hardcoded in nginx build 
   service:
     type: ClusterIP
-    port: 5000         
-
+    port: 5000
   resources:
     requests:
       cpu: 10m
@@ -112,23 +92,22 @@ frontend:
     limits:
       cpu: 100m
       memory: 64Mi
-             
-
-
 ingress:
   enabled: true
   className: nginx
-
   tlsSecretName: yakkai-tls
   hosts:
     - host: yakkai.guhatek.org
-
   paths:
     root: /
     keycloak: /keycloak
     backend: /backend
     frontend: /yakkai-dev
-
 global:
   imagePullSecrets:
     - name: gitlab-registry
+spec:
+  template:
+    spec:
+      containers:
+        - image: registry.gitlab.com/harshavardhan81860/yakkai-demo/backend:main
