@@ -5,7 +5,7 @@ import { Refresh, ArrowBack, BarChart } from '@mui/icons-material';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useRole } from '../contexts/RoleContext';
 import CachedInventory from './CachedInventory';
-import UnifiedSyncButton from '../components/common/UnifiedSyncButton';
+import UnifiedSyncButton from '../components/Common/UnifiedSyncButton';
 
 const TenantResourceExplorer = () => {
     const { tenantId } = useParams();

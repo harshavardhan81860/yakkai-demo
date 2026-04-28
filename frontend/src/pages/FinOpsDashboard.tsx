@@ -21,7 +21,7 @@ import api from '../services/api';
 import Breadcrumbs from "../components/Common/Breadcrumbs";
 import { useSettings } from "../contexts/SettingsContext";
 import { useRole } from "../contexts/RoleContext";
-import UnifiedSyncButton from "../components/common/UnifiedSyncButton";
+import UnifiedSyncButton from "../components/Common/UnifiedSyncButton";
 
 const FinOpsDashboard = () => {
     const { tenantId } = useParams();

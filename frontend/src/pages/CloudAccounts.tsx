@@ -24,7 +24,7 @@ import AccountOnboardingDialog from "../components/CloudAccounts/AccountOnboardi
 import AccountEditDialog from "../components/CloudAccounts/AccountEditDialog";
 import { testConnection } from "../services/cloudDiscoveryService";
 import DriftDashboardDialog from "./DriftDashboard";
-import UnifiedSyncButton from "../components/common/UnifiedSyncButton";
+import UnifiedSyncButton from "../components/Common/UnifiedSyncButton";
 import { useSettings } from "../contexts/SettingsContext";
 import { useRole } from "../contexts/RoleContext";
 import api from "../services/api";

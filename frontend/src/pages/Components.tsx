@@ -29,7 +29,7 @@ import {
   fetchAzureImages, fetchAzureClusters, testAwsConnection, testAzureConnection
 } from "../services/cloudResourcesService";
 import DriftDashboardDialog from "./DriftDashboard";
-import UnifiedSyncButton from "../components/common/UnifiedSyncButton";
+import UnifiedSyncButton from "../components/Common/UnifiedSyncButton";
 import CachedInventory from "./CachedInventory";
 
 const Components = () => {
