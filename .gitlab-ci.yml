@@ -54,7 +54,7 @@ deploy_backend:
     - apk add --no-cache git
     - git config --global user.email "harsha81860@gmail.com"
     - git config --global user.name "harshavardhan81860"
-    - git remote set-url origin https://oauth2:aQIBXp87iS7T1K_FfngOXWM6MQpvOjEKdTptZXUydg8.01.170e05n0u@gitlab.com/harshavardhan81860/yakkai-demo.git
+    - git remote set-url origin https://gitlab-ci-token:glpat-AukbHntS6V6MtZIP03dGpmM6MQpvOjEKdTptaDBqMw8.01.1707a26lo@gitlab.com/harshavardhan81860/yakkai-demo.git
   script:
     - IMAGE_PATH="$CI_REGISTRY_IMAGE/backend:$IMAGE_TAG"
     - wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
@@ -73,7 +73,7 @@ deploy_frontend:
     - apk add --no-cache git
     - git config --global user.email "harsha81860@gmail.com"
     - git config --global user.name "harshavardhan81860"
-    - git remote set-url origin https://oauth2:aQIBXp87iS7T1K_FfngOXWM6MQpvOjEKdTptZXUydg8.01.170e05n0u@gitlab.com/harshavardhan81860/yakkai-demo.git
+    - git remote set-url origin https://gitlab-ci-token:glpat-AukbHntS6V6MtZIP03dGpmM6MQpvOjEKdTptaDBqMw8.01.1707a26lo@gitlab.com/harshavardhan81860/yakkai-demo.git
   script:
     - IMAGE_PATH="$CI_REGISTRY_IMAGE/frontend:$IMAGE_TAG"
     - wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
