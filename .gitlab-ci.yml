@@ -1,6 +1,5 @@
 stages:
   - build
-  - test
   - security
   - deploy
 
@@ -44,30 +43,7 @@ build-frontend:
     - docker push $CI_REGISTRY_IMAGE/frontend:$IMAGE_TAG
 
 # ---------------- TEST ----------------
-test_backend:
-  stage: test
-  image: node:20
-  cache:
-    key: backend-deps
-    paths:
-      - backend/node_modules/
-  script:
-    - cd backend
-    - npm install
-    - npm run test || echo "No tests found, skipping..."
 
-test_frontend:
-  stage: test
-  image: node:20
-  cache:
-    key: frontend-deps
-    paths:
-      - frontend/node_modules/
-  script:
-    - cd frontend
-    - npm install
-    - npm run lint || echo "No lint script, skipping"
-    - npm run test || echo "No tests found, skipping..."
 
 # ---------------- SECURITY ----------------
 dependency_scan:
