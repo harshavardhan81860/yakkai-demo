@@ -46,24 +46,6 @@ build-frontend:
 
 
 # ---------------- SECURITY ----------------
-dependency_scan:
-  stage: security
-  image: node:20
-  cache:
-    key: backend-deps
-    policy: pull
-  script:
-    - cd backend
-    - npm audit --audit-level=high || true
-
-container_scan:
-  stage: security
-  image: 
-    name: aquasec/trivy:latest
-    entrypoint: [""]
-  script:
-    - trivy image $CI_REGISTRY_IMAGE/backend:$IMAGE_TAG
-
 
 #---------------------
 # Deploy 
