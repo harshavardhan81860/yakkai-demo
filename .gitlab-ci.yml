@@ -1,5 +1,6 @@
 stages:
   - build
+  - deploy
 
 variables:
   DOCKER_HOST: tcp://docker:2375
@@ -8,7 +9,7 @@ variables:
 
   BACKEND_IMAGE_NAME: "registry.gitlab.com/harshavardhan81860/yakkai-demo/backend"
   FRONTEND_IMAGE_NAME: "registry.gitlab.com/harshavardhan81860/yakkai-demo/frontend"
-  IMAGE_TAG: "develop"
+  IMAGE_TAG: $CI_COMMIT_REF_NAME
 
 before_script:
   - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
@@ -27,6 +28,7 @@ build-backend:
     - docker build -t $BACKEND_IMAGE_NAME:$IMAGE_TAG ./backend
     - docker push $BACKEND_IMAGE_NAME:$IMAGE_TAG
   only:
+    - main
     - develop
 
 # -------------------------
@@ -43,9 +45,28 @@ build-frontend:
     - docker build --build-arg BUILD_SCRIPT=build:dev -t $FRONTEND_IMAGE_NAME:$IMAGE_TAG ./frontend
     - docker push $FRONTEND_IMAGE_NAME:$IMAGE_TAG
   only:
+    - main
     - develop
 
 #---------------------
-# Terraform 
-#-------------------------
+# Deploy 
+#----------------------
+deploy_manifests:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache git wget
+    - wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
+    - git config --global user.email "harsha81860@gmail.com"
+    - git config --global user.name "harshavardhan81860"
+    - git remote set-url origin https://oauth2:aQIBXp87iS7T1K_FfngOXWM6MQpvOjEKdTptZXUydg8.01.170e05n0u@gitlab.com/harshavardhan81860/yakkai-demo.git
+  script:
+    - yq -i '.spec.template.spec.containers[0].image = "'${BACKEND_IMAGE}:${IMAGE_TAG}'"' backend-deployment.yaml
+    - yq -i '.spec.template.spec.containers[0].image = "'${FRONTEND_IMAGE}:${IMAGE_TAG}'"' frontend-deployment.yaml
+    - git add .
+    - git commit -m "chore(deploy): update images to $IMAGE_TAG [skip ci]" || echo "No changes"
+    - git push origin HEAD:$CI_COMMIT_BRANCH
+  only:
+    - main
+    - develop
 
