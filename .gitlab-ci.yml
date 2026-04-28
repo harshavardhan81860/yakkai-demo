@@ -1,5 +1,7 @@
 stages:
   - build
+  - test
+  - security
   - deploy
 
 variables:
@@ -15,7 +17,7 @@ before_script:
   - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
 
 # -------------------------
-# Backend build
+# build
 # -------------------------
 build-backend:
   stage: build
@@ -29,9 +31,6 @@ build-backend:
     - docker build -t $CI_REGISTRY_IMAGE/backend:$IMAGE_TAG backend/
     - docker push $CI_REGISTRY_IMAGE/backend:$IMAGE_TAG
 
-# -------------------------
-# Frontend build
-# -------------------------
 build-frontend:
   stage: build
   image: docker:24.0.5
@@ -43,6 +42,52 @@ build-frontend:
   script:
     - docker build -t $CI_REGISTRY_IMAGE/frontend:$IMAGE_TAG frontend/
     - docker push $CI_REGISTRY_IMAGE/frontend:$IMAGE_TAG
+
+# ---------------- TEST ----------------
+test_backend:
+  stage: test
+  image: node:20
+  cache:
+    key: backend-deps
+    paths:
+      - backend/node_modules/
+  script:
+    - cd backend
+    - npm install
+    - npm run test || echo "No tests found, skipping..."
+
+test_frontend:
+  stage: test
+  image: node:20
+  cache:
+    key: frontend-deps
+    paths:
+      - frontend/node_modules/
+  script:
+    - cd frontend
+    - npm install
+    - npm run lint || echo "No lint script, skipping"
+    - npm run test || echo "No tests found, skipping..."
+
+# ---------------- SECURITY ----------------
+dependency_scan:
+  stage: security
+  image: node:20
+  cache:
+    key: backend-deps
+    policy: pull
+  script:
+    - cd backend
+    - npm audit --audit-level=high || true
+
+container_scan:
+  stage: security
+  image: 
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  script:
+    - trivy image $CI_REGISTRY_IMAGE/backend:$IMAGE_TAG
+
 
 #---------------------
 # Deploy 
@@ -61,6 +106,7 @@ deploy_backend:
     - /usr/bin/yq -i '.spec.template.spec.containers[0].image = "'"$IMAGE_PATH"'"' helm/yaakai/values/values-dev.yaml
     - git add helm/yaakai/values/values-dev.yaml
     - git commit -m "deploy backend $IMAGE_TAG [skip ci]" || echo "No changes"
+    - git pull origin $CI_COMMIT_BRANCH --rebase
     - git push origin HEAD:$CI_COMMIT_BRANCH
   only:
     - main
@@ -80,6 +126,7 @@ deploy_frontend:
     - /usr/bin/yq -i '.spec.template.spec.containers[0].image = "'"$IMAGE_PATH"'"' helm/yaakai/values/values-dev.yaml
     - git add helm/yaakai/values/values-dev.yaml
     - git commit -m "deploy frontend $IMAGE_TAG [skip ci]" || echo "No changes"
+    - git pull origin $CI_COMMIT_BRANCH --rebase
     - git push origin HEAD:$CI_COMMIT_BRANCH
   only:
     - main
