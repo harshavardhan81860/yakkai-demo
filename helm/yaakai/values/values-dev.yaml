@@ -110,4 +110,4 @@ spec:
   template:
     spec:
       containers:
-        - image: registry.gitlab.com/harshavardhan81860/yakkai-demo/backend:main
+        - image: registry.gitlab.com/harshavardhan81860/yakkai-demo/frontend:main
