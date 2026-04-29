@@ -38,7 +38,7 @@ backend:
   port: 8000
   image:
     repository: registry.gitlab.com/guhatek/yakkai/backend
-    tag: develop
+    tag: registry.gitlab.com/harshavardhan81860/yakkai-demo/backend:main
     pullPolicy: Always
   service:
     type: ClusterIP
