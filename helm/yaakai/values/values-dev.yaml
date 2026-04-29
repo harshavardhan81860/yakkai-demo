@@ -106,8 +106,8 @@ ingress:
 global:
   imagePullSecrets:
     - name: gitlab-registry
-spec:
-  template:
-    spec:
-      containers:
-        - image: registry.gitlab.com/harshavardhan81860/yakkai-demo/backend:main
+#spec:
+#  template:
+#    spec:
+#      containers:
+#        - image: registry.gitlab.com/harshavardhan81860/yakkai-demo/backend:main
