@@ -44,7 +44,7 @@ deploy_backend:
     - wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
     - /usr/bin/yq -i '.backend.image.tag = "'"$IMAGE_PATH"'"' helm/yaakai/values/values-dev.yaml
     - git add helm/yaakai/values/values-dev.yaml
-    - git commit -m "deploy backend $IMAGE_TAG [skip ci]" || echo "No changes"
+    - git commit -m "deploy backend $IMAGE_TAG" || echo "No changes"
     - git pull origin $CI_COMMIT_BRANCH --rebase
     - git push origin HEAD:$CI_COMMIT_BRANCH
 
