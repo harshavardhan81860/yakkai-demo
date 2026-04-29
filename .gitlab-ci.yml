@@ -29,6 +29,10 @@ build-backend:
   script:
     - docker build -t $CI_REGISTRY_IMAGE/backend:$IMAGE_TAG backend/
     - docker push $CI_REGISTRY_IMAGE/backend:$IMAGE_TAG
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"
+      changes:
+        - backend/**/*
 
 build-frontend:
   stage: build
@@ -41,6 +45,10 @@ build-frontend:
   script:
     - docker build -t $CI_REGISTRY_IMAGE/frontend:$IMAGE_TAG frontend/
     - docker push $CI_REGISTRY_IMAGE/frontend:$IMAGE_TAG
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"
+      changes:
+        - frontend/**/*
 
 # ---------------- TEST ----------------
 
@@ -66,9 +74,10 @@ deploy_backend:
     - git commit -m "deploy backend $IMAGE_TAG [skip ci]" || echo "No changes"
     - git pull origin $CI_COMMIT_BRANCH --rebase
     - git push origin HEAD:$CI_COMMIT_BRANCH
-  only:
-    - main
-    - develop
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"
+      changes:
+        - backend/**/*
 
 deploy_frontend:
   stage: deploy
@@ -86,8 +95,9 @@ deploy_frontend:
     - git commit -m "deploy frontend $IMAGE_TAG [skip ci]" || echo "No changes"
     - git pull origin $CI_COMMIT_BRANCH --rebase
     - git push origin HEAD:$CI_COMMIT_BRANCH
-  only:
-    - main
-    - develop
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"
+      changes:
+        - frontend/**/*
 
 
