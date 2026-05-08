@@ -9,7 +9,7 @@ metadata:
   labels:
     app: {{ .Values.frontend.name }}
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: {{ .Values.frontend.name }}
