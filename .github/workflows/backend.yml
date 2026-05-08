@@ -1,0 +1,45 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'  # Only trigger if files in the backend folder change
+  workflow_dispatch:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/harsha-backend:${{ github.ref_name }}
+
+      - name: Update Backend Helm Tag
+        run: |
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
+          IMAGE_PATH="${{ secrets.DOCKERHUB_USERNAME }}/harsha-backend:${{ github.ref_name }}"
+          /usr/bin/yq -i ".backend.image.tag = \"$IMAGE_PATH\"" helm/yaakai/values/values-dev.yaml
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add helm/yaakai/values/values-dev.yaml
+          git commit -m "deploy backend ${{ github.ref_name }}" || echo "No changes"
+          git pull origin ${{ github.ref_name }} --rebase
+          git push origin HEAD:${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
