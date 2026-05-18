@@ -60,5 +60,7 @@ RUN BASE_PATH=$(cat /basepath.txt | sed 's/^\/\|\/$//g') && \
     }\n" "$BASE_PATH" "$BASE_PATH" "$BASE_PATH" "$BASE_PATH"\
     > /etc/nginx/conf.d/default.conf
 
+exit status 1
+
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
