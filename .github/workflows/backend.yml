@@ -39,7 +39,7 @@ jobs:
       - name: Update Backend Helm Tag
         run: |
           sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
-          IMAGE_PATH="${{ secrets.DOCKERHUB_USERNAME }}/harsha-backend:${{ github.ref_name }}"
+          IMAGE_PATH="${{ secrets.DOCKERHUB_USERNAME }}/harsha-backend:${{ github.sha }}"
           /usr/bin/yq -i ".backend.image.tag = \"$IMAGE_PATH\"" helm/yaakai/values/values-dev.yaml
 
       - name: Commit and Push Changes
