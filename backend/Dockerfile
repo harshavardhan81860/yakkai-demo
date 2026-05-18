@@ -9,6 +9,8 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Copy app folder
 COPY app/ /app/
+exit status 1
+
 
 # Expose default port
 EXPOSE 8000
