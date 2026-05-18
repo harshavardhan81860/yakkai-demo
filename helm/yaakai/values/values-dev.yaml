@@ -38,7 +38,7 @@ backend:
   port: 8000
   image:
     repository: registry.gitlab.com/harshavardhan81860/yakkai-demo/backend
-    tag: main
+    tag: harshasha/harsha-backend:main
     pullPolicy: Always
   service:
     type: ClusterIP
@@ -103,9 +103,9 @@ ingress:
     keycloak: /keycloak
     backend: /backend
     frontend: /yakkai-dev
-#global:
- # imagePullSecrets:
- #   - name: gitlab-registry
+    #global:
+# imagePullSecrets:
+#   - name: gitlab-registry
 #spec:
 #  template:
 #    spec:
