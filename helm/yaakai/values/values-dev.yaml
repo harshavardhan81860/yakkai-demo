@@ -79,7 +79,7 @@ frontend:
   name: frontend-dev
   image:
     repository: registry.gitlab.com/harshavardhan81860/yakkai-demo/frontend
-    tag: main
+    tag: harshasha/harsha-frontend:f69f2940ec87bfd1c1f9fb266c672c096df7dd23
     pullPolicy: Always
   port: 80 #don't change as it is hardcoded in nginx build 
   service:
