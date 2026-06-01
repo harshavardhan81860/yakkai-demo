@@ -5,6 +5,7 @@ on:
     branches: [ main ]
     paths:
       - 'backend/**'  # Only trigger if files in the backend folder change
+      - 'helm/**'
   workflow_dispatch:
 
 jobs:
