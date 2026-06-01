@@ -38,7 +38,7 @@ backend:
   port: 8000
   image:
     repository: registry.gitlab.com/harshavardhan81860/yakkai-demo/backend
-    tag: ghcr.io/harshavardhan81860/harsha-backend:5114086dce97c3d31259c1546f064c8eb9b79bb4
+    tag: ghcr.io/harshavardhan81860/harsha-backend:ee075b80d0275d1240cc20f2915c7c2916853d51
     pullPolicy: Always
   service:
     type: ClusterIP
