@@ -5,7 +5,7 @@ on:
     branches: [ main ]
     paths:
       - 'frontend/**'  # Only trigger if files in the frontend folder change
-      - 'helm/yaakai/templates/**'
+      - 'helm/yaakai/templates/frontend**'
 env:
   FRONTEND_IMAGE_NAME: "ghcr.io/${{ github.repository_owner }}/yakkai-frontend"
 
