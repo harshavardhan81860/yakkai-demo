@@ -37,5 +37,4 @@ jobs:
         run: |
           echo "Building frontend image with BUILD_SCRIPT=build:dev"
           docker build --build-arg BUILD_SCRIPT=build:dev -t ${{ env.FRONTEND_IMAGE_NAME }}:${{ env.IMAGE_TAG }} ./frontend
-          docker push ${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
           docker push ${{ env.FRONTEND_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
