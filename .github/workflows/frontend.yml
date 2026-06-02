@@ -7,8 +7,7 @@ on:
       - 'frontend/**'  # Only trigger if files in the frontend folder change
       - 'helm/yaakai/templates/**'
 env:
-  FRONTEND_IMAGE_NAME: "ghcr.io/${{ github.repository_owner }}/frontend"
-  IMAGE_TAG: "latest"
+  FRONTEND_IMAGE_NAME: "ghcr.io/${{ github.repository_owner }}/yakkai-frontend"
 
 permissions:
   contents: write
@@ -36,5 +35,6 @@ jobs:
       - name: Build and Push Frontend
         run: |
           echo "Building frontend image with BUILD_SCRIPT=build:dev"
-          docker build --build-arg BUILD_SCRIPT=build:dev -t ${{ env.FRONTEND_IMAGE_NAME }}:${{ env.IMAGE_TAG }} ./frontend
-          docker push ${{ env.FRONTEND_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          docker build --build-arg BUILD_SCRIPT=build:dev -t ${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }} -t ${{ env.FRONTEND_IMAGE_NAME }}:latest ./frontend
+          docker push ${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.FRONTEND_IMAGE_NAME }}:latest
