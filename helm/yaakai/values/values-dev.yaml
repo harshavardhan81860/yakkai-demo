@@ -37,8 +37,8 @@ backend:
   name: backend-dev
   port: 8000
   image:
-    repository: registry.gitlab.com/harshavardhan81860/yakkai-demo/backend
-    tag: ghcr.io/harshavardhan81860/harsha-backend:941ae198a3d1fcbe7af0359beb47cd7eb7049f72
+    repository: ghcr.io/harshavardhan81860/yakkai-demo/backend
+    tag: latest
     pullPolicy: Always
   service:
     type: ClusterIP
@@ -78,8 +78,8 @@ frontend:
   enabled: true
   name: frontend-dev
   image:
-    repository: registry.gitlab.com/harshavardhan81860/yakkai-demo/frontend
-    tag: harshasha/harsha-frontend:f69f2940ec87bfd1c1f9fb266c672c096df7dd23
+    repository: ghcr.io/harshavardhan81860/yakkai-demo/frontend
+    tag: latest
     pullPolicy: Always
   port: 80 #don't change as it is hardcoded in nginx build 
   service:
@@ -103,9 +103,9 @@ ingress:
     keycloak: /keycloak
     backend: /backend
     frontend: /yakkai-dev
-    #global:
-# imagePullSecrets:
-#   - name: gitlab-registry
+global:
+ imagePullSecrets:
+   - name: ghcr-secret
 #spec:
 #  template:
 #    spec:
