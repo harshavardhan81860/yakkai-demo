@@ -5,7 +5,7 @@ on:
     branches: [ main ]
     paths:
       - 'backend/**'  # Only trigger if files in the backend folder change
-      - 'helm/yaakai/templates'
+      - 'helm/yaakai/templates/**'
   workflow_dispatch:
 
 jobs:
