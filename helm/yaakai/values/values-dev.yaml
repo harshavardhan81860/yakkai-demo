@@ -38,7 +38,7 @@ backend:
   port: 8000
   image:
     repository: ghcr.io/harshavardhan81860/yakkai-demo/backend
-    tag: latest
+    tag: 968671f146d474ce8eb8e13bc6a63d8c642dd38b
     pullPolicy: Always
   service:
     type: ClusterIP
@@ -104,8 +104,8 @@ ingress:
     backend: /backend
     frontend: /yakkai-dev
 global:
- imagePullSecrets:
-   - name: ghcr-secret
+  imagePullSecrets:
+    - name: ghcr-secret
 #spec:
 #  template:
 #    spec:
