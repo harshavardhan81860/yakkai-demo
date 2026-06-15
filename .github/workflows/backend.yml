@@ -6,6 +6,7 @@ on:
       - prod
     paths:
       - backend/**
+      - helm/yaakai/templates/backend*
 
 permissions:
   contents: write
