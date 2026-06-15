@@ -42,7 +42,7 @@ jobs:
         run: |
           sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
           IMAGE_PATH="ghcr.io/${{ github.repository_owner }}/harsha-backend:${{ github.sha }}"
-          /usr/bin/yq -i ".backend.image.tag = \"$IMAGE_PATH\"" helm/yaakai/values/values-dev.yaml
+          /usr/bin/yq -i ".backend.image.tag = \"${{ github.sha }}\"" helm/yaakai/values/values-dev.yaml
 
       - name: Commit and Push Changes
         run: |
