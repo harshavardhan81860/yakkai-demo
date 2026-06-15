@@ -51,7 +51,7 @@ jobs:
       - name: Update Helm Values
         run: |
           yq -i '.backend.image.tag="${{ github.sha }}"' \
-          helm/yakkai/values/values-dev.yaml
+          helm/yaakai/values/values-dev.yaml
 
       - name: Commit Changes
         run: |
