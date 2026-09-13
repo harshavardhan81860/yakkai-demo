@@ -22,7 +22,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: harshavardhan81860/yakkai/backend
   IMAGE_TAG: ${{ github.sha }}
-  HELM_VALUES_FILE: helm/yakkai/values/values-dev.yaml
+  HELM_VALUES_FILE: helm/yaakai/values/values-dev.yaml
 
 jobs:
   # =====================================================
