@@ -412,6 +412,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: audit-evidence-pack
+          pattern: evidence-*
+          merge-multiple: true
 
       - name: Generate Audit Manifest
         run: |
