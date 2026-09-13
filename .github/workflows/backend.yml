@@ -273,7 +273,7 @@ jobs:
           docker load -i backend-image.tar
 
       - name: Run Trivy Image Scan
-        uses: aquasecurity/trivy-action@v0.30.0
+        uses: aquasecurity/setup-trivy@v0.3.1
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           severity: HIGH,CRITICAL
