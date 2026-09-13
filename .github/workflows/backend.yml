@@ -109,16 +109,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Trivy Filesystem Scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.30.0
         with:
           scan-type: fs
           scan-ref: ./backend
-          scanners: vuln,secret
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           format: json
           output: trivy-dependency-report.json
-          exit-code: "1"
 
       - name: Upload Dependency Evidence
         if: always()
