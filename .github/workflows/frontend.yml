@@ -234,6 +234,85 @@ jobs:
       run: pip install -r "${{ env.REQUIREMENTS }}" pytest
     - name: pytest
       run: pytest "${{ env.TEST_PATH }}" -W error::DeprecationWarning
+  deploy-helm:
+    name: Deploy (Helm → Kubernetes)
+    runs-on: ubuntu-latest
+    needs:
+    - unit-test
+    if: github.event_name != 'pull_request'
+    environment: dev
+    env:
+      YAKKAI_STAGE: deploy-helm
+      ENVIRONMENT: dev
+      HELM_RELEASE: app
+      CHART_PATH: deploy/helm
+      K8S_NAMESPACE: default
+      IMAGE_NAME: ghcr.io/${{ github.repository }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Helm
+      uses: azure/setup-helm@v4
+    - name: Configure kubeconfig
+      run: mkdir -p ~/.kube && umask 077 && printf '%s' "$KUBECONFIG_B64" | base64 -d > ~/.kube/config
+      env:
+        KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+    - name: helm upgrade --install
+      run: |-
+        helm upgrade --install "${{ env.HELM_RELEASE }}" "${{ env.CHART_PATH }}" \
+          --namespace "${{ env.K8S_NAMESPACE }}" --create-namespace \
+          --set image.repository="${{ env.IMAGE_NAME }}" --set image.tag="${{ github.sha }}" \
+          --wait --timeout 10m
+    - name: Rollout status
+      run: kubectl -n "${{ env.K8S_NAMESPACE }}" get deploy,po,svc,ingress
+  dast:
+    name: DAST (OWASP ZAP API scan)
+    runs-on: ubuntu-latest
+    needs:
+    - deploy-helm
+    if: github.event_name != 'pull_request'
+    continue-on-error: true
+    env:
+      YAKKAI_STAGE: dast
+      TARGET_OPENAPI_URL: https://example.com/openapi.json
+    steps:
+    - name: ZAP API scan
+      uses: zaproxy/action-api-scan@v0.9.0
+      with:
+        target: ${{ env.TARGET_OPENAPI_URL }}
+        format: openapi
+        cmd_options: -a
+        allow_issue_writing: false
+  notify-failure:
+    name: Notify on failure (webhook)
+    runs-on: ubuntu-latest
+    needs:
+    - lint
+    - type-check
+    - secret-scan
+    - sast
+    - sca
+    - iac-scan
+    - helm-lint
+    - policy-check
+    - unit-test
+    - deploy-helm
+    - dast
+    if: failure()
+    env:
+      YAKKAI_STAGE: notify-failure
+      WEBHOOK_SECRET_NAME: DEPLOY_WEBHOOK
+    steps:
+    - name: Post failure summary
+      env:
+        WEBHOOK: ${{ secrets.DEPLOY_WEBHOOK }}
+        RESULTS: ${{ toJSON(needs) }}
+      run: |-
+        test -n "$WEBHOOK" || { echo 'webhook secret not set'; exit 0; }
+        curl -fsS -X POST -H 'Content-Type: application/json' \
+          -d "{\"text\": \"${GITHUB_REPOSITORY} ${GITHUB_WORKFLOW} failed on ${GITHUB_REF_NAME}: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}" "$WEBHOOK"
   frontend:
     runs-on: ubuntu-latest
     steps:
