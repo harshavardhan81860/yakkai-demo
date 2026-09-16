@@ -1,0 +1,11 @@
+{
+  "stage": "container-build",
+  "policies": [
+    {
+      "id": "no-latest-base",
+      "type": "dockerfile.no_latest_base",
+      "severity": "block",
+      "params": {}
+    }
+  ]
+}
