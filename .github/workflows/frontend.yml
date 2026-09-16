@@ -14,9 +14,208 @@ permissions:
   contents: write
   packages: write
 jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    env:
+      YAKKAI_STAGE: lint
+      PYTHON_VERSION: '3.12'
+      RUFF_VERSION: 0.16.6
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    - name: Install ruff
+      run: pip install ruff==${{ env.RUFF_VERSION }}
+    - name: ruff check
+      run: ruff check . --output-format github
+  type-check:
+    name: Types (mypy)
+    runs-on: ubuntu-latest
+    env:
+      YAKKAI_STAGE: type-check
+      PYTHON_VERSION: '3.12'
+      MYPY_VERSION: 2.3.1
+      SOURCE_PATHS: .
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    - name: Install mypy
+      run: pip install mypy==${{ env.MYPY_VERSION }}
+    - name: mypy
+      run: mypy ${{ env.SOURCE_PATHS }} --ignore-missing-imports
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    env:
+      YAKKAI_STAGE: secret-scan
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: gitleaks
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_ENABLE_SUMMARY: 'true'
+  sast:
+    name: SAST (semgrep)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    env:
+      YAKKAI_STAGE: sast
+      SEMGREP_RULES: p/security-audit p/secrets
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: semgrep
+      run: |-
+        pip install semgrep
+        semgrep scan --config "${{ env.SEMGREP_RULES }}" --sarif --output semgrep.sarif --error
+    - name: Upload SARIF
+      if: always()
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: semgrep.sarif
+  sca:
+    name: SCA / dependency scan (trivy fs)
+    runs-on: ubuntu-latest
+    env:
+      YAKKAI_STAGE: sca
+      SEVERITY: HIGH,CRITICAL
+      SCAN_PATH: .
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: trivy fs
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        scan-type: fs
+        scan-ref: ${{ env.SCAN_PATH }}
+        severity: ${{ env.SEVERITY }}
+        ignore-unfixed: true
+        exit-code: '1'
+  iac-scan:
+    name: IaC / config scan (trivy config)
+    runs-on: ubuntu-latest
+    env:
+      YAKKAI_STAGE: iac-scan
+      SEVERITY: HIGH,CRITICAL
+      SCAN_PATH: .
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: trivy config
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        scan-type: config
+        scan-ref: ${{ env.SCAN_PATH }}
+        severity: ${{ env.SEVERITY }}
+        exit-code: '1'
+  helm-lint:
+    name: Helm lint & template
+    runs-on: ubuntu-latest
+    env:
+      YAKKAI_STAGE: helm-lint
+      CHART_PATH: deploy/helm
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Helm
+      uses: azure/setup-helm@v4
+    - name: helm lint
+      run: helm lint "${{ env.CHART_PATH }}"
+    - name: helm template
+      run: helm template ci "${{ env.CHART_PATH }}" > /dev/null
+  policy-check:
+    name: Policy check (OPA / conftest)
+    runs-on: ubuntu-latest
+    env:
+      YAKKAI_STAGE: policy-check
+      POLICY_REPO: GuhaTek/yakkai-policies
+      POLICY_REF: v1.1.0
+      POLICY_SHA: 157eb8eba55e271ecb2ce1ccbbf79543414a4739
+      CONFTEST_VERSION: 0.70.0
+      CHART_PATH: deploy/helm
+      DOCKERFILE: Dockerfile
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Fetch YakkAI policy library
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ env.POLICY_REPO }}
+        ref: ${{ env.POLICY_REF }}
+        sparse-checkout: rego
+        path: .yakkai-policy-lib
+    - name: Verify policy library commit
+      run: |
+        set -euo pipefail
+        HEAD="$(git -C .yakkai-policy-lib rev-parse HEAD)"
+        echo "policy library ${POLICY_REPO}@${POLICY_REF} = ${HEAD}"
+        if [ -n "${POLICY_SHA}" ] && [ "${HEAD}" != "${POLICY_SHA}" ]; then
+          echo "::error::policy library tag ${POLICY_REF} resolves to ${HEAD}, expected ${POLICY_SHA} - tag moved?"
+          exit 1
+        fi
+    - name: Set up Helm
+      uses: azure/setup-helm@v4
+    - name: Install conftest
+      run: |
+        mkdir -p "$HOME/.local/bin"
+        curl -sSfL "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" \
+          | tar -xz -C "$HOME/.local/bin" conftest
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+    - name: Evaluate policies
+      run: |
+        set -euo pipefail
+        LIB=.yakkai-policy-lib/rego
+        rc=0
+        if [ -f .yakkai/policies/deploy-helm.json ]; then
+          helm dependency build "$CHART_PATH" >/dev/null 2>&1 || true
+          helm template policy-check "$CHART_PATH" > "$RUNNER_TEMP/rendered.yaml"
+          conftest test "$RUNNER_TEMP/rendered.yaml" -p "$LIB" -n yakkai.k8s -d .yakkai/policies/deploy-helm.json || rc=1
+        fi
+        if [ -f .yakkai/policies/container-build.json ]; then
+          conftest test "$DOCKERFILE" --parser dockerfile -p "$LIB" -n yakkai.dockerfile -d .yakkai/policies/container-build.json || rc=1
+        fi
+        [ -d .yakkai/policies ] || echo "::notice::no .yakkai/policies/*.json in this repo - nothing to evaluate"
+        exit $rc
   unit-test:
     name: Unit tests (pytest)
     runs-on: ubuntu-latest
+    needs:
+    - lint
+    - type-check
+    - secret-scan
+    - sast
+    - sca
+    - iac-scan
+    - helm-lint
+    - policy-check
     env:
       YAKKAI_STAGE: unit-test
       PYTHON_VERSION: '3.12'
