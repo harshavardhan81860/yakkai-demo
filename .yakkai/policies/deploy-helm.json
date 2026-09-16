@@ -1,0 +1,11 @@
+{
+  "stage": "deploy-helm",
+  "policies": [
+    {
+      "id": "no-privileged",
+      "type": "k8s.no_privileged",
+      "severity": "block",
+      "params": {}
+    }
+  ]
+}
