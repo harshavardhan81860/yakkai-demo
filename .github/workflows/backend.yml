@@ -1,5 +1,5 @@
 name: Backend CI/CD
-
+# Only trigger if files in the backend folder change
 on:
   push:
     branches: [ main ]
