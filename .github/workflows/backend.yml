@@ -206,9 +206,9 @@ jobs:
       - name: Run Blast Radius Analysis
         run: |
 
-          chmod +x scripts/blast-radius.sh
+          chmod +x backend/scripts/blast-radius.sh
 
-          ./scripts/blast-radius.sh \
+          ./backend/scripts/blast-radius.sh \
             "${{ steps.git-range.outputs.base }}" \
             "${{ steps.git-range.outputs.head }}"
 
