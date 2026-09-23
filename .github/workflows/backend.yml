@@ -164,12 +164,77 @@ jobs:
           retention-days: 90
 
 
+
   # =====================================================
-  # STAGE 5: UNIT TESTS
+  # STAGE 5: BLAST RADIUS / CHANGE IMPACT ANALYSIS
+  # =====================================================
+
+  blast-radius:
+    name: 05. Blast Radius - Change Impact Analysis
+    runs-on: ubuntu-latest
+
+    needs:
+      - secret-scanning
+      - sast-scan
+      - dependency-scan
+      - iac-security
+
+    steps:
+
+      - name: Checkout Full Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Git Range
+        id: git-range
+        shell: bash
+        run: |
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+
+            echo "base=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "head=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+
+          else
+
+            echo "base=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
+            echo "head=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+          fi
+
+      - name: Run Blast Radius Analysis
+        run: |
+
+          chmod +x scripts/blast-radius.sh
+
+          ./scripts/blast-radius.sh \
+            "${{ steps.git-range.outputs.base }}" \
+            "${{ steps.git-range.outputs.head }}"
+
+      - name: Display Blast Radius Report
+        run: |
+
+          echo "========================================="
+          echo "BLAST RADIUS REPORT"
+          echo "========================================="
+
+          cat blast-radius-report/blast-radius.md
+
+      - name: Upload Blast Radius Evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-05-blast-radius
+          path: blast-radius-report/
+          retention-days: 90
+
+  # =====================================================
+  # STAGE 6: UNIT TESTS
   # =====================================================
 
   unit-tests:
-    name: 05. Backend Unit Tests
+    name: 06. Backend Unit Tests
     runs-on: ubuntu-latest
 
     needs: [sast-scan, dependency-scan]
@@ -206,11 +271,11 @@ jobs:
 
 
   # =====================================================
-  # STAGE 6: BUILD DOCKER IMAGE
+  # STAGE 7: BUILD DOCKER IMAGE
   # =====================================================
 
   build-image:
-    name: 06. Build Backend Docker Image
+    name: 07. Build Backend Docker Image
     runs-on: ubuntu-latest
 
     needs:
@@ -250,11 +315,11 @@ jobs:
 
 
   # =====================================================
-  # STAGE 7: CONTAINER IMAGE SECURITY
+  # STAGE 8: CONTAINER IMAGE SECURITY
   # =====================================================
 
   container-security:
-    name: 07. Container Security - Trivy
+    name: 08. Container Security - Trivy
     runs-on: ubuntu-latest
 
     needs: build-image
@@ -292,11 +357,11 @@ jobs:
           retention-days: 90
 
     # =====================================================
-  # STAGE 8: PUSH IMAGE TO GHCR
+  # STAGE 9: PUSH IMAGE TO GHCR
   # =====================================================
 
   push-image:
-    name: 08. Push Secure Image to GHCR
+    name: 09. Push Secure Image to GHCR
     runs-on: ubuntu-latest
 
     needs: container-security
@@ -335,11 +400,11 @@ jobs:
 
 
   # =====================================================
-  # STAGE 9: UPDATE HELM VALUES
+  # STAGE 10: UPDATE HELM VALUES
   # =====================================================
 
   update-helm:
-    name: 09. Update Helm Image Tag
+    name: 10. Update Helm Image Tag
     runs-on: ubuntu-latest
 
     needs: push-image
@@ -389,11 +454,11 @@ jobs:
 
 
   # =====================================================
-  # STAGE 10: AUDIT EVIDENCE PACK
+  # STAGE 11: AUDIT EVIDENCE PACK
   # =====================================================
 
   audit-evidence:
-    name: 10. Consolidate DevSecOps Evidence
+    name: 11. Consolidate DevSecOps Evidence
     runs-on: ubuntu-latest
 
     needs:
