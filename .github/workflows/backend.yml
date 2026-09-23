@@ -20,7 +20,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: harshavardhan81860/yakkai/backend
+  IMAGE_NAME: harshavardhan81860/yakkai/new
   IMAGE_TAG: ${{ github.sha }}
   HELM_VALUES_FILE: helm/yaakai/values/values-dev.yaml
 
