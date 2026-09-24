@@ -356,12 +356,191 @@ jobs:
           if-no-files-found: ignore
           retention-days: 90
 
+  # =====================================================
+  # STAGE 9: DAST - DYNAMIC APPLICATION SECURITY TESTING
+  # =====================================================
+
+  dast-scan:
+    name: 09. DAST - OWASP ZAP
+    runs-on: ubuntu-latest
+
+    needs:
+      - container-security
+
+    steps:
+
+      # -------------------------------------------------
+      # STEP 1: CHECKOUT
+      # -------------------------------------------------
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+
+      # -------------------------------------------------
+      # STEP 2: DOWNLOAD BUILD IMAGE
+      # -------------------------------------------------
+
+      - name: Download Docker Image
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-docker-image
+
+
+      # -------------------------------------------------
+      # STEP 3: LOAD DOCKER IMAGE
+      # -------------------------------------------------
+
+      - name: Load Docker Image
+        run: |
+          docker load -i backend-image.tar
+
+          docker images
+
+
+      # -------------------------------------------------
+      # STEP 4: CREATE DAST NETWORK
+      # -------------------------------------------------
+
+      - name: Create DAST Network
+        run: |
+          docker network create dast-network
+
+
+      # -------------------------------------------------
+      # STEP 5: START BACKEND APPLICATION
+      # -------------------------------------------------
+
+      - name: Start Backend for DAST
+        run: |
+          docker run -d \
+            --name yakkai-backend-dast \
+            --network dast-network \
+            -p 8000:8000 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
+
+      # -------------------------------------------------
+      # STEP 6: WAIT FOR APPLICATION
+      # -------------------------------------------------
+
+      - name: Wait for Backend
+        run: |
+          echo "Waiting for backend application..."
+
+          for i in {1..30}; do
+
+            if curl -sf http://localhost:8000/ > /dev/null; then
+              echo "========================================="
+              echo "Backend is UP"
+              echo "DAST target is ready"
+              echo "========================================="
+              exit 0
+            fi
+
+            echo "Waiting for backend... attempt $i/30"
+
+            sleep 5
+
+          done
+
+          echo "========================================="
+          echo "Backend failed to start"
+          echo "========================================="
+
+          docker ps
+          docker logs yakkai-backend-dast
+
+          exit 1
+
+
+      # -------------------------------------------------
+      # STEP 7: SHOW APPLICATION LOGS
+      # -------------------------------------------------
+
+      - name: Backend Status
+        run: |
+          echo "========================================="
+          echo "BACKEND CONTAINER"
+          echo "========================================="
+
+          docker ps
+
+          echo "========================================="
+          echo "BACKEND LOGS"
+          echo "========================================="
+
+          docker logs yakkai-backend-dast
+
+
+      # -------------------------------------------------
+      # STEP 8: DAST BASELINE SCAN
+      # -------------------------------------------------
+
+      - name: OWASP ZAP Baseline Scan
+        run: |
+          mkdir -p dast-reports
+
+          docker run \
+            --network host \
+            -v "$PWD/dast-reports:/zap/wrk/:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+            -t http://localhost:8000 \
+            -r dast-baseline-report.html \
+            -J dast-baseline-report.json \
+            -w dast-baseline-report.md
+
+
+      # -------------------------------------------------
+      # STEP 9: DISPLAY DAST RESULTS
+      # -------------------------------------------------
+
+      - name: Display DAST Results
+        if: always()
+        run: |
+
+          echo "========================================="
+          echo "DAST SCAN RESULTS"
+          echo "========================================="
+
+          if [ -f dast-reports/dast-baseline-report.md ]; then
+            cat dast-reports/dast-baseline-report.md
+          else
+            echo "DAST markdown report not generated"
+          fi
+
+
+      # -------------------------------------------------
+      # STEP 10: UPLOAD DAST EVIDENCE
+      # -------------------------------------------------
+
+      - name: Upload DAST Evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-09-dast
+          path: dast-reports/
+          if-no-files-found: warn
+          retention-days: 90
+
+
+      # -------------------------------------------------
+      # STEP 11: CLEANUP
+      # -------------------------------------------------
+
+      - name: Cleanup DAST Environment
+        if: always()
+        run: |
+          docker rm -f yakkai-backend-dast || true
+          docker network rm dast-network || true
+
     # =====================================================
-  # STAGE 9: PUSH IMAGE TO GHCR
+  # STAGE 10: PUSH IMAGE TO GHCR
   # =====================================================
 
   push-image:
-    name: 09. Push Secure Image to GHCR
+    name: 10. Push Secure Image to GHCR
     runs-on: ubuntu-latest
 
     needs: container-security
@@ -400,11 +579,11 @@ jobs:
 
 
   # =====================================================
-  # STAGE 10: UPDATE HELM VALUES
+  # STAGE 11: UPDATE HELM VALUES
   # =====================================================
 
   update-helm:
-    name: 10. Update Helm Image Tag
+    name: 11. Update Helm Image Tag
     runs-on: ubuntu-latest
 
     needs: push-image
@@ -454,11 +633,11 @@ jobs:
 
 
   # =====================================================
-  # STAGE 11: AUDIT EVIDENCE PACK
+  # STAGE 12: AUDIT EVIDENCE PACK
   # =====================================================
 
   audit-evidence:
-    name: 11. Consolidate DevSecOps Evidence
+    name: 12. Consolidate DevSecOps Evidence
     runs-on: ubuntu-latest
 
     needs:
