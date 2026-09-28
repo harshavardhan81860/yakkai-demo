@@ -576,10 +576,11 @@ jobs:
       # STEP 11: CLEANUP
       # -------------------------------------------------
 
+
       - name: Cleanup DAST Environment
         if: always()
         run: |
-          docker rm -f yakkai-backend-dast || true
+          docker rm -f yakkai-backend-dast postgres-dast || true
           docker network rm dast-network || true
 
     # =====================================================
