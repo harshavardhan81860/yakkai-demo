@@ -408,14 +408,32 @@ jobs:
 
 
       # -------------------------------------------------
-      # STEP 5: START BACKEND APPLICATION
+      # STEP 5: START DEPENDENCIES & BACKEND FOR DAST
       # -------------------------------------------------
+
+      - name: Start Database for DAST
+        run: |
+          docker run -d \
+            --name postgres-dast \
+            --network dast-network \
+            -e POSTGRES_DB=yakkai_db \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
+            postgres:15-alpine
+
+          # Wait briefly for Postgres to accept connections
+          sleep 5
 
       - name: Start Backend for DAST
         run: |
           docker run -d \
             --name yakkai-backend-dast \
             --network dast-network \
+            -e DB_HOST=postgres-dast \
+            -e DB_PORT=5432 \
+            -e DB_USER=postgres \
+            -e DB_PASSWORD=postgres \
+            -e DB_NAME=yakkai_db \
             -p 8000:8000 \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
