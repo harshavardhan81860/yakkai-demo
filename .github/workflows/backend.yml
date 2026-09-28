@@ -3,16 +3,16 @@ name: Backend DevSecOps CI/CD
 on:
   push:
     branches:
-      - prod
+      - prod                                                  # UPDATE
     paths:
-      - backend/**
-      - helm/yaakai/templates/backend*
+      - backend/**                                             # UPDATE
+      - helm/yaakai/templates/backend*                         # UPDATE
   pull_request: 
     branches: 
-      - prod 
+      - prod                                                  # UPDATE
     paths: 
-      - backend/**
-      - helm/yakkai/templates/backend*
+      - backend/**                                             # UPDATE
+      - helm/yakkai/templates/backend*                         # UPDATE
 
 permissions:
   contents: write
@@ -20,9 +20,9 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: harshavardhan81860/yakkai/new
+  IMAGE_NAME: harshavardhan81860/yakkai/new                     # UPDATE
   IMAGE_TAG: ${{ github.sha }}
-  HELM_VALUES_FILE: helm/yaakai/values/values-dev.yaml
+  HELM_VALUES_FILE: helm/yaakai/values/values-dev.yaml         # UPDATE
 
 jobs:
   # =====================================================
@@ -112,7 +112,7 @@ jobs:
         uses: aquasecurity/setup-trivy@v0.3.1
         with:
           scan-type: fs
-          scan-ref: ./backend
+          scan-ref: ./backend                                             # UPDATE
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           format: json
@@ -208,7 +208,7 @@ jobs:
 
           chmod +x backend/scripts/blast-radius.sh
 
-          ./backend/scripts/blast-radius.sh \
+          ./backend/scripts/blast-radius.sh \                                                          # UPDATE
             "${{ steps.git-range.outputs.base }}" \
             "${{ steps.git-range.outputs.head }}"
 
@@ -294,7 +294,7 @@ jobs:
       - name: Build Docker Image
         uses: docker/build-push-action@v6
         with:
-          context: ./backend
+          context: ./backend                                                                          # UPDATE
           push: false
           load: true
           tags: |
@@ -434,7 +434,7 @@ jobs:
           test -f "${{ env.HELM_VALUES_FILE }}"
 
           yq -i \
-            '.backend.image.tag = "${{ env.IMAGE_TAG }}"' \
+            '.backend.image.tag = "${{ env.IMAGE_TAG }}"' \                                                     # UPDATE
             "${{ env.HELM_VALUES_FILE }}"
 
       - name: Commit Helm Changes
