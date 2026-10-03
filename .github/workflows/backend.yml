@@ -165,7 +165,7 @@ jobs:
 
 
 
-  # =====================================================
+# =====================================================
   # STAGE 5: BLAST RADIUS / CHANGE IMPACT ANALYSIS
   # =====================================================
 
@@ -180,7 +180,6 @@ jobs:
       - iac-security
 
     steps:
-
       - name: Checkout Full Repository
         uses: actions/checkout@v4
         with:
@@ -190,36 +189,54 @@ jobs:
         id: git-range
         shell: bash
         run: |
-
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-
             echo "base=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
             echo "head=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
-
           else
-
             echo "base=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
             echo "head=${{ github.sha }}" >> "$GITHUB_OUTPUT"
-
           fi
 
       - name: Run Blast Radius Analysis
         run: |
-
-          chmod +x backend/scripts/blast-radius.sh
-
-          ./backend/scripts/blast-radius.sh \                                                          # UPDATE
+          chmod +x backend/scripts/br.sh                                                                              #update
+          ./backend/scripts/br.sh \                                                                                    #update
             "${{ steps.git-range.outputs.base }}" \
             "${{ steps.git-range.outputs.head }}"
 
       - name: Display Blast Radius Report
         run: |
-
           echo "========================================="
           echo "BLAST RADIUS REPORT"
           echo "========================================="
-
           cat blast-radius-report/blast-radius.md
+
+      - name: Enforce Blast Radius Security Gate
+        run: |
+          echo "========================================="
+          echo "EVALUATING BLAST RADIUS POLICY"
+          echo "========================================="
+          echo "Detected BR Level: ${{ env.BR_LEVEL }} (Level ${{ env.BR_NUM }})"
+          echo "Detected Impact  : ${{ env.BLAST_IMPACT }}"
+
+          # BR4 Policy: Block always + required Incident Response
+          if [ "${{ env.BR_NUM }}" -ge 4 ]; then
+            echo "::error::[BR4 Detected] Critical control plane or global infrastructure change detected! Blocking pipeline for Incident Response."
+            exit 1
+
+          # BR3 Policy: Block always + required Incident Review
+          elif [ "${{ env.BR_NUM }}" -eq 3 ]; then
+            echo "::error::[BR3 Detected] Database, schema, or tenant-level change detected! Blocking pipeline for Incident Review."
+            exit 1
+
+          # BR2 Policy: Block if target branch is production
+          elif [ "${{ env.BR_NUM }}" -eq 2 ] && [[ "${{ github.ref_name }}" == "prod" ]]; then
+            echo "::error::[BR2 Detected] Non-production environment file directly modified on 'prod' branch! Blocking pipeline."
+            exit 1
+
+          else
+            echo "Blast radius evaluation passed. Policy requirements satisfied."
+          fi
 
       - name: Upload Blast Radius Evidence
         if: always()
@@ -228,6 +245,7 @@ jobs:
           name: evidence-05-blast-radius
           path: blast-radius-report/
           retention-days: 90
+     
 
   # =====================================================
   # STAGE 6: UNIT TESTS
