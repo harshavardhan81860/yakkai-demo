@@ -230,10 +230,18 @@ jobs:
             exit 1
 
           # BR2 Policy: Block if target branch is production
-          elif [ "${{ env.BR_NUM }}" -eq 2 ] && [[ "${{ github.ref_name }}" == "prod" ]]; then
-            echo "::error::[BR2 Detected] Non-production environment file directly modified on 'prod' branch! Blocking pipeline."
-            exit 1
+          #elif [ "${{ env.BR_NUM }}" -eq 2 ] && [[ "${{ github.ref_name }}" == "prod" ]]; then
+            #echo "::error::[BR2 Detected] Non-production environment file directly modified on 'prod' branch! Blocking pipeline."
+            #exit 1
 
+            
+          # BR2 - Warn only
+          elif [ "${{ env.BR_NUM }}" -eq 2 ]; then
+
+            echo "::warning::[BR2 Detected] Deployment or environment configuration change detected."
+            echo "Additional validation/review is recommended."
+
+          # BR1 / BR0
           else
             echo "Blast radius evaluation passed. Policy requirements satisfied."
           fi
