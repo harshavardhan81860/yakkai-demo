@@ -199,8 +199,8 @@ jobs:
 
       - name: Run Blast Radius Analysis
         run: |
-          chmod +x backend/scripts/br.sh                                                                              #update
-          ./backend/scripts/br.sh \                                                                                    #update
+          chmod +x backend/scripts/br.sh
+          ./backend/scripts/br.sh \
             "${{ steps.git-range.outputs.base }}" \
             "${{ steps.git-range.outputs.head }}"
 
