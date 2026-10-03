@@ -20,7 +20,7 @@ echo "Head SHA : $HEAD_SHA"
 echo
 
 # --------------------------------------------------
-# 1. Determine changed files with fallback
+# 1. Determine changed files
 # --------------------------------------------------
 
 if [[ -n "$BASE_SHA" && "$BASE_SHA" != "N/A" && "$BASE_SHA" != "0000000000000000000000000000000000000000" ]]; then
@@ -92,7 +92,7 @@ do
         update_br_level "BR0" 0 "One request/session" "Allowed only within product safety policy"
     fi
 
-    # Category Counters (Fixed standard bash || syntax)
+    # Category Counters
     if [[ "$FILE" == backend/* ]]; then BACKEND_COUNT=$((BACKEND_COUNT + 1)); fi
     if [[ "$FILE" == helm/* ]]; then HELM_COUNT=$((HELM_COUNT + 1)); fi
     if [[ "$FILE" == .github/workflows/* ]]; then WORKFLOW_COUNT=$((WORKFLOW_COUNT + 1)); fi
