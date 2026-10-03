@@ -2,8 +2,9 @@
 
 set -uo pipefail
 
-BASE_SHA="${1:-}"
-HEAD_SHA="${2:-HEAD}"
+# Trim whitespace from arguments
+BASE_SHA="$(echo "${1:-}" | xargs)"
+HEAD_SHA="$(echo "${2:-HEAD}" | xargs)"
 REPORT_DIR="${3:-blast-radius-report}"
 
 mkdir -p "$REPORT_DIR"
@@ -20,13 +21,13 @@ echo "Head SHA : $HEAD_SHA"
 echo
 
 # --------------------------------------------------
-# 1. Determine changed files
+# 1. Determine changed files with fallback
 # --------------------------------------------------
 
 if [[ -n "$BASE_SHA" && "$BASE_SHA" != "0000000000000000000000000000000000000000" ]]; then
-    git diff --name-only "$BASE_SHA" "$HEAD_SHA" > "$CHANGED_FILE"
+    git diff --name-only "$BASE_SHA" "$HEAD_SHA" > "$CHANGED_FILE" || git diff --name-only HEAD~1 HEAD > "$CHANGED_FILE"
 else
-    git diff --name-only HEAD~1 "$HEAD_SHA" > "$CHANGED_FILE"
+    git diff --name-only HEAD~1 HEAD > "$CHANGED_FILE"
 fi
 
 echo "Changed files:"
@@ -56,7 +57,6 @@ BR_LEVEL_NUM=0
 BR_DESCRIPTION="One request/session (Allowed within safety policy)"
 PRODUCTION_ACTION="Allowed only within product safety policy"
 
-# Helper function to assign higher BR level
 update_br_level() {
     local level_str="$1"
     local level_num="$2"
@@ -72,7 +72,7 @@ update_br_level() {
 }
 
 # --------------------------------------------------
-# 3. Analyze files (Categories + VelAI BR Classification)
+# 3. Analyze files
 # --------------------------------------------------
 
 while IFS= read -r FILE
@@ -81,31 +81,20 @@ do
 
     echo "Analyzing: $FILE"
 
-    # --- BR Level Classification ---
-
-    # BR4: Global control plane, production configs, shared infra
+    # BR Level Classification
     if [[ "$FILE" =~ ^(terraform/global/|helm/.*/templates/prod|global-config/|\.github/workflows/) ]]; then
         update_br_level "BR4" 4 "Multiple customers or enterprise control plane" "Block + incident response"
-
-    # BR3: Database migrations, tenant schemas, multi-customer data paths
     elif [[ "$FILE" =~ ^(backend/db/migrations/|backend/app/schemas/|models/tenant|*migration*|*schema*) ]]; then
         update_br_level "BR3" 3 "One customer, tenant or market" "Block + incident review"
-
-    # BR2: Non-production / staging environment changes
     elif [[ "$FILE" =~ ^(helm/yaakai/values/values-dev.yaml|helm/.*|staging/|config/dev) ]]; then
         update_br_level "BR2" 2 "One non-production environment" "Block production"
-
-    # BR1: Isolated application code, services, unit test files
     elif [[ "$FILE" =~ ^(backend/app/|backend/tests/|backend/*) ]]; then
         update_br_level "BR1" 1 "One pod, agent or single reversible tool call" "Target ceiling"
-
-    # BR0: Documentation, non-executable content
     else
         update_br_level "BR0" 0 "One request/session" "Allowed only within product safety policy"
     fi
 
-    # --- Category Counters ---
-
+    # Category Counters
     if [[ "$FILE" == backend/* ]]; then BACKEND_COUNT=$((BACKEND_COUNT + 1)); fi
     if [[ "$FILE" == helm/* ]]; then HELM_COUNT=$((HELM_COUNT + 1)); fi
     if [[ "$FILE" == .github/workflows/* ]]; then WORKFLOW_COUNT=$((WORKFLOW_COUNT + 1)); fi
@@ -119,7 +108,6 @@ do
 
 done < "$CHANGED_FILE"
 
-# Determine Legacy Impact Level
 IMPACT="LOW"
 REASON="Application-level change"
 
@@ -166,31 +154,6 @@ cat > "$REPORT_FILE" <<EOF
 - **Head SHA:** ${HEAD_SHA}
 - **Total Changed Files:** ${TOTAL_FILES}
 
-## VelAI Blast Radius Policy Reference
-
-| Level | Maximum Affected Scope | Production Decision |
-|---|---|---|
-| **BR0** | One request/session | Allowed only within product safety policy |
-| **BR1** | One pod, agent or single reversible tool call | Target ceiling |
-| **BR2** | One non-production environment | Block production |
-| **BR3** | One customer, tenant or market | Block + incident review |
-| **BR4** | Multiple customers or enterprise control plane | Block + incident response |
-
-## Change Categories Breakdown
-
-| Category | File Count |
-|---|---:|
-| Backend | ${BACKEND_COUNT} |
-| Helm/Kubernetes | ${HELM_COUNT} |
-| GitHub Actions | ${WORKFLOW_COUNT} |
-| Infrastructure as Code (IaC) | ${IAC_COUNT} |
-| Dependencies | ${DEPENDENCY_COUNT} |
-| Tests | ${TEST_COUNT} |
-| Docker | ${DOCKER_COUNT} |
-| Authentication/Security | ${AUTH_COUNT} |
-| Database | ${DATABASE_COUNT} |
-| Network | ${NETWORK_COUNT} |
-
 ## Changed Files List
 
 \`\`\`text
@@ -199,30 +162,4 @@ $(cat "$CHANGED_FILE")
 
 EOF
 
-# --------------------------------------------------
-# 6. Console Summary Output
-# --------------------------------------------------
-
-echo
-echo "============================================="
-echo "           BLAST RADIUS RESULT"
-echo "============================================="
-echo
-echo "Highest BR Level : $HIGHEST_BR (Level$BR_LEVEL_NUM)"
-echo "Impact Level     : $IMPACT"
-echo "Changed Files    : $TOTAL_FILES"
-echo
-echo "Backend          : $BACKEND_COUNT"
-echo "Helm/K8s         : $HELM_COUNT"
-echo "CI/CD            : $WORKFLOW_COUNT"
-echo "IaC              : $IAC_COUNT"
-echo "Dependencies     : $DEPENDENCY_COUNT"
-echo "Tests            : $TEST_COUNT"
-echo "Docker           : $DOCKER_COUNT"
-echo "Auth/Security    : $AUTH_COUNT"
-echo "Database         : $DATABASE_COUNT"
-echo "Network          : $NETWORK_COUNT"
-echo
-echo "Report Written To:"
-echo "$REPORT_FILE"
-echo "============================================="
+echo "Blast radius script completed successfully."
