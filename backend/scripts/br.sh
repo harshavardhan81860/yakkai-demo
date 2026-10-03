@@ -2,7 +2,6 @@
 
 set -uo pipefail
 
-# Trim whitespace from arguments
 BASE_SHA="$(echo "${1:-}" | xargs)"
 HEAD_SHA="$(echo "${2:-HEAD}" | xargs)"
 REPORT_DIR="${3:-blast-radius-report}"
@@ -24,7 +23,7 @@ echo
 # 1. Determine changed files with fallback
 # --------------------------------------------------
 
-if [[ -n "$BASE_SHA" && "$BASE_SHA" != "0000000000000000000000000000000000000000" ]]; then
+if [[ -n "$BASE_SHA" && "$BASE_SHA" != "N/A" && "$BASE_SHA" != "0000000000000000000000000000000000000000" ]]; then
     git diff --name-only "$BASE_SHA" "$HEAD_SHA" > "$CHANGED_FILE" || git diff --name-only HEAD~1 HEAD > "$CHANGED_FILE"
 else
     git diff --name-only HEAD~1 HEAD > "$CHANGED_FILE"
@@ -51,7 +50,6 @@ NETWORK_COUNT=0
 
 TOTAL_FILES=$(grep -c . "$CHANGED_FILE" || true)
 
-# BR Level Tracking
 HIGHEST_BR="BR0"
 BR_LEVEL_NUM=0
 BR_DESCRIPTION="One request/session (Allowed within safety policy)"
@@ -84,7 +82,7 @@ do
     # BR Level Classification
     if [[ "$FILE" =~ ^(terraform/global/|helm/.*/templates/prod|global-config/|\.github/workflows/) ]]; then
         update_br_level "BR4" 4 "Multiple customers or enterprise control plane" "Block + incident response"
-    elif [[ "$FILE" =~ ^(backend/db/migrations/|backend/app/schemas/|models/tenant|*migration*|*schema*) ]]; then
+    elif [[ "$FILE" =~ ^(backend/db/migrations/|backend/app/schemas/|models/tenant|migration|schema) ]]; then
         update_br_level "BR3" 3 "One customer, tenant or market" "Block + incident review"
     elif [[ "$FILE" =~ ^(helm/yaakai/values/values-dev.yaml|helm/.*|staging/|config/dev) ]]; then
         update_br_level "BR2" 2 "One non-production environment" "Block production"
@@ -94,7 +92,7 @@ do
         update_br_level "BR0" 0 "One request/session" "Allowed only within product safety policy"
     fi
 
-    # Category Counters
+    # Category Counters (Fixed standard bash || syntax)
     if [[ "$FILE" == backend/* ]]; then BACKEND_COUNT=$((BACKEND_COUNT + 1)); fi
     if [[ "$FILE" == helm/* ]]; then HELM_COUNT=$((HELM_COUNT + 1)); fi
     if [[ "$FILE" == .github/workflows/* ]]; then WORKFLOW_COUNT=$((WORKFLOW_COUNT + 1)); fi
@@ -162,4 +160,4 @@ $(cat "$CHANGED_FILE")
 
 EOF
 
-echo "Blast radius script completed successfully."
+echo "Blast radius analysis completed successfully."
