@@ -1,1 +1,1 @@
-backend/scripts/br.sh
+backend/scripts/blast-radius-report/changed-files.txt
