@@ -197,7 +197,7 @@ jobs:
             echo "head=${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Run Blast Radius Analysis
+      - name: Run Blast Radius Analysis                                                                            # UPDATE
         run: |
           chmod +x backend/scripts/br.sh
           ./backend/scripts/br.sh \
@@ -455,12 +455,12 @@ jobs:
 
           sudo chmod +x /usr/local/bin/yq
 
-      - name: Update Helm Image Tag
+      - name: Update Helm Image Tag                                                                                 # UPDATE
         run: |
           test -f "${{ env.HELM_VALUES_FILE }}"
 
           yq -i \
-            '.backend.image.tag = "${{ env.IMAGE_TAG }}"' \                                                     # UPDATE
+            '.backend.image.tag = "${{ env.IMAGE_TAG }}"' \
             "${{ env.HELM_VALUES_FILE }}"
 
       - name: Commit Helm Changes
