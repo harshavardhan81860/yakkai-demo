@@ -1,26 +1,31 @@
-# Yakkai Backend Blast Radius Report
+# Blast Radius Security Assessment Report
 
-## Commit Information
+## Assessment Summary
 
-- Base SHA: N/A
-- Head SHA: HEAD
-- Changed files: 1
+| Field | Result |
+|---|---|
+| Highest Blast Radius Level | `BR1` |
+| BR Numeric Level | 1 |
+| Maximum Affected Scope | Application-level change with limited scope |
+| Production Action | Run automated tests and standard review |
+| Overall Impact | **MEDIUM** |
+| Impact Reason | Deployment, container, dependency or backend application change |
 
-## Impact
+## Commit Details
 
-**MEDIUM**
+| Field | Value |
+|---|---|
+| Base SHA | N/A |
+| Head SHA | HEAD |
+| Total Changed Files | 2 |
 
-Reason:
-
-Deployment, container or dependency change
-
-## Change Categories
+## Category Analysis
 
 | Category | Files |
 |---|---:|
-| Backend | 0 |
-| Helm/Kubernetes | 1 |
-| GitHub Actions | 0 |
+| Backend | 2 |
+| Helm | 0 |
+| GitHub Workflows | 0 |
 | IaC | 0 |
 | Dependencies | 0 |
 | Tests | 0 |
@@ -32,24 +37,16 @@ Deployment, container or dependency change
 ## Changed Files
 
 ```text
-helm/yaakai/templates/backend-deployment.yaml
+backend/scripts/blast-radius-report/changed-files.txt
+backend/scripts/br.sh
 ```
 
-## Potentially Affected Components
+## Interpretation
 
-- Kubernetes/Helm deployment
+The blast-radius analysis estimates the potential scope of the
+change based on the files modified in the commit range.
 
-## Validation Recommendation
-
-The blast-radius result is an impact indicator, not a correctness verdict.
-
-Additional validation should be performed for changes affecting:
-
-- CI/CD
-- Authentication
-- Infrastructure
-- Database
-- Network exposure
-- Dependencies
-- Kubernetes deployment configuration
+A HIGH impact classification does not by itself indicate a security
+vulnerability. It indicates that additional validation, testing or
+review may be appropriate.
 
