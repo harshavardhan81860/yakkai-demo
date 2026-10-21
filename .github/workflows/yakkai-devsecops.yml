@@ -1,0 +1,237 @@
+# Managed by YakkAI — DevSecOps pipeline. Stages are jobs keyed by stage id;
+# stage parameters live in each job's `env`. Edit via YakkAI or by hand.
+name: DevSecOps (YakkAI)
+'on':
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+  workflow_dispatch: null
+permissions:
+  contents: read
+concurrency:
+  group: devsecops-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    env:
+      YAKKAI_STAGE: secret-scan
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: gitleaks
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_ENABLE_SUMMARY: 'true'
+  sast:
+    name: SAST (semgrep)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    env:
+      YAKKAI_STAGE: sast
+      SEMGREP_RULES: p/security-audit p/secrets
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: semgrep
+      run: |-
+        pip install semgrep
+        semgrep scan --config "${{ env.SEMGREP_RULES }}" --sarif --output semgrep.sarif --error
+    - name: Upload SARIF
+      if: always()
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: semgrep.sarif
+  sca:
+    name: SCA / dependency scan (trivy fs)
+    runs-on: ubuntu-latest
+    env:
+      YAKKAI_STAGE: sca
+      SEVERITY: HIGH,CRITICAL
+      SCAN_PATH: .
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: trivy fs
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        scan-type: fs
+        scan-ref: ${{ env.SCAN_PATH }}
+        severity: ${{ env.SEVERITY }}
+        ignore-unfixed: true
+        exit-code: '1'
+  iac-scan:
+    name: IaC / config scan (trivy config)
+    runs-on: ubuntu-latest
+    env:
+      YAKKAI_STAGE: iac-scan
+      SEVERITY: HIGH,CRITICAL
+      SCAN_PATH: .
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: trivy config
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        scan-type: config
+        scan-ref: ${{ env.SCAN_PATH }}
+        severity: ${{ env.SEVERITY }}
+        exit-code: '1'
+  helm-lint:
+    name: Helm lint & template
+    runs-on: ubuntu-latest
+    env:
+      YAKKAI_STAGE: helm-lint
+      CHART_PATH: helm/yaakai
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Helm
+      uses: azure/setup-helm@v4
+    - name: helm lint
+      run: helm lint "${{ env.CHART_PATH }}"
+    - name: helm template
+      run: helm template ci "${{ env.CHART_PATH }}" > /dev/null
+  policy-check:
+    name: Policy check (OPA / conftest)
+    runs-on: ubuntu-latest
+    env:
+      YAKKAI_STAGE: policy-check
+      POLICY_REPO: GuhaTek/yakkai-policies
+      POLICY_REF: v1.1.0
+      POLICY_SHA: 157eb8eba55e271ecb2ce1ccbbf79543414a4739
+      CONFTEST_VERSION: 0.70.0
+      CHART_PATH: helm/yaakai
+      DOCKERFILE: backend/Dockerfile
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Fetch YakkAI policy library
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ env.POLICY_REPO }}
+        ref: ${{ env.POLICY_REF }}
+        sparse-checkout: rego
+        path: .yakkai-policy-lib
+    - name: Verify policy library commit
+      run: |
+        set -euo pipefail
+        HEAD="$(git -C .yakkai-policy-lib rev-parse HEAD)"
+        echo "policy library ${POLICY_REPO}@${POLICY_REF} = ${HEAD}"
+        if [ -n "${POLICY_SHA}" ] && [ "${HEAD}" != "${POLICY_SHA}" ]; then
+          echo "::error::policy library tag ${POLICY_REF} resolves to ${HEAD}, expected ${POLICY_SHA} - tag moved?"
+          exit 1
+        fi
+    - name: Set up Helm
+      uses: azure/setup-helm@v4
+    - name: Install conftest
+      run: |
+        mkdir -p "$HOME/.local/bin"
+        curl -sSfL "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" \
+          | tar -xz -C "$HOME/.local/bin" conftest
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+    - name: Evaluate policies
+      run: |
+        set -euo pipefail
+        LIB=.yakkai-policy-lib/rego
+        rc=0
+        if [ -f .yakkai/policies/deploy-helm.json ]; then
+          helm dependency build "$CHART_PATH" >/dev/null 2>&1 || true
+          helm template policy-check "$CHART_PATH" > "$RUNNER_TEMP/rendered.yaml"
+          conftest test "$RUNNER_TEMP/rendered.yaml" -p "$LIB" -n yakkai.k8s -d .yakkai/policies/deploy-helm.json || rc=1
+        fi
+        if [ -f .yakkai/policies/container-build.json ]; then
+          conftest test "$DOCKERFILE" --parser dockerfile -p "$LIB" -n yakkai.dockerfile -d .yakkai/policies/container-build.json || rc=1
+        fi
+        [ -d .yakkai/policies ] || echo "::notice::no .yakkai/policies/*.json in this repo - nothing to evaluate"
+        exit $rc
+  container-build:
+    name: Container build, scan, SBOM & sign
+    runs-on: ubuntu-latest
+    needs:
+    - secret-scan
+    - sast
+    - sca
+    - iac-scan
+    - helm-lint
+    - policy-check
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    env:
+      YAKKAI_STAGE: container-build
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ghcr.io/${{ github.repository }}
+      BUILD_CONTEXT: backend
+      DOCKERFILE: backend/Dockerfile
+      SEVERITY: HIGH,CRITICAL
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    - name: Build image (local)
+      uses: docker/build-push-action@v6
+      with:
+        context: ${{ env.BUILD_CONTEXT }}
+        file: ${{ env.BUILD_CONTEXT }}/${{ env.DOCKERFILE }}
+        load: true
+        push: false
+        tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+    - name: Scan image (gate before publish)
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+        severity: ${{ env.SEVERITY }}
+        ignore-unfixed: true
+        exit-code: '1'
+    - name: SBOM (CycloneDX)
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+        format: cyclonedx
+        output: sbom.cdx.json
+    - name: Upload SBOM
+      uses: actions/upload-artifact@v4
+      with:
+        name: sbom-${{ github.sha }}
+        path: sbom.cdx.json
+        retention-days: 30
+    - name: Login to registry
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Push image
+      if: github.event_name != 'pull_request'
+      run: docker push "${{ env.IMAGE_NAME }}:${{ github.sha }}"
+    - name: Install cosign
+      if: github.event_name != 'pull_request'
+      uses: sigstore/cosign-installer@v3
+    - name: Sign image (keyless)
+      if: github.event_name != 'pull_request'
+      run: cosign sign --yes "${{ env.IMAGE_NAME }}:${{ github.sha }}"
