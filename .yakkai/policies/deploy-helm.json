@@ -2,7 +2,7 @@
   "stage": "deploy-helm",
   "policies": [
     {
-      "id": "no-privileged",
+      "id": "bbbbbbb",
       "type": "k8s.no_privileged",
       "severity": "block",
       "params": {}
