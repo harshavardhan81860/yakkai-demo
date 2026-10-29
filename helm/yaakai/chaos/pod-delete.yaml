@@ -1,0 +1,27 @@
+
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: yakkai-backend-pod-delete
+  namespace: dev
+spec:
+  engineState: active
+  annotationCheck: "false"
+  appinfo:
+    appns: dev
+    applabel: "app=yakkai-backend"
+    appkind: deployment
+  chaosServiceAccount: yakkai-chaos-sa
+  experiments:
+    - name: pod-delete
+      spec:
+        components:
+          env:
+            - name: TOTAL_CHAOS_DURATION
+              value: "30"
+            - name: CHAOS_INTERVAL
+              value: "10"
+            - name: FORCE
+              value: "false"
+            - name: PODS_AFFECTED_PERC
+              value: "0"
