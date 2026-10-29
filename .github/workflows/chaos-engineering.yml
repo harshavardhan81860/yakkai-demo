@@ -1,0 +1,222 @@
+
+name: Yakkai Chaos Engineering
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: yakkai-chaos-dev
+  cancel-in-progress: false
+
+jobs:
+  pod-recovery-test:
+    name: Backend pod recovery test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_CHAOS_ROLE_ARN }}
+
+      # This workflow intentionally targets dev only.
+      NAMESPACE: dev
+
+      # Set these repository variables to match your live cluster.
+      BACKEND_DEPLOYMENT: ${{ vars.DEV_BACKEND_DEPLOYMENT }}
+      BACKEND_LABEL_VALUE: ${{ vars.DEV_BACKEND_LABEL_VALUE }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for key in AWS_REGION EKS_CLUSTER_NAME AWS_ROLE_ARN \
+                     BACKEND_DEPLOYMENT BACKEND_LABEL_VALUE; do
+            if [[ -z "${!key:-}" ]]; then
+              echo "::error::Missing configuration: $key"
+              exit 1
+            fi
+          done
+
+          if [[ "$NAMESPACE" != "dev" ]]; then
+            echo "::error::This workflow is restricted to dev."
+            exit 1
+          fi
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_CHAOS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Read EKS Kubernetes version
+        id: cluster
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION=$(aws eks describe-cluster \
+            --name "$EKS_CLUSTER_NAME" \
+            --region "$AWS_REGION" \
+            --query 'cluster.version' \
+            --output text)
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v${{ steps.cluster.outputs.version }}
+
+      - name: Connect to EKS
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          aws eks update-kubeconfig \
+            --name "$EKS_CLUSTER_NAME" \
+            --region "$AWS_REGION"
+
+          kubectl config current-context
+          kubectl get nodes
+
+      - name: Validate backend health before chaos
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SELECTOR="app=${BACKEND_LABEL_VALUE}"
+
+          kubectl get namespace "$NAMESPACE"
+          kubectl get deployment "$BACKEND_DEPLOYMENT" \
+            -n "$NAMESPACE" -o wide
+
+          DESIRED=$(kubectl get deployment "$BACKEND_DEPLOYMENT" \
+            -n "$NAMESPACE" \
+            -o jsonpath='{.spec.replicas}')
+
+          READY=$(kubectl get deployment "$BACKEND_DEPLOYMENT" \
+            -n "$NAMESPACE" \
+            -o jsonpath='{.status.readyReplicas}')
+
+          if [[ "$DESIRED" != "2" || "$READY" != "2" ]]; then
+            echo "::error::Expected 2 desired and 2 Ready replicas before chaos. Desired=$DESIRED Ready=${READY:-0}"
+            exit 1
+          fi
+
+          kubectl get pods -n "$NAMESPACE" -l "$SELECTOR" -o wide
+
+          kubectl get pods -n "$NAMESPACE" -l "$SELECTOR" \
+            -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' \
+            > /tmp/initial-pods.txt
+
+          if [[ $(wc -l < /tmp/initial-pods.txt) -lt 2 ]]; then
+            echo "::error::Fewer than two pods matched the backend selector."
+            exit 1
+          fi
+
+          cat /tmp/initial-pods.txt
+
+      - name: Delete one backend pod
+        id: chaos
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SELECTOR="app=${BACKEND_LABEL_VALUE}"
+
+          # Select exactly one pod and delete only that pod.
+          POD_NAME=$(head -n 1 /tmp/initial-pods.txt)
+
+          if [[ -z "$POD_NAME" ]]; then
+            echo "::error::No backend pod was selected."
+            exit 1
+          fi
+
+          echo "Deleting one pod: $POD_NAME"
+          echo "deleted_pod=$POD_NAME" >> "$GITHUB_OUTPUT"
+
+          kubectl delete pod "$POD_NAME" \
+            -n "$NAMESPACE" \
+            --wait=true \
+            --timeout=90s
+
+          echo "Pod deletion completed."
+
+      - name: Verify backend recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SELECTOR="app=${BACKEND_LABEL_VALUE}"
+          DEADLINE=$((SECONDS + 180))
+          RECOVERED=false
+
+          while (( SECONDS < DEADLINE )); do
+            DESIRED=$(kubectl get deployment "$BACKEND_DEPLOYMENT" \
+              -n "$NAMESPACE" \
+              -o jsonpath='{.spec.replicas}')
+
+            READY=$(kubectl get deployment "$BACKEND_DEPLOYMENT" \
+              -n "$NAMESPACE" \
+              -o jsonpath='{.status.readyReplicas}')
+
+            READY="${READY:-0}"
+
+            PODS=$(kubectl get pods -n "$NAMESPACE" \
+              -l "$SELECTOR" -o json)
+
+            READY_PODS=$(printf '%s' "$PODS" | jq \
+              '[.items[] | select(.metadata.deletionTimestamp == null) |
+                select(any(.status.conditions[]?;
+                  .type == "Ready" and .status == "True"))] | length')
+
+            echo "Desired=$DESIRED ReadyReplicas=$READY ReadyPods=$READY_PODS"
+
+            if [[ "$DESIRED" == "2" &&
+                  "$READY" == "2" &&
+                  "$READY_PODS" == "2" ]]; then
+              RECOVERED=true
+              break
+            fi
+
+            sleep 5
+          done
+
+          kubectl get deployment "$BACKEND_DEPLOYMENT" \
+            -n "$NAMESPACE" -o wide
+
+          kubectl get pods -n "$NAMESPACE" -l "$SELECTOR" -o wide
+
+          if [[ "$RECOVERED" != "true" ]]; then
+            echo "::error::Backend did not recover to two Ready replicas within 180 seconds."
+            kubectl describe deployment "$BACKEND_DEPLOYMENT" \
+              -n "$NAMESPACE" || true
+            kubectl get events -n "$NAMESPACE" \
+              --sort-by=.lastTimestamp | tail -n 50 || true
+            exit 1
+          fi
+
+          echo "PASS: Backend recovered to two Ready replicas."
+
+      - name: Collect diagnostic evidence
+        if: always()
+        shell: bash
+        run: |
+          kubectl get deployment "$BACKEND_DEPLOYMENT" \
+            -n "$NAMESPACE" -o wide || true
+
+          kubectl get pods -n "$NAMESPACE" \
+            -l "app=${BACKEND_LABEL_VALUE}" -o wide || true
+
+          kubectl get events -n "$NAMESPACE" \
+            --sort-by=.lastTimestamp | tail -n 50 || true
